@@ -1,0 +1,40 @@
+yaml
+name: Fetch Millie Place Data
+
+on:
+  schedule:
+    # 매일 08:00 KST (= 23:00 UTC 전날) 실행
+    - cron: "0 23 * * *"
+  workflow_dispatch: {}  # Actions 탭에서 수동 실행도 가능
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: Superset 데이터 가져오기
+        env:
+          SUPERSET_USERNAME: ${{ secrets.SUPERSET_USERNAME }}
+          SUPERSET_PASSWORD: ${{ secrets.SUPERSET_PASSWORD }}
+        run: python fetch_data.py
+
+      - name: data.json 커밋 & 푸시
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data.json
+          git diff --staged --quiet || git commit -m "chore: update dashboard data ($(date -u +'%Y-%m-%d'))"
+          git push
