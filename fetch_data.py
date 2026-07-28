@@ -33,9 +33,9 @@ LABELS = {
 }
 
 
-def get_access_token(username: str, password: str) -> str:
+def get_access_token(session: requests.Session, username: str, password: str) -> str:
     """Superset에 로그인해서 access_token을 받아온다."""
-    resp = requests.post(
+    resp = session.post(
         f"{SUPERSET_BASE_URL}/api/v1/security/login",
         json={
             "username": username,
@@ -52,28 +52,30 @@ def get_access_token(username: str, password: str) -> str:
     return token
 
 
-def get_csrf_token(access_token: str) -> tuple[str, str]:
-    """CSRF 토큰과 세션 쿠키를 받아온다 (POST 요청에 필요할 수 있음)."""
-    resp = requests.get(
+def get_csrf_token(session: requests.Session, access_token: str) -> str:
+    """CSRF 토큰을 받아온다 (세션 쿠키는 session 객체가 자동으로 유지)."""
+    resp = session.get(
         f"{SUPERSET_BASE_URL}/api/v1/security/csrf_token/",
-        headers={"Authorization": f"Bearer {access_token}"},
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        },
         timeout=30,
     )
     resp.raise_for_status()
-    csrf_token = resp.json().get("result")
-    session_cookie = resp.cookies.get_dict()
-    return csrf_token, session_cookie
+    return resp.json().get("result")
 
 
-def fetch_chart_data(access_token: str, csrf_token: str, chart_id: int) -> dict:
+def fetch_chart_data(session: requests.Session, access_token: str, csrf_token: str, chart_id: int) -> dict:
     """특정 차트의 실제 데이터를 가져온다 (Superset Explore 화면이 실제로 쓰는 방식과 동일)."""
     form_data = json.dumps({"slice_id": chart_id}, separators=(",", ":"))
-    resp = requests.post(
+    resp = session.post(
         f"{SUPERSET_BASE_URL}/api/v1/chart/data",
         params={"form_data": form_data},
         headers={
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
+            "Accept": "application/json",
             "X-CSRFToken": csrf_token,
             "Referer": SUPERSET_BASE_URL + "/",
         },
@@ -95,10 +97,11 @@ def main():
         sys.exit(1)
 
     print("Superset 로그인 중...")
-    access_token = get_access_token(username, password)
+    session = requests.Session()
+    access_token = get_access_token(session, username, password)
 
     print("CSRF 토큰 발급 중...")
-    csrf_token, _ = get_csrf_token(access_token)
+    csrf_token = get_csrf_token(session, access_token)
 
     output = {
         "updated_at": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M:%S KST"),
@@ -108,7 +111,7 @@ def main():
     for key, chart_id in CHARTS.items():
         print(f"[{LABELS[key]}] 차트({chart_id}) 데이터 가져오는 중...")
         try:
-            data = fetch_chart_data(access_token, csrf_token, chart_id)
+            data = fetch_chart_data(session, access_token, csrf_token, chart_id)
             output["metrics"][key] = {"label": LABELS[key], "chart_id": chart_id, "data": data}
         except Exception as e:
             body_snippet = ""
