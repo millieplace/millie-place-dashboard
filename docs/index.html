@@ -4,319 +4,425 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>밀리플레이스 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <style>
   :root {
-    --paper: #ece5d6;
-    --paper-shadow: #ddd4bf;
-    --ink: #2a2419;
-    --ink-soft: #5a5040;
-    --coffee: #6f4a2e;
-    --stamp: #a8433a;
-    --moss: #57624a;
-    --line: #b8af9c;
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --ink: #14181f;
+    --ink-soft: #6b7280;
+    --ink-faint: #9ca3af;
+    --accent: #b5652d;
+    --accent-soft: #f6e9dc;
+    --uv-color: #b5652d;
+    --benefit-color: #2563eb;
+    --staff-color: #7c3aed;
+    --good: #15803d;
+    --bad: #dc2626;
+    --radius: 14px;
   }
 
   * { box-sizing: border-box; }
 
   body {
     margin: 0;
-    min-height: 100vh;
-    background: var(--paper-shadow);
-    background-image:
-      radial-gradient(circle at 20% 20%, rgba(0,0,0,0.03) 0, transparent 40%),
-      radial-gradient(circle at 80% 80%, rgba(0,0,0,0.03) 0, transparent 40%);
-    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
     color: var(--ink);
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+
+  /* ---------- Header ---------- */
+  .topbar {
     display: flex;
-    justify-content: center;
-    padding: 48px 16px 96px;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 28px;
   }
-
-  .receipt-wrap {
-    width: 100%;
-    max-width: 480px;
-  }
-
-  .receipt {
-    background: var(--paper);
-    position: relative;
-    padding: 40px 32px 32px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 2px 0 rgba(0,0,0,0.05);
-  }
-
-  /* 영수증 톱니 상단/하단 */
-  .receipt::before, .receipt::after {
-    content: "";
-    position: absolute;
-    left: 0; right: 0;
-    height: 14px;
-    background:
-      radial-gradient(circle at 10px 0, transparent 8px, var(--paper-shadow) 8px) 0 -7px / 20px 14px repeat-x;
-  }
-  .receipt::before { top: -7px; transform: rotate(180deg); }
-  .receipt::after { bottom: -7px; }
-
-  .masthead {
-    text-align: center;
+  .topbar .title-block .eyebrow {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.02em;
     margin-bottom: 6px;
   }
-  .masthead .eyebrow {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.25em;
-    color: var(--ink-soft);
-    text-transform: uppercase;
-  }
-  .masthead h1 {
-    font-family: 'Noto Serif KR', serif;
+  .topbar h1 {
+    font-size: 24px;
     font-weight: 700;
-    font-size: 26px;
-    margin: 6px 0 2px;
+    margin: 0;
     letter-spacing: -0.01em;
   }
-  .masthead .sub {
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 7px 14px;
     font-size: 12.5px;
     color: var(--ink-soft);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .status-pill .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--good);
+    box-shadow: 0 0 0 3px rgba(21,128,61,0.15);
   }
 
-  .divider {
-    border: none;
-    border-top: 2px dashed var(--line);
-    margin: 20px 0;
+  /* ---------- KPI cards ---------- */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
   }
-
-  .stat-row {
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px 14px;
+  }
+  .kpi-card .kpi-top {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 10px 0;
+    margin-bottom: 10px;
   }
-  .stat-row .stat-label {
-    font-size: 14px;
-    font-weight: 500;
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    flex: 1;
-    min-width: 0;
-  }
-  .stat-row .stat-label .leader {
-    flex: 1;
-    border-bottom: 1.5px dotted var(--line);
-    height: 0;
-    margin-bottom: 4px;
-  }
-  .stat-row .stat-value {
-    font-family: 'IBM Plex Mono', monospace;
+  .kpi-card .kpi-label {
+    font-size: 13px;
     font-weight: 600;
-    font-size: 17px;
-    white-space: nowrap;
-  }
-  .stat-row .stat-unit {
-    font-size: 11px;
     color: var(--ink-soft);
-    margin-left: 2px;
   }
-
-  .section-title {
+  .kpi-card .kpi-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .kpi-card .kpi-value {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 0.15em;
-    color: var(--coffee);
-    text-transform: uppercase;
-    margin: 22px 0 4px;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .kpi-card .kpi-value .unit {
+    font-size: 13px;
+    color: var(--ink-faint);
+    font-weight: 500;
+    margin-left: 4px;
+  }
+  .kpi-card .kpi-spark {
+    height: 40px;
+    margin-top: 8px;
   }
 
-  .store-list {
-    list-style: none;
-    padding: 0;
-    margin: 8px 0 0;
+  /* ---------- Section cards ---------- */
+  .section-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px 22px;
+    margin-bottom: 16px;
   }
-  .store-list li {
+  .section-head {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
-    padding: 6px 0;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-head h2 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+  }
+  .section-head .legend {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .trend-chart-wrap { height: 260px; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 16px;
+  }
+
+  .bar-chart-wrap { height: 320px; }
+
+  table.rank-table {
+    width: 100%;
+    border-collapse: collapse;
     font-size: 13.5px;
   }
-  .store-list .name { flex-shrink: 0; }
-  .store-list .leader {
-    flex: 1;
-    border-bottom: 1.5px dotted var(--line);
-    height: 0;
-    margin-bottom: 4px;
+  table.rank-table th {
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0 8px 8px;
+    border-bottom: 1px solid var(--border);
   }
-  .store-list .val {
-    font-family: 'IBM Plex Mono', monospace;
-    font-weight: 500;
-    flex-shrink: 0;
+  table.rank-table td {
+    padding: 9px 8px;
+    border-bottom: 1px solid #f0f1f3;
   }
-  .store-list .rank {
+  table.rank-table tr:last-child td { border-bottom: none; }
+  table.rank-table td.rank-num {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    color: var(--ink-soft);
-    width: 18px;
+    color: var(--ink-faint);
+    width: 28px;
+  }
+  table.rank-table td.rank-val {
+    font-family: 'IBM Plex Mono', monospace;
+    text-align: right;
+    font-weight: 600;
   }
 
   .empty-note {
-    font-size: 12px;
-    color: var(--ink-soft);
-    padding: 8px 0;
-  }
-
-  .stamp {
-    position: absolute;
-    top: 34px;
-    right: 28px;
-    transform: rotate(-8deg);
-    border: 2px solid var(--stamp);
-    color: var(--stamp);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    padding: 3px 8px;
-    border-radius: 3px;
-    opacity: 0.85;
+    font-size: 13px;
+    color: var(--ink-faint);
+    padding: 24px 0;
+    text-align: center;
   }
 
   .footer {
-    margin-top: 24px;
     text-align: center;
-  }
-  .footer .barcode {
-    height: 32px;
-    margin: 0 auto 10px;
-    width: 70%;
-    background: repeating-linear-gradient(
-      90deg,
-      var(--ink) 0px, var(--ink) 2px,
-      transparent 2px, transparent 4px,
-      var(--ink) 4px, var(--ink) 5px,
-      transparent 5px, transparent 9px
-    );
-    opacity: 0.85;
-  }
-  .footer .updated {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    color: var(--ink-soft);
-    letter-spacing: 0.03em;
-  }
-  .footer .brand {
-    margin-top: 4px;
-    font-size: 11px;
-    color: var(--ink-soft);
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--ink-faint);
   }
 
   .loading, .error {
     text-align: center;
-    padding: 40px 0;
+    padding: 60px 0;
     font-size: 13px;
     color: var(--ink-soft);
     font-family: 'IBM Plex Mono', monospace;
   }
+  .error { color: var(--bad); }
 
-  @media (prefers-reduced-motion: no-preference) {
-    .receipt { animation: drop 0.5s ease-out; }
-  }
-  @keyframes drop {
-    from { opacity: 0; transform: translateY(-16px); }
-    to { opacity: 1; transform: translateY(0); }
+  @media (max-width: 760px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+    .two-col { grid-template-columns: 1fr; }
   }
 </style>
 </head>
 <body>
-  <div class="receipt-wrap">
-    <div class="receipt">
-      <div class="stamp">MILLIE PLACE</div>
-      <div class="masthead">
-        <div class="eyebrow">Millie's Library × Cafe Partnership</div>
-        <h1>밀리플레이스 리포트</h1>
-        <div class="sub">전국 제휴 카페 구독자 혜택 트래킹</div>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title-block">
+        <div class="eyebrow">MILLIE'S LIBRARY × CAFE PARTNERSHIP</div>
+        <h1>밀리플레이스 대시보드</h1>
       </div>
-
-      <hr class="divider" />
-
-      <div id="metrics-area">
-        <div class="loading">데이터 불러오는 중...</div>
-      </div>
-
-      <div class="footer">
-        <div class="barcode"></div>
-        <div class="updated" id="updated-at">-</div>
-        <div class="brand">밀리의서재 · Millie Place</div>
-      </div>
+      <div class="status-pill"><span class="dot"></span><span id="updated-at">불러오는 중...</span></div>
     </div>
+
+    <div id="dashboard-area">
+      <div class="loading">데이터 불러오는 중...</div>
+    </div>
+
+    <div class="footer">밀리의서재 · Millie Place</div>
   </div>
 
 <script>
+  const COLORS = { uv: "#b5652d", benefit_claims: "#2563eb", staff_verifications: "#7c3aed" };
   const METRIC_ORDER = ["uv", "benefit_claims", "staff_verifications"];
   const STORE_KEY = "store_breakdown";
 
-  function renderMetricRow(label, total) {
-    const valueText = (total === null || total === undefined) ? "-" : Math.round(total).toLocaleString("ko-KR");
+  function fmt(n) {
+    if (n === null || n === undefined) return "-";
+    return Math.round(n).toLocaleString("ko-KR");
+  }
+
+  function sparklineSvg(series, color) {
+    if (!series || series.length < 2) return "";
+    const w = 240, h = 40, pad = 3;
+    const values = series.map(p => p.value);
+    const min = Math.min(...values), max = Math.max(...values);
+    const range = (max - min) || 1;
+    const step = (w - pad * 2) / (series.length - 1);
+    const pts = values.map((v, i) => {
+      const x = pad + i * step;
+      const y = h - pad - ((v - min) / range) * (h - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ");
+    return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="none">
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  }
+
+  function kpiCard(key, metric) {
+    const color = COLORS[key];
+    const spark = sparklineSvg(metric.series, color);
     return `
-      <div class="stat-row">
-        <div class="stat-label"><span>${label}</span><span class="leader"></span></div>
-        <div class="stat-value">${valueText}<span class="stat-unit">건</span></div>
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-label">${metric.label}</div>
+          <div class="kpi-dot" style="background:${color}"></div>
+        </div>
+        <div class="kpi-value">${fmt(metric.total)}<span class="unit">건</span></div>
+        <div class="kpi-spark">${spark}</div>
       </div>`;
   }
 
-  function renderStoreList(rows, metricKey, labelKey) {
-    if (!rows || rows.length === 0) {
+  function renderTrendChart(canvasId, metricsData) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+    const datasets = [];
+    let labels = [];
+    METRIC_ORDER.forEach(key => {
+      const m = metricsData[key];
+      if (m && m.series && m.series.length) {
+        if (labels.length === 0) labels = m.series.map(p => p.date.slice(5));
+        datasets.push({
+          label: m.label,
+          data: m.series.map(p => p.value),
+          borderColor: COLORS[key],
+          backgroundColor: COLORS[key],
+          tension: 0.35,
+          pointRadius: 0,
+          borderWidth: 2,
+        });
+      }
+    });
+    if (datasets.length === 0) return;
+    new Chart(ctx, {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+          y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+        },
+      },
+    });
+  }
+
+  function renderBarChart(canvasId, storeMetric) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx || !storeMetric || !storeMetric.data || !storeMetric.data.length) return;
+    const { data, metric_key, label_key } = storeMetric;
+    if (!metric_key || !label_key) return;
+    const totals = {};
+    data.forEach(r => {
+      const name = r[label_key];
+      totals[name] = (totals[name] || 0) + (Number(r[metric_key]) || 0);
+    });
+    const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: sorted.map(([name]) => name),
+        datasets: [{ data: sorted.map(([, v]) => v), backgroundColor: "#b5652d", borderRadius: 4, maxBarThickness: 22 }],
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+          y: { grid: { display: false }, ticks: { color: "#374151", font: { size: 12 } } },
+        },
+      },
+    });
+    return sorted;
+  }
+
+  function renderRankTable(sorted) {
+    if (!sorted || sorted.length === 0) {
       return `<div class="empty-note">아직 매장별 데이터가 없습니다.</div>`;
     }
-    if (!metricKey || !labelKey) {
-      return `<div class="empty-note">데이터 형식을 해석할 수 없습니다. Superset 응답 구조를 확인해주세요.</div>`;
-    }
-    // 매장별로 합산 (같은 매장이 여러 날짜에 걸쳐 나올 수 있으므로)
-    const totals = {};
-    rows.forEach(r => {
-      const name = r[labelKey];
-      const val = Number(r[metricKey]) || 0;
-      totals[name] = (totals[name] || 0) + val;
-    });
-    const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 12);
-    const items = sorted.map(([name, val], i) => `
-      <li>
-        <span class="rank">${String(i + 1).padStart(2, "0")}</span>
-        <span class="name">${name}</span>
-        <span class="leader"></span>
-        <span class="val">${Math.round(val).toLocaleString("ko-KR")}</span>
-      </li>`).join("");
-    return `<ul class="store-list">${items}</ul>`;
+    const rows = sorted.map(([name, val], i) => `
+      <tr>
+        <td class="rank-num">${String(i + 1).padStart(2, "0")}</td>
+        <td>${name}</td>
+        <td class="rank-val">${fmt(val)}</td>
+      </tr>`).join("");
+    return `
+      <table class="rank-table">
+        <thead><tr><th>순위</th><th>매장</th><th style="text-align:right">건수</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
   }
 
   async function load() {
-    const area = document.getElementById("metrics-area");
+    const area = document.getElementById("dashboard-area");
     try {
       const res = await fetch("./data.json", { cache: "no-store" });
       if (!res.ok) throw new Error("data.json을 불러오지 못했습니다");
       const data = await res.json();
+      const metricsData = data.metrics || {};
 
-      let html = "";
+      let kpiHtml = "";
       METRIC_ORDER.forEach(key => {
-        const m = data.metrics && data.metrics[key];
-        if (m) html += renderMetricRow(m.label, m.total);
+        if (metricsData[key]) kpiHtml += kpiCard(key, metricsData[key]);
       });
-      html += `<div class="section-title">매장별 순위</div>`;
-      const storeMetric = data.metrics && data.metrics[STORE_KEY];
-      html += renderStoreList(
-        storeMetric ? storeMetric.data : [],
-        storeMetric ? storeMetric.metric_key : null,
-        storeMetric ? storeMetric.label_key : null
-      );
 
-      area.innerHTML = html;
-      document.getElementById("updated-at").textContent =
-        "발행일시  " + (data.updated_at || "-");
+      const storeMetric = metricsData[STORE_KEY];
+      const hasStoreData = storeMetric && storeMetric.data && storeMetric.data.length;
+
+      area.innerHTML = `
+        <div class="kpi-grid">${kpiHtml}</div>
+
+        <div class="section-card">
+          <div class="section-head">
+            <h2>일별 추이</h2>
+            <div class="legend">
+              ${METRIC_ORDER.filter(k => metricsData[k]).map(k => `
+                <span class="legend-item"><span class="legend-dot" style="background:${COLORS[k]}"></span>${metricsData[k].label}</span>
+              `).join("")}
+            </div>
+          </div>
+          <div class="trend-chart-wrap"><canvas id="trendChart"></canvas></div>
+        </div>
+
+        <div class="two-col">
+          <div class="section-card">
+            <div class="section-head"><h2>매장별 순위 (TOP 10)</h2></div>
+            <div class="bar-chart-wrap">
+              ${hasStoreData ? '<canvas id="storeBarChart"></canvas>' : '<div class="empty-note">아직 매장별 데이터가 없습니다.</div>'}
+            </div>
+          </div>
+          <div class="section-card">
+            <div class="section-head"><h2>매장별 상세</h2></div>
+            <div id="rank-table-area"></div>
+          </div>
+        </div>
+      `;
+
+      renderTrendChart("trendChart", metricsData);
+      const sorted = renderBarChart("storeBarChart", storeMetric);
+      document.getElementById("rank-table-area").innerHTML = renderRankTable(sorted);
+
+      document.getElementById("updated-at").textContent = data.updated_at || "-";
     } catch (e) {
       area.innerHTML = `<div class="error">데이터를 불러오지 못했습니다.<br>${e.message}</div>`;
+      document.getElementById("updated-at").textContent = "오류";
     }
   }
 
