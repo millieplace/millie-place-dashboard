@@ -66,13 +66,16 @@ def get_csrf_token(access_token: str) -> tuple[str, str]:
 
 
 def fetch_chart_data(access_token: str, csrf_token: str, chart_id: int) -> dict:
-    """특정 차트의 실제 데이터를 가져온다."""
+    """특정 차트의 실제 데이터를 가져온다 (Superset Explore 화면이 실제로 쓰는 방식과 동일)."""
+    form_data = json.dumps({"slice_id": chart_id})
     resp = requests.post(
-        f"{SUPERSET_BASE_URL}/api/v1/chart/{chart_id}/data/",
+        f"{SUPERSET_BASE_URL}/api/v1/chart/data",
+        params={"form_data": form_data},
         headers={
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
             "X-CSRFToken": csrf_token,
+            "Referer": SUPERSET_BASE_URL + "/",
         },
         json={},
         timeout=60,
