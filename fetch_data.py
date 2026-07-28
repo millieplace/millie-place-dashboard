@@ -83,13 +83,26 @@ def guess_metric_label(query_context: dict):
     return None
 
 
+def to_date_str(v) -> str:
+    """Superset이 반환하는 시간 값(epoch ms/s 또는 문자열)을 YYYY-MM-DD로 변환."""
+    if isinstance(v, (int, float)):
+        try:
+            ts = v / 1000 if v > 1e12 else v  # ms 단위면 초 단위로 변환
+            return datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d")
+        except Exception:
+            return str(v)
+    if isinstance(v, str):
+        return v[:10]
+    return str(v)
+
+
 def summarize_rows(data_rows: list, metric_label_guess) -> dict:
     """실제 반환된 row들을 보고 지표/라벨/날짜 컬럼을 판별해 합산 및 일별 시계열을 만든다."""
     if not data_rows:
         return {"total": None, "metric_key": None, "label_key": None, "time_key": None, "series": [], "rows": []}
 
     sample = data_rows[0]
-    exclude_hints = ("date", "seq", "id", "time", "key", "__")
+    exclude_hints = ("date", "seq", "id", "time", "key", "month", "__")
 
     metric_key = None
     if metric_label_guess and isinstance(sample.get(metric_label_guess), (int, float)):
@@ -118,14 +131,21 @@ def summarize_rows(data_rows: list, metric_label_guess) -> dict:
                 time_key = k
                 break
 
-    # 라벨(매장명 등) 컬럼 추정
-    label_key = None
-    for k, v in sample.items():
-        if k in (metric_key, time_key):
-            continue
-        if isinstance(v, str):
-            label_key = k
-            break
+    # 라벨(매장명 등) 컬럼 추정: 'name'이 포함된 필드를 최우선으로,
+    # seq/id/code 같은 코드성 필드는 최대한 피한다.
+    label_candidates = [
+        k for k, v in sample.items()
+        if k not in (metric_key, time_key) and isinstance(v, str)
+    ]
+    preferred = [k for k in label_candidates if "name" in k.lower()]
+    if preferred:
+        label_key = preferred[0]
+    else:
+        non_code_candidates = [
+            k for k in label_candidates
+            if not any(h in k.lower() for h in ("seq", "id", "code", "key"))
+        ]
+        label_key = non_code_candidates[0] if non_code_candidates else (label_candidates[0] if label_candidates else None)
 
     total = None
     if metric_key:
@@ -135,13 +155,14 @@ def summarize_rows(data_rows: list, metric_label_guess) -> dict:
     if metric_key and time_key:
         agg = {}
         for r in data_rows:
-            d = r.get(time_key)
-            if d is None:
+            d_raw = r.get(time_key)
+            if d_raw is None:
                 continue
+            d = to_date_str(d_raw)
             val = float(r.get(metric_key) or 0)
             agg[d] = agg.get(d, 0) + val
         series = sorted(
-            [{"date": str(d)[:10], "value": v} for d, v in agg.items()],
+            [{"date": d, "value": v} for d, v in agg.items()],
             key=lambda x: x["date"],
         )
 
