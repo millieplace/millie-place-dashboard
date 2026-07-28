@@ -258,23 +258,8 @@
   const METRIC_ORDER = ["uv", "benefit_claims", "staff_verifications"];
   const STORE_KEY = "store_breakdown";
 
-  function findNumericKey(row) {
-    return Object.keys(row).find(k => typeof row[k] === "number");
-  }
-  function findLabelKey(row, numericKey) {
-    return Object.keys(row).find(k => k !== numericKey && typeof row[k] !== "number");
-  }
-
-  function sumMetric(rows) {
-    if (!rows || rows.length === 0) return null;
-    const numKey = findNumericKey(rows[0]);
-    if (!numKey) return null;
-    return rows.reduce((acc, r) => acc + (Number(r[numKey]) || 0), 0);
-  }
-
-  function renderMetricRow(label, rows) {
-    const total = sumMetric(rows);
-    const valueText = total === null ? "-" : total.toLocaleString("ko-KR");
+  function renderMetricRow(label, total) {
+    const valueText = (total === null || total === undefined) ? "-" : Math.round(total).toLocaleString("ko-KR");
     return `
       <div class="stat-row">
         <div class="stat-label"><span>${label}</span><span class="leader"></span></div>
@@ -282,22 +267,27 @@
       </div>`;
   }
 
-  function renderStoreList(rows) {
+  function renderStoreList(rows, metricKey, labelKey) {
     if (!rows || rows.length === 0) {
       return `<div class="empty-note">아직 매장별 데이터가 없습니다.</div>`;
     }
-    const numKey = findNumericKey(rows[0]);
-    const labelKey = findLabelKey(rows[0], numKey);
-    if (!numKey || !labelKey) {
+    if (!metricKey || !labelKey) {
       return `<div class="empty-note">데이터 형식을 해석할 수 없습니다. Superset 응답 구조를 확인해주세요.</div>`;
     }
-    const sorted = [...rows].sort((a, b) => (b[numKey] || 0) - (a[numKey] || 0)).slice(0, 12);
-    const items = sorted.map((r, i) => `
+    // 매장별로 합산 (같은 매장이 여러 날짜에 걸쳐 나올 수 있으므로)
+    const totals = {};
+    rows.forEach(r => {
+      const name = r[labelKey];
+      const val = Number(r[metricKey]) || 0;
+      totals[name] = (totals[name] || 0) + val;
+    });
+    const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 12);
+    const items = sorted.map(([name, val], i) => `
       <li>
         <span class="rank">${String(i + 1).padStart(2, "0")}</span>
-        <span class="name">${r[labelKey]}</span>
+        <span class="name">${name}</span>
         <span class="leader"></span>
-        <span class="val">${Number(r[numKey]).toLocaleString("ko-KR")}</span>
+        <span class="val">${Math.round(val).toLocaleString("ko-KR")}</span>
       </li>`).join("");
     return `<ul class="store-list">${items}</ul>`;
   }
@@ -312,11 +302,15 @@
       let html = "";
       METRIC_ORDER.forEach(key => {
         const m = data.metrics && data.metrics[key];
-        if (m) html += renderMetricRow(m.label, m.data);
+        if (m) html += renderMetricRow(m.label, m.total);
       });
       html += `<div class="section-title">매장별 순위</div>`;
       const storeMetric = data.metrics && data.metrics[STORE_KEY];
-      html += renderStoreList(storeMetric ? storeMetric.data : []);
+      html += renderStoreList(
+        storeMetric ? storeMetric.data : [],
+        storeMetric ? storeMetric.metric_key : null,
+        storeMetric ? storeMetric.label_key : null
+      );
 
       area.innerHTML = html;
       document.getElementById("updated-at").textContent =
