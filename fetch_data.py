@@ -67,7 +67,7 @@ def get_csrf_token(access_token: str) -> tuple[str, str]:
 
 def fetch_chart_data(access_token: str, csrf_token: str, chart_id: int) -> dict:
     """특정 차트의 실제 데이터를 가져온다 (Superset Explore 화면이 실제로 쓰는 방식과 동일)."""
-    form_data = json.dumps({"slice_id": chart_id})
+    form_data = json.dumps({"slice_id": chart_id}, separators=(",", ":"))
     resp = requests.post(
         f"{SUPERSET_BASE_URL}/api/v1/chart/data",
         params={"form_data": form_data},
@@ -111,8 +111,18 @@ def main():
             data = fetch_chart_data(access_token, csrf_token, chart_id)
             output["metrics"][key] = {"label": LABELS[key], "chart_id": chart_id, "data": data}
         except Exception as e:
+            body_snippet = ""
+            resp_obj = getattr(e, "response", None)
+            if resp_obj is not None:
+                body_snippet = resp_obj.text[:500]
             print(f"  ⚠️  {LABELS[key]} 가져오기 실패: {e}", file=sys.stderr)
-            output["metrics"][key] = {"label": LABELS[key], "chart_id": chart_id, "data": [], "error": str(e)}
+            output["metrics"][key] = {
+                "label": LABELS[key],
+                "chart_id": chart_id,
+                "data": [],
+                "error": str(e),
+                "response_body": body_snippet,
+            }
 
     out_path = os.path.join(os.path.dirname(__file__), "docs", "data.json")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
