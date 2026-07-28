@@ -1,9 +1,0 @@
-{
-  "updated_at": "아직 데이터가 갱신되지 않았습니다",
-  "metrics": {
-    "uv": { "label": "UV", "chart_id": 3180, "data": [] },
-    "benefit_claims": { "label": "혜택받기", "chart_id": 3087, "data": [] },
-    "staff_verifications": { "label": "직원확인", "chart_id": 3085, "data": [] },
-    "store_breakdown": { "label": "매장별 데이터", "chart_id": 3037, "data": [] }
-  }
-}
