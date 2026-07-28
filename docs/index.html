@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>밀리플레이스 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #ece5d6;
+    --paper-shadow: #ddd4bf;
+    --ink: #2a2419;
+    --ink-soft: #5a5040;
+    --coffee: #6f4a2e;
+    --stamp: #a8433a;
+    --moss: #57624a;
+    --line: #b8af9c;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--paper-shadow);
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(0,0,0,0.03) 0, transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(0,0,0,0.03) 0, transparent 40%);
+    font-family: 'Noto Sans KR', sans-serif;
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+    padding: 48px 16px 96px;
+  }
+
+  .receipt-wrap {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .receipt {
+    background: var(--paper);
+    position: relative;
+    padding: 40px 32px 32px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 2px 0 rgba(0,0,0,0.05);
+  }
+
+  /* 영수증 톱니 상단/하단 */
+  .receipt::before, .receipt::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0;
+    height: 14px;
+    background:
+      radial-gradient(circle at 10px 0, transparent 8px, var(--paper-shadow) 8px) 0 -7px / 20px 14px repeat-x;
+  }
+  .receipt::before { top: -7px; transform: rotate(180deg); }
+  .receipt::after { bottom: -7px; }
+
+  .masthead {
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .masthead .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  .masthead h1 {
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 700;
+    font-size: 26px;
+    margin: 6px 0 2px;
+    letter-spacing: -0.01em;
+  }
+  .masthead .sub {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+
+  .divider {
+    border: none;
+    border-top: 2px dashed var(--line);
+    margin: 20px 0;
+  }
+
+  .stat-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+  }
+  .stat-row .stat-label {
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+  .stat-row .stat-label .leader {
+    flex: 1;
+    border-bottom: 1.5px dotted var(--line);
+    height: 0;
+    margin-bottom: 4px;
+  }
+  .stat-row .stat-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 17px;
+    white-space: nowrap;
+  }
+  .stat-row .stat-unit {
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-left: 2px;
+  }
+
+  .section-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--coffee);
+    text-transform: uppercase;
+    margin: 22px 0 4px;
+  }
+
+  .store-list {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0;
+  }
+  .store-list li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 13.5px;
+  }
+  .store-list .name { flex-shrink: 0; }
+  .store-list .leader {
+    flex: 1;
+    border-bottom: 1.5px dotted var(--line);
+    height: 0;
+    margin-bottom: 4px;
+  }
+  .store-list .val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .store-list .rank {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    width: 18px;
+  }
+
+  .empty-note {
+    font-size: 12px;
+    color: var(--ink-soft);
+    padding: 8px 0;
+  }
+
+  .stamp {
+    position: absolute;
+    top: 34px;
+    right: 28px;
+    transform: rotate(-8deg);
+    border: 2px solid var(--stamp);
+    color: var(--stamp);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 3px;
+    opacity: 0.85;
+  }
+
+  .footer {
+    margin-top: 24px;
+    text-align: center;
+  }
+  .footer .barcode {
+    height: 32px;
+    margin: 0 auto 10px;
+    width: 70%;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--ink) 0px, var(--ink) 2px,
+      transparent 2px, transparent 4px,
+      var(--ink) 4px, var(--ink) 5px,
+      transparent 5px, transparent 9px
+    );
+    opacity: 0.85;
+  }
+  .footer .updated {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.03em;
+  }
+  .footer .brand {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  .loading, .error {
+    text-align: center;
+    padding: 40px 0;
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .receipt { animation: drop 0.5s ease-out; }
+  }
+  @keyframes drop {
+    from { opacity: 0; transform: translateY(-16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+  <div class="receipt-wrap">
+    <div class="receipt">
+      <div class="stamp">MILLIE PLACE</div>
+      <div class="masthead">
+        <div class="eyebrow">Millie's Library × Cafe Partnership</div>
+        <h1>밀리플레이스 리포트</h1>
+        <div class="sub">전국 제휴 카페 구독자 혜택 트래킹</div>
+      </div>
+
+      <hr class="divider" />
+
+      <div id="metrics-area">
+        <div class="loading">데이터 불러오는 중...</div>
+      </div>
+
+      <div class="footer">
+        <div class="barcode"></div>
+        <div class="updated" id="updated-at">-</div>
+        <div class="brand">밀리의서재 · Millie Place</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const METRIC_ORDER = ["uv", "benefit_claims", "staff_verifications"];
+  const STORE_KEY = "store_breakdown";
+
+  function findNumericKey(row) {
+    return Object.keys(row).find(k => typeof row[k] === "number");
+  }
+  function findLabelKey(row, numericKey) {
+    return Object.keys(row).find(k => k !== numericKey && typeof row[k] !== "number");
+  }
+
+  function sumMetric(rows) {
+    if (!rows || rows.length === 0) return null;
+    const numKey = findNumericKey(rows[0]);
+    if (!numKey) return null;
+    return rows.reduce((acc, r) => acc + (Number(r[numKey]) || 0), 0);
+  }
+
+  function renderMetricRow(label, rows) {
+    const total = sumMetric(rows);
+    const valueText = total === null ? "-" : total.toLocaleString("ko-KR");
+    return `
+      <div class="stat-row">
+        <div class="stat-label"><span>${label}</span><span class="leader"></span></div>
+        <div class="stat-value">${valueText}<span class="stat-unit">건</span></div>
+      </div>`;
+  }
+
+  function renderStoreList(rows) {
+    if (!rows || rows.length === 0) {
+      return `<div class="empty-note">아직 매장별 데이터가 없습니다.</div>`;
+    }
+    const numKey = findNumericKey(rows[0]);
+    const labelKey = findLabelKey(rows[0], numKey);
+    if (!numKey || !labelKey) {
+      return `<div class="empty-note">데이터 형식을 해석할 수 없습니다. Superset 응답 구조를 확인해주세요.</div>`;
+    }
+    const sorted = [...rows].sort((a, b) => (b[numKey] || 0) - (a[numKey] || 0)).slice(0, 12);
+    const items = sorted.map((r, i) => `
+      <li>
+        <span class="rank">${String(i + 1).padStart(2, "0")}</span>
+        <span class="name">${r[labelKey]}</span>
+        <span class="leader"></span>
+        <span class="val">${Number(r[numKey]).toLocaleString("ko-KR")}</span>
+      </li>`).join("");
+    return `<ul class="store-list">${items}</ul>`;
+  }
+
+  async function load() {
+    const area = document.getElementById("metrics-area");
+    try {
+      const res = await fetch("./data.json", { cache: "no-store" });
+      if (!res.ok) throw new Error("data.json을 불러오지 못했습니다");
+      const data = await res.json();
+
+      let html = "";
+      METRIC_ORDER.forEach(key => {
+        const m = data.metrics && data.metrics[key];
+        if (m) html += renderMetricRow(m.label, m.data);
+      });
+      html += `<div class="section-title">매장별 순위</div>`;
+      const storeMetric = data.metrics && data.metrics[STORE_KEY];
+      html += renderStoreList(storeMetric ? storeMetric.data : []);
+
+      area.innerHTML = html;
+      document.getElementById("updated-at").textContent =
+        "발행일시  " + (data.updated_at || "-");
+    } catch (e) {
+      area.innerHTML = `<div class="error">데이터를 불러오지 못했습니다.<br>${e.message}</div>`;
+    }
+  }
+
+  load();
+</script>
+</body>
+</html>
