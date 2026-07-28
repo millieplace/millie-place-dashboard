@@ -9,6 +9,7 @@ docs/ 폴더에 저장되어 웹페이지가 바로 fetch 해서 사용할 수 �
 
 import json
 import os
+import re
 import sys
 from datetime import datetime, timezone, timedelta
 
@@ -83,9 +84,9 @@ def guess_metric_label(query_context: dict):
 
 
 def summarize_rows(data_rows: list, metric_label_guess) -> dict:
-    """실제 반환된 row들을 보고 어떤 컬럼이 진짜 지표인지, 어떤 컬럼이 라벨(매장명 등)인지 판별해 합산한다."""
+    """실제 반환된 row들을 보고 지표/라벨/날짜 컬럼을 판별해 합산 및 일별 시계열을 만든다."""
     if not data_rows:
-        return {"total": None, "metric_key": None, "label_key": None, "rows": []}
+        return {"total": None, "metric_key": None, "label_key": None, "time_key": None, "series": [], "rows": []}
 
     sample = data_rows[0]
     exclude_hints = ("date", "seq", "id", "time", "key", "__")
@@ -101,9 +102,28 @@ def summarize_rows(data_rows: list, metric_label_guess) -> dict:
         ]
         metric_key = candidates[0] if candidates else None
 
+    # 날짜/시간 컬럼 추정
+    time_key = None
+    for k in sample.keys():
+        if k == metric_key:
+            continue
+        if "date" in k.lower() or "time" in k.lower():
+            time_key = k
+            break
+    if time_key is None:
+        for k, v in sample.items():
+            if k == metric_key:
+                continue
+            if isinstance(v, str) and re.match(r"^\d{4}-\d{2}-\d{2}", v):
+                time_key = k
+                break
+
+    # 라벨(매장명 등) 컬럼 추정
     label_key = None
     for k, v in sample.items():
-        if k != metric_key and isinstance(v, str):
+        if k in (metric_key, time_key):
+            continue
+        if isinstance(v, str):
             label_key = k
             break
 
@@ -111,7 +131,28 @@ def summarize_rows(data_rows: list, metric_label_guess) -> dict:
     if metric_key:
         total = sum(float(r.get(metric_key) or 0) for r in data_rows)
 
-    return {"total": total, "metric_key": metric_key, "label_key": label_key, "rows": data_rows}
+    series = []
+    if metric_key and time_key:
+        agg = {}
+        for r in data_rows:
+            d = r.get(time_key)
+            if d is None:
+                continue
+            val = float(r.get(metric_key) or 0)
+            agg[d] = agg.get(d, 0) + val
+        series = sorted(
+            [{"date": str(d)[:10], "value": v} for d, v in agg.items()],
+            key=lambda x: x["date"],
+        )
+
+    return {
+        "total": total,
+        "metric_key": metric_key,
+        "label_key": label_key,
+        "time_key": time_key,
+        "series": series,
+        "rows": data_rows,
+    }
 
 
 def get_chart_query_context(session: requests.Session, access_token: str, chart_id: int) -> dict:
@@ -192,6 +233,8 @@ def main():
                 "total": summary["total"],
                 "metric_key": summary["metric_key"],
                 "label_key": summary["label_key"],
+                "time_key": summary["time_key"],
+                "series": summary["series"],
                 "data": summary["rows"],
             }
         except Exception as e:
