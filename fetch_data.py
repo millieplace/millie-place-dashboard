@@ -66,6 +66,54 @@ def get_csrf_token(session: requests.Session, access_token: str) -> str:
     return resp.json().get("result")
 
 
+def guess_metric_label(query_context: dict):
+    """query_context에서 실제 지표(metric)의 컬럼명을 추정한다."""
+    try:
+        metrics = query_context["queries"][0].get("metrics", [])
+        if not metrics:
+            return None
+        m = metrics[0]
+        if isinstance(m, str):
+            return m
+        if isinstance(m, dict):
+            return m.get("label") or (m.get("column") or {}).get("column_name")
+    except Exception:
+        return None
+    return None
+
+
+def summarize_rows(data_rows: list, metric_label_guess) -> dict:
+    """실제 반환된 row들을 보고 어떤 컬럼이 진짜 지표인지, 어떤 컬럼이 라벨(매장명 등)인지 판별해 합산한다."""
+    if not data_rows:
+        return {"total": None, "metric_key": None, "label_key": None, "rows": []}
+
+    sample = data_rows[0]
+    exclude_hints = ("date", "seq", "id", "time", "key", "__")
+
+    metric_key = None
+    if metric_label_guess and isinstance(sample.get(metric_label_guess), (int, float)):
+        metric_key = metric_label_guess
+
+    if metric_key is None:
+        candidates = [
+            k for k, v in sample.items()
+            if isinstance(v, (int, float)) and not any(h in k.lower() for h in exclude_hints)
+        ]
+        metric_key = candidates[0] if candidates else None
+
+    label_key = None
+    for k, v in sample.items():
+        if k != metric_key and isinstance(v, str):
+            label_key = k
+            break
+
+    total = None
+    if metric_key:
+        total = sum(float(r.get(metric_key) or 0) for r in data_rows)
+
+    return {"total": total, "metric_key": metric_key, "label_key": label_key, "rows": data_rows}
+
+
 def get_chart_query_context(session: requests.Session, access_token: str, chart_id: int) -> dict:
     """차트에 저장된 query_context(실제 쿼리 정의)를 가져온다."""
     resp = session.get(
@@ -87,7 +135,7 @@ def get_chart_query_context(session: requests.Session, access_token: str, chart_
     return json.loads(qc)
 
 
-def fetch_chart_data(session: requests.Session, access_token: str, csrf_token: str, chart_id: int) -> dict:
+def fetch_chart_data(session: requests.Session, access_token: str, csrf_token: str, chart_id: int):
     """저장된 query_context를 그대로 사용해 차트의 실제 데이터를 가져온다."""
     query_context = get_chart_query_context(session, access_token, chart_id)
     query_context.setdefault("result_format", "json")
@@ -108,7 +156,9 @@ def fetch_chart_data(session: requests.Session, access_token: str, csrf_token: s
     resp.raise_for_status()
     payload = resp.json()
     result = payload.get("result", [{}])[0]
-    return result.get("data", [])
+    data_rows = result.get("data", [])
+    metric_guess = guess_metric_label(query_context)
+    return data_rows, metric_guess
 
 
 def main():
@@ -134,8 +184,16 @@ def main():
     for key, chart_id in CHARTS.items():
         print(f"[{LABELS[key]}] 차트({chart_id}) 데이터 가져오는 중...")
         try:
-            data = fetch_chart_data(session, access_token, csrf_token, chart_id)
-            output["metrics"][key] = {"label": LABELS[key], "chart_id": chart_id, "data": data}
+            data_rows, metric_guess = fetch_chart_data(session, access_token, csrf_token, chart_id)
+            summary = summarize_rows(data_rows, metric_guess)
+            output["metrics"][key] = {
+                "label": LABELS[key],
+                "chart_id": chart_id,
+                "total": summary["total"],
+                "metric_key": summary["metric_key"],
+                "label_key": summary["label_key"],
+                "data": summary["rows"],
+            }
         except Exception as e:
             body_snippet = ""
             resp_obj = getattr(e, "response", None)
