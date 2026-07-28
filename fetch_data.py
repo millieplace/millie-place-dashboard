@@ -66,12 +66,35 @@ def get_csrf_token(session: requests.Session, access_token: str) -> str:
     return resp.json().get("result")
 
 
+def get_chart_query_context(session: requests.Session, access_token: str, chart_id: int) -> dict:
+    """차트에 저장된 query_context(실제 쿼리 정의)를 가져온다."""
+    resp = session.get(
+        f"{SUPERSET_BASE_URL}/api/v1/chart/{chart_id}",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    result = resp.json().get("result", {})
+    qc = result.get("query_context")
+    if not qc:
+        raise RuntimeError(
+            "이 차트에는 저장된 query_context가 없습니다. "
+            "Superset에서 해당 차트를 한 번 열어서 'Save' 해주면 생성됩니다."
+        )
+    return json.loads(qc)
+
+
 def fetch_chart_data(session: requests.Session, access_token: str, csrf_token: str, chart_id: int) -> dict:
-    """특정 차트의 실제 데이터를 가져온다 (Superset Explore 화면이 실제로 쓰는 방식과 동일)."""
-    form_data = json.dumps({"slice_id": chart_id}, separators=(",", ":"))
+    """저장된 query_context를 그대로 사용해 차트의 실제 데이터를 가져온다."""
+    query_context = get_chart_query_context(session, access_token, chart_id)
+    query_context.setdefault("result_format", "json")
+    query_context.setdefault("result_type", "full")
+
     resp = session.post(
         f"{SUPERSET_BASE_URL}/api/v1/chart/data",
-        params={"form_data": form_data},
         headers={
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
@@ -79,7 +102,7 @@ def fetch_chart_data(session: requests.Session, access_token: str, csrf_token: s
             "X-CSRFToken": csrf_token,
             "Referer": SUPERSET_BASE_URL + "/",
         },
-        json={},
+        json=query_context,
         timeout=60,
     )
     resp.raise_for_status()
