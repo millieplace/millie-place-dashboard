@@ -1,33 +1,33 @@
 {
-  "updated_at": "2026-07-28 18:21:22 KST",
+  "updated_at": "2026-07-28 18:25:37 KST",
   "metrics": {
     "uv": {
       "label": "UV",
       "chart_id": 3180,
       "data": [],
       "error": "500 Server Error: INTERNAL SERVER ERROR for url: https://superset.data.millie.co.kr/api/v1/chart/data?form_data=%7B%22slice_id%22%3A3180%7D",
-      "response_body": "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"/><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"/><meta name=\"viewport\" content=\"width=q,initial-scale=1\"/><link rel=\"icon\" type=\"image/png\" href=\"/static/assets/e3bafb62eb2592c0bb0e.png\"/><link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap\" rel=\"stylesheet\"/><style>html {\n        height: 100%;\n      }\n      body {\n        color: #1985a0;\n        font-family: 'Inter', sans-serif;\n        height: 100%"
+      "response_body": "{\"errors\": [{\"message\": \"create() missing 2 required keyword-only arguments: 'datasource' and 'queries'\", \"error_type\": \"GENERIC_BACKEND_ERROR\", \"level\": \"error\", \"extra\": {\"issue_codes\": [{\"code\": 1011, \"message\": \"Issue 1011 - Superset encountered an unexpected error.\"}]}}]}"
     },
     "benefit_claims": {
       "label": "혜택받기",
       "chart_id": 3087,
       "data": [],
       "error": "500 Server Error: INTERNAL SERVER ERROR for url: https://superset.data.millie.co.kr/api/v1/chart/data?form_data=%7B%22slice_id%22%3A3087%7D",
-      "response_body": "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"/><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"/><meta name=\"viewport\" content=\"width=q,initial-scale=1\"/><link rel=\"icon\" type=\"image/png\" href=\"/static/assets/e3bafb62eb2592c0bb0e.png\"/><link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap\" rel=\"stylesheet\"/><style>html {\n        height: 100%;\n      }\n      body {\n        color: #1985a0;\n        font-family: 'Inter', sans-serif;\n        height: 100%"
+      "response_body": "{\"errors\": [{\"message\": \"create() missing 2 required keyword-only arguments: 'datasource' and 'queries'\", \"error_type\": \"GENERIC_BACKEND_ERROR\", \"level\": \"error\", \"extra\": {\"issue_codes\": [{\"code\": 1011, \"message\": \"Issue 1011 - Superset encountered an unexpected error.\"}]}}]}"
     },
     "staff_verifications": {
       "label": "직원확인",
       "chart_id": 3085,
       "data": [],
       "error": "500 Server Error: INTERNAL SERVER ERROR for url: https://superset.data.millie.co.kr/api/v1/chart/data?form_data=%7B%22slice_id%22%3A3085%7D",
-      "response_body": "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"/><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"/><meta name=\"viewport\" content=\"width=q,initial-scale=1\"/><link rel=\"icon\" type=\"image/png\" href=\"/static/assets/e3bafb62eb2592c0bb0e.png\"/><link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap\" rel=\"stylesheet\"/><style>html {\n        height: 100%;\n      }\n      body {\n        color: #1985a0;\n        font-family: 'Inter', sans-serif;\n        height: 100%"
+      "response_body": "{\"errors\": [{\"message\": \"create() missing 2 required keyword-only arguments: 'datasource' and 'queries'\", \"error_type\": \"GENERIC_BACKEND_ERROR\", \"level\": \"error\", \"extra\": {\"issue_codes\": [{\"code\": 1011, \"message\": \"Issue 1011 - Superset encountered an unexpected error.\"}]}}]}"
     },
     "store_breakdown": {
       "label": "매장별 데이터",
       "chart_id": 3037,
       "data": [],
       "error": "500 Server Error: INTERNAL SERVER ERROR for url: https://superset.data.millie.co.kr/api/v1/chart/data?form_data=%7B%22slice_id%22%3A3037%7D",
-      "response_body": "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"/><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\"/><meta name=\"viewport\" content=\"width=q,initial-scale=1\"/><link rel=\"icon\" type=\"image/png\" href=\"/static/assets/e3bafb62eb2592c0bb0e.png\"/><link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap\" rel=\"stylesheet\"/><style>html {\n        height: 100%;\n      }\n      body {\n        color: #1985a0;\n        font-family: 'Inter', sans-serif;\n        height: 100%"
+      "response_body": "{\"errors\": [{\"message\": \"create() missing 2 required keyword-only arguments: 'datasource' and 'queries'\", \"error_type\": \"GENERIC_BACKEND_ERROR\", \"level\": \"error\", \"extra\": {\"issue_codes\": [{\"code\": 1011, \"message\": \"Issue 1011 - Superset encountered an unexpected error.\"}]}}]}"
     }
   }
 }
