@@ -1108,6 +1108,51 @@
     const rankSeries = getStoreMonthlyRankSeries(monthlyTotals, storeName);
     const repeatRatio = computeStoreRepeatRatio(dsRawRows, dsLabelKey, dsMetricKey, storeName);
 
+    // 요일별 평균 방문자 (전체 기간 기준)
+    const weekdayNames = ["일", "월", "화", "수", "목", "금", "토"];
+    const wdSums = new Array(7).fill(0);
+    const wdCounts = new Array(7).fill(0);
+    dailySeries.forEach(p => {
+      const wd = new Date(p.date + "T00:00:00").getDay();
+      wdSums[wd] += p.value;
+      wdCounts[wd] += 1;
+    });
+    const wdAvgs = wdSums.map((s, i) => wdCounts[i] ? s / wdCounts[i] : 0);
+    let bestWd = 0, worstWd = 0;
+    wdAvgs.forEach((v, i) => {
+      if (v > wdAvgs[bestWd]) bestWd = i;
+      if (wdCounts[i] > 0 && (wdCounts[worstWd] === 0 || v < wdAvgs[worstWd])) worstWd = i;
+    });
+    const hasWeekdayData = dailySeries.length >= 14;
+
+    // 최근 추세 (최근 7일 vs 이전 7일)
+    const last7 = dailySeries.slice(-7);
+    const prev7 = dailySeries.slice(-14, -7);
+    const avgOf = arr => arr.length ? arr.reduce((a, p) => a + p.value, 0) / arr.length : null;
+    const last7Avg = avgOf(last7);
+    const prev7Avg = avgOf(prev7);
+    const trendPct = (prev7Avg && prev7Avg > 0) ? ((last7Avg - prev7Avg) / prev7Avg) * 100 : null;
+
+    const insights = [];
+    if (hasWeekdayData) {
+      insights.push(`<b>${weekdayNames[bestWd]}요일</b>에 방문자가 가장 많아요 (평균 ${fmt(wdAvgs[bestWd])}명) · <b>${weekdayNames[worstWd]}요일</b>이 가장 적어요 (평균 ${fmt(wdAvgs[worstWd])}명)`);
+    }
+    if (curRank !== null) {
+      if (rankChange === null) {
+        insights.push(`밀리플레이스 전체 ${totalStores}개 매장 중 <b>${curRank}위</b>예요`);
+      } else if (rankChange > 0) {
+        insights.push(`이번 달 <b>${curRank}위</b>로, 전월(${prevRank}위) 대비 <span style="color:var(--good); font-weight:600;">▲${rankChange}계단 상승</span>했어요`);
+      } else if (rankChange < 0) {
+        insights.push(`이번 달 <b>${curRank}위</b>로, 전월(${prevRank}위) 대비 <span style="color:var(--bad); font-weight:600;">▼${Math.abs(rankChange)}계단 하락</span>했어요`);
+      } else {
+        insights.push(`이번 달도 <b>${curRank}위</b>로 순위 변동이 없어요`);
+      }
+    }
+    if (trendPct !== null) {
+      const up = trendPct >= 0;
+      insights.push(`최근 7일 평균 방문자는 ${fmt(last7Avg)}명으로, 이전 7일(${fmt(prev7Avg)}명) 대비 <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">${up ? "▲" : "▼"} ${Math.abs(trendPct).toFixed(1)}%</span> ${up ? "증가" : "감소"} 추세예요`);
+    }
+
     function rankChangeBadge() {
       if (rankChange === null) return "";
       if (rankChange > 0) return `<span class="kpi-delta up">▲ ${rankChange}계단</span>`;
@@ -1115,7 +1160,17 @@
       return `<span class="kpi-delta" style="color:var(--ink-faint); background:#f1f2f5;">- 변동없음</span>`;
     }
 
+    const insightsHtml = insights.length
+      ? `<div class="section-card">
+          <div class="section-head"><h2>📌 ${storeName} 매장 인사이트</h2></div>
+          <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
+            ${insights.map(t => `<li>${t}</li>`).join("")}
+          </ul>
+        </div>`
+      : "";
+
     detailArea.innerHTML = `
+      ${insightsHtml}
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-top"><div class="kpi-label">${curLabel} 누적 방문자</div></div>
