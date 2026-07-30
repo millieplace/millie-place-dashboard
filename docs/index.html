@@ -52,7 +52,7 @@
     align-items: flex-end;
     flex-wrap: wrap;
     gap: 12px;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
   }
   .topbar .title-block .eyebrow {
     font-size: 12px;
@@ -86,6 +86,47 @@
     background: var(--good);
     box-shadow: 0 0 0 3px rgba(21,128,61,0.15);
   }
+
+  /* ---------- Tabs ---------- */
+  .tab-nav {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-nav button {
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-faint);
+    padding: 10px 4px;
+    margin-right: 22px;
+    cursor: pointer;
+    position: relative;
+    top: 1px;
+  }
+  .tab-nav button.active {
+    color: var(--ink);
+    border-bottom: 2px solid var(--accent);
+  }
+  .tab-nav button:hover:not(.active) { color: var(--ink-soft); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .placeholder-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    border-radius: var(--radius);
+    padding: 60px 20px;
+    text-align: center;
+  }
+  .placeholder-panel .icon { font-size: 28px; margin-bottom: 10px; }
+  .placeholder-panel h3 { font-size: 15px; margin: 0 0 6px; }
+  .placeholder-panel p { font-size: 13px; color: var(--ink-soft); margin: 0; }
 
   /* ---------- KPI cards ---------- */
   .kpi-grid {
@@ -148,6 +189,11 @@
   .kpi-card .kpi-spark {
     height: 36px;
     margin-top: 6px;
+  }
+  .kpi-card .kpi-sub {
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-top: 4px;
   }
 
   /* ---------- Section cards ---------- */
@@ -221,6 +267,7 @@
   }
 
   .trend-chart-wrap { height: 270px; }
+  .trend-chart-wrap.tall { height: 320px; }
 
   .two-col {
     display: grid;
@@ -229,6 +276,7 @@
   }
 
   .bar-chart-wrap { height: 300px; }
+  .bar-chart-wrap.tall { height: 420px; }
 
   .store-stats-row {
     display: flex;
@@ -261,7 +309,6 @@
     border-bottom: 1px solid #f0f1f3;
   }
   table.rank-table tr:last-child td { border-bottom: none; }
-  table.rank-table tr.highlight { background: var(--accent-soft); }
   table.rank-table td.rank-num {
     font-family: 'IBM Plex Mono', monospace;
     color: var(--ink-faint);
@@ -312,8 +359,22 @@
       <div class="status-pill"><span class="dot"></span><span id="updated-at">불러오는 중...</span></div>
     </div>
 
-    <div id="dashboard-area">
-      <div class="loading">데이터 불러오는 중...</div>
+    <div class="tab-nav" id="tab-nav">
+      <button class="active" data-tab="daily">일별 트래킹</button>
+      <button data-tab="monthly">월간 데이터</button>
+      <button data-tab="partner">제휴처별 데이터</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-daily">
+      <div id="daily-area"><div class="loading">데이터 불러오는 중...</div></div>
+    </div>
+
+    <div class="tab-panel" id="tab-monthly">
+      <div id="monthly-area"></div>
+    </div>
+
+    <div class="tab-panel" id="tab-partner">
+      <div id="partner-area"></div>
     </div>
 
     <div class="footer">밀리의서재 · Millie Place</div>
@@ -327,9 +388,9 @@
   const STORE_KEY = "store_breakdown";
 
   let METRICS_DATA = {};
-  let STORE_ROWS = [];
-  let currentPeriod = "day";
-  let trendChartInstance = null;
+  let monthlyPeriod = "month";
+  let dailyChartInstance = null;
+  let monthlyChartInstance = null;
   let storeChartInstance = null;
 
   function fmt(n) {
@@ -337,14 +398,12 @@
     return Math.round(n).toLocaleString("ko-KR");
   }
 
-  function sparklineSvg(series, color) {
-    if (!series || series.length < 2) return "";
-    const recent = series.slice(-30);
+  function sparklineSvg(values, color) {
+    if (!values || values.length < 2) return "";
     const w = 240, h = 36, pad = 3;
-    const values = recent.map(p => p.value);
     const min = Math.min(...values), max = Math.max(...values);
     const range = (max - min) || 1;
-    const step = (w - pad * 2) / (recent.length - 1);
+    const step = (w - pad * 2) / (values.length - 1);
     const pts = values.map((v, i) => {
       const x = pad + i * step;
       const y = h - pad - ((v - min) / range) * (h - pad * 2);
@@ -363,27 +422,11 @@
     return ((last7 - prev7) / prev7) * 100;
   }
 
-  function kpiCard(key, metric) {
-    const color = COLORS[key];
-    const spark = sparklineSvg(metric.series, color);
-    const delta = weeklyDelta(metric.series);
-    let deltaHtml = "";
-    if (delta !== null) {
-      const cls = delta >= 0 ? "up" : "down";
-      const arrow = delta >= 0 ? "▲" : "▼";
-      deltaHtml = `<span class="kpi-delta ${cls}">${arrow} ${Math.abs(delta).toFixed(1)}%</span>`;
-    }
-    return `
-      <div class="kpi-card">
-        <div class="kpi-top">
-          <div class="kpi-label"><span class="kpi-dot" style="background:${color}"></span>${metric.label}</div>
-        </div>
-        <div class="kpi-value-row">
-          <div class="kpi-value">${fmt(metric.total)}<span class="unit">건</span></div>
-          ${deltaHtml}
-        </div>
-        <div class="kpi-spark">${spark}</div>
-      </div>`;
+  function deltaBadge(delta) {
+    if (delta === null || delta === undefined || !isFinite(delta)) return "";
+    const cls = delta >= 0 ? "up" : "down";
+    const arrow = delta >= 0 ? "▲" : "▼";
+    return `<span class="kpi-delta ${cls}">${arrow} ${Math.abs(delta).toFixed(1)}%</span>`;
   }
 
   function getQuarter(dateStr) {
@@ -410,28 +453,51 @@
     }));
   }
 
-  function renderTrendChart() {
-    const ctx = document.getElementById("trendChart");
+  /* ================= 일별 트래킹 탭 ================= */
+
+  function renderDailyKpiCards() {
+    let html = "";
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (!m) return;
+      const color = COLORS[key];
+      const recent = (m.series || []).slice(-30).map(p => p.value);
+      const delta = weeklyDelta(m.series);
+      html += `
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <div class="kpi-label"><span class="kpi-dot" style="background:${color}"></span>${m.label}</div>
+          </div>
+          <div class="kpi-value-row">
+            <div class="kpi-value">${fmt(m.total)}<span class="unit">건</span></div>
+            ${deltaBadge(delta)}
+          </div>
+          <div class="kpi-spark">${sparklineSvg(recent, color)}</div>
+          <div class="kpi-sub">최근 30일 합계 · 최근 7일 전주比</div>
+        </div>`;
+    });
+    return html;
+  }
+
+  function renderDailyTrendChart() {
+    const ctx = document.getElementById("dailyTrendChart");
     if (!ctx) return;
-    if (trendChartInstance) { trendChartInstance.destroy(); trendChartInstance = null; }
+    if (dailyChartInstance) { dailyChartInstance.destroy(); dailyChartInstance = null; }
 
     const perMetric = {};
     let allKeys = new Set();
     METRIC_ORDER.forEach(key => {
       const m = METRICS_DATA[key];
       if (m && m.series && m.series.length) {
-        const agg = aggregateSeries(m.series, currentPeriod);
+        const agg = aggregateSeries(m.series, "day");
         perMetric[key] = agg;
         agg.forEach(p => allKeys.add(p.key));
       }
     });
     const sortedKeys = Array.from(allKeys).sort();
     if (sortedKeys.length === 0) return;
-
     const labelMap = {};
-    METRIC_ORDER.forEach(key => {
-      (perMetric[key] || []).forEach(p => { labelMap[p.key] = p.label; });
-    });
+    METRIC_ORDER.forEach(key => (perMetric[key] || []).forEach(p => { labelMap[p.key] = p.label; }));
     const labels = sortedKeys.map(k => labelMap[k] || k);
 
     const datasets = METRIC_ORDER.filter(k => perMetric[k]).map(key => {
@@ -443,16 +509,119 @@
         borderColor: COLORS[key],
         backgroundColor: COLORS[key],
         tension: 0.3,
-        pointRadius: currentPeriod === "day" ? 0 : 3,
+        pointRadius: 0,
+        borderWidth: 2,
+        spanGaps: true,
+      };
+    });
+
+    dailyChartInstance = new Chart(ctx, {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: { legend: { display: false }, datalabels: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+          y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+        },
+      },
+    });
+  }
+
+  function renderDailyTab() {
+    const area = document.getElementById("daily-area");
+    area.innerHTML = `
+      <div class="kpi-grid">${renderDailyKpiCards()}</div>
+      <div class="section-card">
+        <div class="section-head">
+          <h2>일별 추이 (최근 30일)</h2>
+          <div class="legend">
+            ${METRIC_ORDER.filter(k => METRICS_DATA[k]).map(k => `
+              <span class="legend-item"><span class="legend-dot" style="background:${COLORS[k]}"></span>${METRICS_DATA[k].label}</span>
+            `).join("")}
+          </div>
+        </div>
+        <div class="trend-chart-wrap tall"><canvas id="dailyTrendChart"></canvas></div>
+      </div>`;
+    renderDailyTrendChart();
+  }
+
+  /* ================= 월간 데이터 탭 ================= */
+
+  function monthOverMonthDelta(agg) {
+    if (agg.length < 2) return null;
+    const cur = agg[agg.length - 1].value;
+    const prev = agg[agg.length - 2].value;
+    if (prev === 0) return null;
+    return ((cur - prev) / prev) * 100;
+  }
+
+  function renderMonthlyKpiCards() {
+    let html = "";
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (!m || !m.series || !m.series.length) return;
+      const color = COLORS[key];
+      const agg = aggregateSeries(m.series, "month");
+      const latest = agg[agg.length - 1];
+      const delta = monthOverMonthDelta(agg);
+      html += `
+        <div class="kpi-card">
+          <div class="kpi-top">
+            <div class="kpi-label"><span class="kpi-dot" style="background:${color}"></span>${m.label}</div>
+          </div>
+          <div class="kpi-value-row">
+            <div class="kpi-value">${fmt(latest ? latest.value : null)}<span class="unit">건</span></div>
+            ${deltaBadge(delta)}
+          </div>
+          <div class="kpi-spark">${sparklineSvg(agg.map(p => p.value), color)}</div>
+          <div class="kpi-sub">${latest ? latest.label : "-"} 합계 · 전월比</div>
+        </div>`;
+    });
+    return html;
+  }
+
+  function renderMonthlyTrendChart() {
+    const ctx = document.getElementById("monthlyTrendChart");
+    if (!ctx) return;
+    if (monthlyChartInstance) { monthlyChartInstance.destroy(); monthlyChartInstance = null; }
+
+    const perMetric = {};
+    let allKeys = new Set();
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (m && m.series && m.series.length) {
+        const agg = aggregateSeries(m.series, monthlyPeriod);
+        perMetric[key] = agg;
+        agg.forEach(p => allKeys.add(p.key));
+      }
+    });
+    const sortedKeys = Array.from(allKeys).sort();
+    if (sortedKeys.length === 0) return;
+    const labelMap = {};
+    METRIC_ORDER.forEach(key => (perMetric[key] || []).forEach(p => { labelMap[p.key] = p.label; }));
+    const labels = sortedKeys.map(k => labelMap[k] || k);
+
+    const datasets = METRIC_ORDER.filter(k => perMetric[k]).map(key => {
+      const valueByKey = {};
+      perMetric[key].forEach(p => { valueByKey[p.key] = p.value; });
+      return {
+        label: METRICS_DATA[key].label,
+        data: sortedKeys.map(k => valueByKey[k] !== undefined ? valueByKey[k] : null),
+        borderColor: COLORS[key],
+        backgroundColor: COLORS[key],
+        tension: 0.3,
+        pointRadius: 4,
         pointBackgroundColor: COLORS[key],
         borderWidth: 2,
         spanGaps: true,
       };
     });
 
-    const showLabels = sortedKeys.length <= 12;
-
-    trendChartInstance = new Chart(ctx, {
+    monthlyChartInstance = new Chart(ctx, {
       type: "line",
       data: { labels, datasets },
       options: {
@@ -461,12 +630,12 @@
         interaction: { mode: "index", intersect: false },
         plugins: {
           legend: { display: false },
-          datalabels: showLabels ? {
+          datalabels: {
             align: "top",
-            font: { size: 10, family: "'IBM Plex Mono', monospace", weight: 600 },
+            font: { size: 10.5, family: "'IBM Plex Mono', monospace", weight: 600 },
             color: (c) => c.dataset.borderColor,
             formatter: (v) => v === null ? "" : Math.round(v).toLocaleString("ko-KR"),
-          } : { display: false },
+          },
         },
         scales: {
           x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
@@ -475,6 +644,40 @@
       },
     });
   }
+
+  function renderMonthlyTab() {
+    const area = document.getElementById("monthly-area");
+    area.innerHTML = `
+      <div class="kpi-grid">${renderMonthlyKpiCards()}</div>
+      <div class="section-card">
+        <div class="section-head">
+          <h2>기간별 추이</h2>
+          <div style="display:flex; align-items:center; gap:16px;">
+            <div class="legend">
+              ${METRIC_ORDER.filter(k => METRICS_DATA[k]).map(k => `
+                <span class="legend-item"><span class="legend-dot" style="background:${COLORS[k]}"></span>${METRICS_DATA[k].label}</span>
+              `).join("")}
+            </div>
+            <div class="segmented" id="monthly-period-toggle">
+              <button class="active" data-period="month">월별</button>
+              <button data-period="quarter">분기별</button>
+            </div>
+          </div>
+        </div>
+        <div class="trend-chart-wrap tall"><canvas id="monthlyTrendChart"></canvas></div>
+      </div>`;
+    renderMonthlyTrendChart();
+    document.querySelectorAll("#monthly-period-toggle button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#monthly-period-toggle button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        monthlyPeriod = btn.dataset.period;
+        renderMonthlyTrendChart();
+      });
+    });
+  }
+
+  /* ================= 제휴처별 데이터 탭 ================= */
 
   function computeStoreTotals(rows, metricKey, labelKey) {
     const totals = {};
@@ -491,32 +694,23 @@
     filtered.forEach(r => {
       const monthRaw = r["produce_month"];
       let key = "기타";
-      if (typeof monthRaw === "number") {
-        key = new Date(monthRaw).toISOString().slice(0, 7);
-      }
+      if (typeof monthRaw === "number") key = new Date(monthRaw).toISOString().slice(0, 7);
       buckets[key] = (buckets[key] || 0) + (Number(r[metricKey]) || 0);
     });
     return Object.keys(buckets).sort().map(k => ({ label: k, value: buckets[k] }));
   }
 
-  function renderStoreSection() {
+  function renderStoreChartAndTable() {
     const storeMetric = METRICS_DATA[STORE_KEY];
     const selectEl = document.getElementById("store-select");
     const selected = selectEl ? selectEl.value : "__all__";
-
-    if (!storeMetric || !storeMetric.data || !storeMetric.data.length) {
-      document.getElementById("store-chart-area").innerHTML = '<div class="empty-note">아직 매장별 데이터가 없습니다.</div>';
-      document.getElementById("rank-table-area").innerHTML = "";
-      return;
-    }
     const { data, metric_key, label_key } = storeMetric;
-    if (!metric_key || !label_key) return;
 
     const ctxEl = document.getElementById("storeBarChart");
     if (storeChartInstance) { storeChartInstance.destroy(); storeChartInstance = null; }
 
     if (selected === "__all__") {
-      const sorted = computeStoreTotals(data, metric_key, label_key).slice(0, 10);
+      const sorted = computeStoreTotals(data, metric_key, label_key).slice(0, 15);
       storeChartInstance = new Chart(ctxEl, {
         type: "bar",
         data: {
@@ -544,7 +738,7 @@
       });
 
       const allSorted = computeStoreTotals(data, metric_key, label_key);
-      const rows = allSorted.slice(0, 12).map(([name, val], i) => `
+      const rows = allSorted.map(([name, val], i) => `
         <tr>
           <td class="rank-num">${String(i + 1).padStart(2, "0")}</td>
           <td>${name}</td>
@@ -565,7 +759,7 @@
         type: "bar",
         data: {
           labels: monthly.map(p => p.label),
-          datasets: [{ data: monthly.map(p => p.value), backgroundColor: "#a8562a", borderRadius: 5, maxBarThickness: 40 }],
+          datasets: [{ data: monthly.map(p => p.value), backgroundColor: "#a8562a", borderRadius: 5, maxBarThickness: 50 }],
         },
         options: {
           responsive: true,
@@ -598,93 +792,68 @@
     }
   }
 
-  function setupPeriodToggle() {
-    document.querySelectorAll("#period-toggle button").forEach(btn => {
+  function renderPartnerTab() {
+    const area = document.getElementById("partner-area");
+    const storeMetric = METRICS_DATA[STORE_KEY];
+    const hasStoreData = storeMetric && storeMetric.data && storeMetric.data.length;
+
+    if (!hasStoreData) {
+      area.innerHTML = `<div class="placeholder-panel"><div class="icon">🏬</div><h3>제휴처 데이터 없음</h3><p>매장별 데이터가 아직 없습니다.</p></div>`;
+      return;
+    }
+
+    area.innerHTML = `
+      <div class="two-col">
+        <div class="section-card">
+          <div class="section-head">
+            <h2>제휴처 순위 / 추이</h2>
+            <select class="store-select" id="store-select"><option>매장 불러오는 중...</option></select>
+          </div>
+          <div class="bar-chart-wrap tall"><canvas id="storeBarChart"></canvas></div>
+        </div>
+        <div class="section-card">
+          <div class="section-head"><h2>상세</h2></div>
+          <div id="rank-table-area"></div>
+        </div>
+      </div>`;
+
+    const { metric_key, label_key, data } = storeMetric;
+    const selectEl = document.getElementById("store-select");
+    const sorted = computeStoreTotals(data, metric_key, label_key);
+    selectEl.innerHTML = `<option value="__all__">전체 제휴처 (TOP 15)</option>` +
+      sorted.map(([name]) => `<option value="${name}">${name}</option>`).join("");
+    selectEl.addEventListener("change", renderStoreChartAndTable);
+    renderStoreChartAndTable();
+  }
+
+  /* ================= 공통 ================= */
+
+  function setupTabs() {
+    document.querySelectorAll("#tab-nav button").forEach(btn => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll("#period-toggle button").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll("#tab-nav button").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
         btn.classList.add("active");
-        currentPeriod = btn.dataset.period;
-        renderTrendChart();
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
       });
     });
   }
 
-  function setupStoreSelect() {
-    const storeMetric = METRICS_DATA[STORE_KEY];
-    const selectEl = document.getElementById("store-select");
-    if (!storeMetric || !storeMetric.data || !storeMetric.data.length || !selectEl) return;
-    const { metric_key, label_key, data } = storeMetric;
-    const sorted = computeStoreTotals(data, metric_key, label_key);
-    selectEl.innerHTML = `<option value="__all__">전체 매장 (TOP 10)</option>` +
-      sorted.map(([name]) => `<option value="${name}">${name}</option>`).join("");
-    selectEl.addEventListener("change", renderStoreSection);
-  }
-
   async function load() {
-    const area = document.getElementById("dashboard-area");
     try {
       const res = await fetch("./data.json", { cache: "no-store" });
       if (!res.ok) throw new Error("data.json을 불러오지 못했습니다");
       const data = await res.json();
       METRICS_DATA = data.metrics || {};
 
-      let kpiHtml = "";
-      METRIC_ORDER.forEach(key => {
-        if (METRICS_DATA[key]) kpiHtml += kpiCard(key, METRICS_DATA[key]);
-      });
-
-      const storeMetric = METRICS_DATA[STORE_KEY];
-      const hasStoreData = storeMetric && storeMetric.data && storeMetric.data.length;
-
-      area.innerHTML = `
-        <div class="kpi-grid">${kpiHtml}</div>
-
-        <div class="section-card">
-          <div class="section-head">
-            <h2>일별 추이</h2>
-            <div style="display:flex; align-items:center; gap:16px;">
-              <div class="legend">
-                ${METRIC_ORDER.filter(k => METRICS_DATA[k]).map(k => `
-                  <span class="legend-item"><span class="legend-dot" style="background:${COLORS[k]}"></span>${METRICS_DATA[k].label}</span>
-                `).join("")}
-              </div>
-              <div class="segmented" id="period-toggle">
-                <button class="active" data-period="day">일별</button>
-                <button data-period="month">월별</button>
-                <button data-period="quarter">분기별</button>
-              </div>
-            </div>
-          </div>
-          <div class="trend-chart-wrap"><canvas id="trendChart"></canvas></div>
-        </div>
-
-        <div class="two-col">
-          <div class="section-card">
-            <div class="section-head">
-              <h2>매장별 데이터</h2>
-              <select class="store-select" id="store-select"><option>매장 불러오는 중...</option></select>
-            </div>
-            <div class="bar-chart-wrap" id="store-chart-area">
-              ${hasStoreData ? '<canvas id="storeBarChart"></canvas>' : '<div class="empty-note">아직 매장별 데이터가 없습니다.</div>'}
-            </div>
-          </div>
-          <div class="section-card">
-            <div class="section-head"><h2>상세</h2></div>
-            <div id="rank-table-area"></div>
-          </div>
-        </div>
-      `;
-
-      renderTrendChart();
-      setupPeriodToggle();
-      if (hasStoreData) {
-        setupStoreSelect();
-        renderStoreSection();
-      }
+      setupTabs();
+      renderDailyTab();
+      renderMonthlyTab();
+      renderPartnerTab();
 
       document.getElementById("updated-at").textContent = data.updated_at || "-";
     } catch (e) {
-      area.innerHTML = `<div class="error">데이터를 불러오지 못했습니다.<br>${e.message}</div>`;
+      document.getElementById("daily-area").innerHTML = `<div class="error">데이터를 불러오지 못했습니다.<br>${e.message}</div>`;
       document.getElementById("updated-at").textContent = "오류";
     }
   }
