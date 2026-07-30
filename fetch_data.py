@@ -266,11 +266,14 @@ def merge_history(history: dict, key: str, series: list) -> None:
         bucket[point["date"]] = point["value"]
 
 
-def merge_store_history(store_history: dict, rows: list, metric_key: str, label_key: str) -> None:
+def merge_store_history(store_history: dict, rows: list, metric_key: str, label_key: str, division_filter: str = None) -> None:
     """매장별 데이터를 월별로 누적한다. 이번 fetch에 포함된 월은 통째로 교체하고,
-    포함되지 않은 과거 월은 기존 값을 그대로 유지한다."""
+    포함되지 않은 과거 월은 기존 값을 그대로 유지한다.
+    division_filter가 주어지면 해당 division(예: '혜택사용_매장별')의 행만 집계한다."""
     fresh = {}
     for r in rows:
+        if division_filter is not None and r.get("division") != division_filter:
+            continue
         month_raw = r.get("produce_month")
         if month_raw is None:
             continue
@@ -323,6 +326,8 @@ def main():
     history = load_history(history_path)
     store_history_path = os.path.join(docs_dir, "store_history.json")
     store_history = load_history(store_history_path)
+    benefit_store_history_path = os.path.join(docs_dir, "benefit_store_history.json")
+    benefit_store_history = load_history(benefit_store_history_path)
     daily_store_history_path = os.path.join(docs_dir, "daily_store_history.json")
     daily_store_history = load_history(daily_store_history_path)
 
@@ -347,6 +352,10 @@ def main():
 
             if key == "store_breakdown" and summary["metric_key"] and summary["label_key"]:
                 merge_store_history(store_history, summary["rows"], summary["metric_key"], summary["label_key"])
+                merge_store_history(
+                    benefit_store_history, summary["rows"], summary["metric_key"], summary["label_key"],
+                    division_filter="혜택사용_매장별",
+                )
 
             if key == "daily_store" and summary["metric_key"] and summary["label_key"] and summary["time_key"]:
                 merge_daily_store_history(
@@ -392,11 +401,15 @@ def main():
     with open(store_history_path, "w", encoding="utf-8") as f:
         json.dump(store_history, f, ensure_ascii=False, indent=2)
 
+    with open(benefit_store_history_path, "w", encoding="utf-8") as f:
+        json.dump(benefit_store_history, f, ensure_ascii=False, indent=2)
+
     with open(daily_store_history_path, "w", encoding="utf-8") as f:
         json.dump(daily_store_history, f, ensure_ascii=False, indent=2)
 
     if "store_breakdown" in output["metrics"]:
         output["metrics"]["store_breakdown"]["monthly_totals"] = store_history
+        output["metrics"]["store_breakdown"]["benefit_monthly_totals"] = benefit_store_history
 
     if "daily_store" in output["metrics"]:
         output["metrics"]["daily_store"]["daily_totals"] = daily_store_history
