@@ -20,8 +20,8 @@
     --ink-faint: #9aa2b1;
     --accent: #a8562a;
     --accent-soft: #f6e9dc;
-    --uv-color: #2563eb;
-    --benefit-color: #10b981;
+    --uv-color: #6366f1;
+    --benefit-color: #06b6d4;
     --staff-color: #f59e0b;
     --good: #15803d;
     --bad: #dc2626;
@@ -383,7 +383,7 @@
 <script>
   Chart.register(ChartDataLabels);
 
-  const COLORS = { uv: "#2563eb", benefit_claims: "#10b981", staff_verifications: "#f59e0b" };
+  const COLORS = { uv: "#6366f1", benefit_claims: "#06b6d4", staff_verifications: "#f59e0b" };
   const LABEL_POS = {
     uv: { align: "top", anchor: "end" },
     benefit_claims: { align: "top", anchor: "end" },
@@ -409,13 +409,25 @@
     const min = Math.min(...values), max = Math.max(...values);
     const range = (max - min) || 1;
     const step = (w - pad * 2) / (values.length - 1);
-    const pts = values.map((v, i) => {
+    const coords = values.map((v, i) => {
       const x = pad + i * step;
       const y = h - pad - ((v - min) / range) * (h - pad * 2);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(" ");
+      return [x, y];
+    });
+    const linePts = coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+    const areaPts = `${pad},${h - pad} ${linePts} ${(w - pad).toFixed(1)},${h - pad}`;
+    const gradId = "spark-" + color.replace("#", "");
+    const [lastX, lastY] = coords[coords.length - 1];
     return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="none">
-      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <defs>
+        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <polygon points="${areaPts}" fill="url(#${gradId})" stroke="none"/>
+      <polyline points="${linePts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" fill="${color}"/>
     </svg>`;
   }
 
@@ -495,7 +507,7 @@
       const { current, delta, monthLabel, startCur } = computeMonthToDateKpi(m.series);
       const sparkSeries = (m.series || []).filter(p => !startCur || p.date >= startCur).map(p => p.value);
       html += `
-        <div class="kpi-card">
+        <div class="kpi-card" style="border-left:3px solid ${color};">
           <div class="kpi-top">
             <div class="kpi-label"><span class="kpi-dot" style="background:${color}"></span>${m.label}</div>
           </div>
@@ -847,9 +859,88 @@
       </div>`;
   }
 
+  function computeWeekdayAvgFromSeries(series) {
+    const weekdayNames = ["일", "월", "화", "수", "목", "금", "토"];
+    const sums = new Array(7).fill(0);
+    const counts = new Array(7).fill(0);
+    (series || []).forEach(p => {
+      const wd = new Date(p.date + "T00:00:00").getDay();
+      sums[wd] += p.value;
+      counts[wd] += 1;
+    });
+    const avgs = sums.map((s, i) => counts[i] ? s / counts[i] : 0);
+    let bestWd = 0, worstWd = 0;
+    avgs.forEach((v, i) => {
+      if (v > avgs[bestWd]) bestWd = i;
+      if (counts[i] > 0 && (counts[worstWd] === 0 || v < avgs[worstWd])) worstWd = i;
+    });
+    return { weekdayNames, avgs, bestWd, worstWd, hasEnough: series && series.length >= 14 };
+  }
+
+  function avgOfSeries(series) {
+    return series && series.length ? series.reduce((a, p) => a + p.value, 0) / series.length : null;
+  }
+
+  function renderDailyInsights() {
+    const parts = [];
+    const trendBits = [];
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (!m || !m.series || !m.series.length) return;
+      const last7 = m.series.slice(-7);
+      const prev7 = m.series.slice(-14, -7);
+      const last7Avg = avgOfSeries(last7);
+      const prev7Avg = avgOfSeries(prev7);
+      if (last7Avg === null) return;
+      let pctStr = "";
+      if (prev7Avg && prev7Avg > 0) {
+        const pct = ((last7Avg - prev7Avg) / prev7Avg) * 100;
+        const up = pct >= 0;
+        pctStr = ` <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">(${up ? "▲" : "▼"}${Math.abs(pct).toFixed(1)}%)</span>`;
+      }
+      trendBits.push(`${m.label} ${fmt(last7Avg)}건${pctStr}`);
+    });
+    if (trendBits.length) {
+      parts.push(`최근 7일 평균은 ${trendBits.join(" · ")} — 전주 대비 변화예요`);
+    }
+
+    const uvSeries = METRICS_DATA.uv && METRICS_DATA.uv.series;
+    const wd = computeWeekdayAvgFromSeries(uvSeries);
+    if (wd.hasEnough) {
+      parts.push(`UV 기준 <b>${wd.weekdayNames[wd.bestWd]}요일</b>에 방문자가 가장 많고 (평균 ${fmt(wd.avgs[wd.bestWd])}건), <b>${wd.weekdayNames[wd.worstWd]}요일</b>이 가장 적어요 (평균 ${fmt(wd.avgs[wd.worstWd])}건)`);
+    }
+
+    if (METRICS_DATA.uv && METRICS_DATA.benefit_claims) {
+      const uvLast7 = avgOfSeries((METRICS_DATA.uv.series || []).slice(-7));
+      const benefitLast7 = avgOfSeries((METRICS_DATA.benefit_claims.series || []).slice(-7));
+      const uvPrev7 = avgOfSeries((METRICS_DATA.uv.series || []).slice(-14, -7));
+      const benefitPrev7 = avgOfSeries((METRICS_DATA.benefit_claims.series || []).slice(-14, -7));
+      if (uvLast7 && benefitLast7 !== null) {
+        const convNow = (benefitLast7 / uvLast7) * 100;
+        let cmpStr = "";
+        if (uvPrev7 && benefitPrev7 !== null && uvPrev7 > 0) {
+          const convPrev = (benefitPrev7 / uvPrev7) * 100;
+          const diff = convNow - convPrev;
+          const up = diff >= 0;
+          cmpStr = ` (지난주 ${convPrev.toFixed(1)}% 대비 <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">${up ? "▲" : "▼"}${Math.abs(diff).toFixed(1)}%p</span>)`;
+        }
+        parts.push(`혜택받기 전환율(UV 대비)은 최근 7일 평균 <b>${convNow.toFixed(1)}%</b>예요${cmpStr}`);
+      }
+    }
+
+    if (!parts.length) return "";
+    return `<div class="section-card">
+      <div class="section-head"><h2>📌 일별 트래킹 인사이트</h2></div>
+      <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
+        ${parts.map(t => `<li>${t}</li>`).join("")}
+      </ul>
+    </div>`;
+  }
+
   function renderDailyTab() {
     const area = document.getElementById("daily-area");
     area.innerHTML = `
+      ${renderDailyInsights()}
       <div class="kpi-grid">${renderDailyKpiCards()}</div>
       <div class="section-card">
         <div class="section-head">
@@ -887,7 +978,7 @@
       const latest = agg[agg.length - 1];
       const delta = monthOverMonthDelta(agg);
       html += `
-        <div class="kpi-card">
+        <div class="kpi-card" style="border-left:3px solid ${color};">
           <div class="kpi-top">
             <div class="kpi-label"><span class="kpi-dot" style="background:${color}"></span>${m.label}</div>
           </div>
@@ -967,9 +1058,67 @@
     });
   }
 
+  function renderMonthlyInsights() {
+    const parts = [];
+    const momBits = [];
+    let bestGrowth = null;
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (!m || !m.series || !m.series.length) return;
+      const agg = aggregateSeries(m.series, "month");
+      const delta = monthOverMonthDelta(agg);
+      const latest = agg[agg.length - 1];
+      if (!latest) return;
+      let pctStr = "";
+      if (delta !== null) {
+        const up = delta >= 0;
+        pctStr = ` <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">(${up ? "▲" : "▼"}${Math.abs(delta).toFixed(1)}%)</span>`;
+        if (bestGrowth === null || delta > bestGrowth.delta) bestGrowth = { label: m.label, delta };
+      }
+      momBits.push(`${m.label} ${fmt(latest.value)}건${pctStr}`);
+    });
+    if (momBits.length) {
+      parts.push(`이번 달 누적은 ${momBits.join(" · ")} — 전월 대비 변화예요`);
+    }
+    if (bestGrowth && bestGrowth.delta > 0) {
+      parts.push(`이번 달 가장 크게 성장한 지표는 <b>${bestGrowth.label}</b>로, 전월 대비 <span style="color:var(--good); font-weight:600;">▲${bestGrowth.delta.toFixed(1)}%</span> 증가했어요`);
+    }
+
+    if (METRICS_DATA.uv && METRICS_DATA.benefit_claims) {
+      const uvAgg = aggregateSeries(METRICS_DATA.uv.series || [], "month");
+      const benefitAgg = aggregateSeries(METRICS_DATA.benefit_claims.series || [], "month");
+      const uvLatest = uvAgg[uvAgg.length - 1];
+      const benefitLatest = benefitAgg[benefitAgg.length - 1];
+      if (uvLatest && benefitLatest && uvLatest.value > 0) {
+        const convNow = (benefitLatest.value / uvLatest.value) * 100;
+        let cmpStr = "";
+        if (uvAgg.length >= 2 && benefitAgg.length >= 2) {
+          const uvPrev = uvAgg[uvAgg.length - 2].value;
+          const benefitPrev = benefitAgg[benefitAgg.length - 2].value;
+          if (uvPrev > 0) {
+            const convPrev = (benefitPrev / uvPrev) * 100;
+            const diff = convNow - convPrev;
+            const up = diff >= 0;
+            cmpStr = ` (전월 ${convPrev.toFixed(1)}% 대비 <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">${up ? "▲" : "▼"}${Math.abs(diff).toFixed(1)}%p</span>)`;
+          }
+        }
+        parts.push(`혜택받기 전환율(UV 대비)은 이번 달 <b>${convNow.toFixed(1)}%</b>예요${cmpStr}`);
+      }
+    }
+
+    if (!parts.length) return "";
+    return `<div class="section-card">
+      <div class="section-head"><h2>📌 월간 데이터 인사이트</h2></div>
+      <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
+        ${parts.map(t => `<li>${t}</li>`).join("")}
+      </ul>
+    </div>`;
+  }
+
   function renderMonthlyTab() {
     const area = document.getElementById("monthly-area");
     area.innerHTML = `
+      ${renderMonthlyInsights()}
       <div class="kpi-grid">${renderMonthlyKpiCards()}</div>
       <div class="section-card">
         <div class="section-head">
@@ -1260,7 +1409,7 @@
       type: "bar",
       data: {
         labels: monthlySeries.map(p => p.month),
-        datasets: [{ data: monthlySeries.map(p => p.value), backgroundColor: "#a8562a", borderRadius: 4, maxBarThickness: 28 }],
+        datasets: [{ data: monthlySeries.map(p => p.value), backgroundColor: "#6366f1", borderRadius: 4, maxBarThickness: 28 }],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
