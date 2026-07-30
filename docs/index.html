@@ -1104,8 +1104,9 @@
       ? recentDaily.reduce((a, p) => a + p.value, 0) / recentDaily.length
       : null;
 
-    const monthlySeries = getStoreMonthlySeries(monthlyTotals, storeName);
-    const rankSeries = getStoreMonthlyRankSeries(monthlyTotals, storeName);
+    const benefitMonthlyTotals = storeMetric.benefit_monthly_totals || {};
+    const monthlySeries = getStoreMonthlySeries(benefitMonthlyTotals, storeName);
+    const rankSeries = getStoreMonthlyRankSeries(benefitMonthlyTotals, storeName);
     const repeatRatio = computeStoreRepeatRatio(dsRawRows, dsLabelKey, dsMetricKey, storeName);
 
     // 요일별 평균 방문자 (전체 기간 기준)
@@ -1207,14 +1208,14 @@
         <div class="section-card">
           <div class="section-head">
             <h2>월별 누적 추이</h2>
-            <span style="font-size:11px; color:var(--ink-faint);">혜택사용+직원사용 합산 회원수 기준</span>
+            <span style="font-size:11px; color:var(--ink-faint);">혜택사용 회원수 기준</span>
           </div>
           <div class="bar-chart-wrap"><canvas id="partnerMonthlyChart"></canvas></div>
         </div>
         <div class="section-card">
           <div class="section-head">
             <h2>매장 순위 추이</h2>
-            <span style="font-size:11px; color:var(--ink-faint);">월별 누적 회원수 기준</span>
+            <span style="font-size:11px; color:var(--ink-faint);">월별 혜택사용 회원수 기준</span>
           </div>
           <div class="bar-chart-wrap"><canvas id="partnerRankChart"></canvas></div>
         </div>
