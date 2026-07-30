@@ -23,6 +23,7 @@ CHARTS = {
     "benefit_claims": 3087,
     "staff_verifications": 3085,
     "store_breakdown": 3037,
+    "daily_store": 3611,
 }
 
 # 사람이 읽을 한글 라벨 (웹페이지에서 그대로 사용)
@@ -31,6 +32,7 @@ LABELS = {
     "benefit_claims": "혜택받기",
     "staff_verifications": "직원확인",
     "store_breakdown": "매장별 데이터",
+    "daily_store": "일별 매장 데이터",
 }
 
 
@@ -197,11 +199,21 @@ def get_chart_query_context(session: requests.Session, access_token: str, chart_
     return json.loads(qc)
 
 
-def fetch_chart_data(session: requests.Session, access_token: str, csrf_token: str, chart_id: int):
-    """저장된 query_context를 그대로 사용해 차트의 실제 데이터를 가져온다."""
+def fetch_chart_data(
+    session: requests.Session,
+    access_token: str,
+    csrf_token: str,
+    chart_id: int,
+    time_range_override: str = None,
+):
+    """저장된 query_context를 그대로(혹은 기간만 override해서) 사용해 데이터를 가져온다."""
     query_context = get_chart_query_context(session, access_token, chart_id)
     query_context.setdefault("result_format", "json")
     query_context.setdefault("result_type", "full")
+
+    if time_range_override:
+        for q in query_context.get("queries", []):
+            q["time_range"] = time_range_override
 
     resp = session.post(
         f"{SUPERSET_BASE_URL}/api/v1/chart/data",
@@ -244,9 +256,45 @@ def merge_history(history: dict, key: str, series: list) -> None:
         bucket[point["date"]] = point["value"]
 
 
+def merge_store_history(store_history: dict, rows: list, metric_key: str, label_key: str) -> None:
+    """매장별 데이터를 월별로 누적한다. 이번 fetch에 포함된 월은 통째로 교체하고,
+    포함되지 않은 과거 월은 기존 값을 그대로 유지한다."""
+    fresh = {}
+    for r in rows:
+        month_raw = r.get("produce_month")
+        if month_raw is None:
+            continue
+        month = to_date_str(month_raw)[:7]
+        name = r.get(label_key)
+        val = float(r.get(metric_key) or 0)
+        fresh.setdefault(month, {})
+        fresh[month][name] = fresh[month].get(name, 0) + val
+
+    for month, bucket in fresh.items():
+        store_history[month] = bucket
+
+
+def merge_daily_store_history(history: dict, rows: list, metric_key: str, label_key: str, time_key: str) -> None:
+    """매장 x 날짜 데이터를 일별로 누적한다. 이번 fetch에 포함된 날짜는 통째로 교체."""
+    fresh = {}
+    for r in rows:
+        raw_date = r.get(time_key)
+        if raw_date is None:
+            continue
+        date = to_date_str(raw_date)
+        name = r.get(label_key)
+        val = float(r.get(metric_key) or 0)
+        fresh.setdefault(date, {})
+        fresh[date][name] = fresh[date].get(name, 0) + val
+
+    for date, bucket in fresh.items():
+        history[date] = bucket
+
+
 def main():
     username = os.environ.get("SUPERSET_USERNAME")
     password = os.environ.get("SUPERSET_PASSWORD")
+    backfill_range = os.environ.get("BACKFILL_TIME_RANGE", "").strip() or None
 
     if not username or not password:
         print("SUPERSET_USERNAME / SUPERSET_PASSWORD 환경변수가 설정되어 있지 않습니다.", file=sys.stderr)
@@ -263,20 +311,37 @@ def main():
     os.makedirs(docs_dir, exist_ok=True)
     history_path = os.path.join(docs_dir, "history.json")
     history = load_history(history_path)
+    store_history_path = os.path.join(docs_dir, "store_history.json")
+    store_history = load_history(store_history_path)
+    daily_store_history_path = os.path.join(docs_dir, "daily_store_history.json")
+    daily_store_history = load_history(daily_store_history_path)
 
     output = {
         "updated_at": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M:%S KST"),
         "metrics": {},
     }
 
+    if backfill_range:
+        print(f"⚠️  백필 모드: 기간을 '{backfill_range}' 로 강제 지정해서 가져옵니다.")
+
     for key, chart_id in CHARTS.items():
         print(f"[{LABELS[key]}] 차트({chart_id}) 데이터 가져오는 중...")
         try:
-            data_rows, metric_guess = fetch_chart_data(session, access_token, csrf_token, chart_id)
+            data_rows, metric_guess = fetch_chart_data(
+                session, access_token, csrf_token, chart_id, time_range_override=backfill_range
+            )
             summary = summarize_rows(data_rows, metric_guess)
 
             if key in TIME_SERIES_KEYS and summary["series"]:
                 merge_history(history, key, summary["series"])
+
+            if key == "store_breakdown" and summary["metric_key"] and summary["label_key"]:
+                merge_store_history(store_history, summary["rows"], summary["metric_key"], summary["label_key"])
+
+            if key == "daily_store" and summary["metric_key"] and summary["label_key"] and summary["time_key"]:
+                merge_daily_store_history(
+                    daily_store_history, summary["rows"], summary["metric_key"], summary["label_key"], summary["time_key"]
+                )
 
             output["metrics"][key] = {
                 "label": LABELS[key],
@@ -313,6 +378,18 @@ def main():
 
     with open(history_path, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
+
+    with open(store_history_path, "w", encoding="utf-8") as f:
+        json.dump(store_history, f, ensure_ascii=False, indent=2)
+
+    with open(daily_store_history_path, "w", encoding="utf-8") as f:
+        json.dump(daily_store_history, f, ensure_ascii=False, indent=2)
+
+    if "store_breakdown" in output["metrics"]:
+        output["metrics"]["store_breakdown"]["monthly_totals"] = store_history
+
+    if "daily_store" in output["metrics"]:
+        output["metrics"]["daily_store"]["daily_totals"] = daily_store_history
 
     out_path = os.path.join(docs_dir, "data.json")
     with open(out_path, "w", encoding="utf-8") as f:
