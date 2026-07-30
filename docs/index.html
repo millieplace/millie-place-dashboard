@@ -549,6 +549,89 @@
     });
   }
 
+  /* ================= 일별 제휴처 방문자 (급증/급감) ================= */
+
+  function renderDailyStoreSection() {
+    const dsMetric = METRICS_DATA["daily_store"];
+    const area = document.getElementById("daily-store-area");
+    const dailyTotals = dsMetric && dsMetric.daily_totals;
+
+    if (!dailyTotals || Object.keys(dailyTotals).length === 0) {
+      area.innerHTML = `
+        <div class="placeholder-panel" style="padding:36px 20px;">
+          <div class="icon">📅</div>
+          <h3>일별 매장 데이터 연동 대기 중</h3>
+          <p>지금 연동된 매장별 데이터는 월 단위라, 날짜별 매장 방문자 순위·급증/급감을 보여주려면<br>
+          Superset에 <b>매장별 × 일별</b> 지표 차트가 하나 더 필요해요.</p>
+        </div>`;
+      return;
+    }
+
+    const dates = getSortedDates(dailyTotals);
+    if (!dailyStoreDate || !dates.includes(dailyStoreDate)) {
+      dailyStoreDate = dates[dates.length - 1];
+    }
+    const idx = dates.indexOf(dailyStoreDate);
+    const dayData = dailyTotals[dailyStoreDate] || {};
+    const top10 = Object.entries(dayData).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const { surges, drops, prevDate } = computeDailyStoreDelta(dailyTotals, dates, dailyStoreDate);
+
+    area.innerHTML = `
+      <div class="section-head">
+        <h2>일별 제휴처 방문자 (혜택클릭 기준)</h2>
+        <div class="segmented" id="daily-store-nav">
+          <button id="ds-prev" ${idx <= 0 ? "disabled" : ""}>◀</button>
+          <button disabled style="color:var(--ink); background:var(--card);">${dailyStoreDate}</button>
+          <button id="ds-next" ${idx >= dates.length - 1 ? "disabled" : ""}>▶</button>
+        </div>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="section-head"><h2 style="font-size:12.5px; color:var(--ink-soft);">TOP 10</h2></div>
+          <table class="rank-table">
+            <thead><tr><th>순위</th><th>매장</th><th style="text-align:right">방문자</th></tr></thead>
+            <tbody>
+              ${top10.map(([name, v], i) => `
+                <tr>
+                  <td class="rank-num">${String(i + 1).padStart(2, "0")}</td>
+                  <td>${name}</td>
+                  <td class="rank-val">${fmt(v)}</td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="section-head"><h2 style="font-size:12.5px; color:var(--ink-soft);">전일 대비 급증/급감${prevDate ? ` (vs ${prevDate})` : ""}</h2></div>
+          ${!prevDate ? '<div class="empty-note">비교할 전일 데이터가 없습니다.</div>' : `
+          <table class="rank-table" style="margin-bottom:10px;">
+            <tbody>
+              ${surges.length ? surges.map(([name, cur, prev, delta]) => `
+                <tr>
+                  <td>▲ ${name}</td>
+                  <td class="rank-val" style="color:var(--good)">+${fmt(delta)}</td>
+                  <td class="rank-val" style="color:var(--ink-faint); font-size:11px;">${fmt(prev)}→${fmt(cur)}</td>
+                </tr>`).join("") : '<tr><td class="empty-note">급증 매장 없음</td></tr>'}
+              ${drops.length ? drops.map(([name, cur, prev, delta]) => `
+                <tr>
+                  <td>▼ ${name}</td>
+                  <td class="rank-val" style="color:var(--bad)">${fmt(delta)}</td>
+                  <td class="rank-val" style="color:var(--ink-faint); font-size:11px;">${fmt(prev)}→${fmt(cur)}</td>
+                </tr>`).join("") : ""}
+            </tbody>
+          </table>`}
+        </div>
+      </div>`;
+
+    const prevBtn = document.getElementById("ds-prev");
+    const nextBtn = document.getElementById("ds-next");
+    if (prevBtn) prevBtn.addEventListener("click", () => {
+      if (idx > 0) { dailyStoreDate = dates[idx - 1]; renderDailyStoreSection(); }
+    });
+    if (nextBtn) nextBtn.addEventListener("click", () => {
+      if (idx < dates.length - 1) { dailyStoreDate = dates[idx + 1]; renderDailyStoreSection(); }
+    });
+  }
+
   function renderDailyTab() {
     const area = document.getElementById("daily-area");
     area.innerHTML = `
@@ -564,16 +647,9 @@
         </div>
         <div class="trend-chart-wrap tall"><canvas id="dailyTrendChart"></canvas></div>
       </div>
-      <div class="section-card">
-        <div class="section-head"><h2>일별 제휴처 방문자 (TOP 10 · 급증·급감)</h2></div>
-        <div class="placeholder-panel" style="padding:36px 20px;">
-          <div class="icon">📅</div>
-          <h3>일별 매장 데이터 연동 대기 중</h3>
-          <p>지금 연동된 매장별 데이터는 월 단위라, 날짜별 매장 방문자 순위·급증/급감을 보여주려면<br>
-          Superset에 <b>매장별 × 일별</b> 지표 차트가 하나 더 필요해요. 그 차트의 slice_id를 알려주시면 바로 연동할게요.</p>
-        </div>
-      </div>`;
+      <div class="section-card" id="daily-store-area"></div>`;
     renderDailyTrendChart();
+    renderDailyStoreSection();
   }
 
   /* ================= 월간 데이터 탭 ================= */
@@ -707,6 +783,29 @@
   /* ================= 제휴처별 데이터 탭 ================= */
 
   let storePeriod = "all";
+  let dailyStoreDate = null;
+
+  function getSortedDates(dailyTotals) {
+    return Object.keys(dailyTotals || {}).sort();
+  }
+
+  function computeDailyStoreDelta(dailyTotals, dates, currentDate) {
+    const idx = dates.indexOf(currentDate);
+    if (idx <= 0) return { surges: [], drops: [] };
+    const prevDate = dates[idx - 1];
+    const cur = dailyTotals[currentDate] || {};
+    const prev = dailyTotals[prevDate] || {};
+    const deltas = [];
+    Object.keys(cur).forEach(name => {
+      if (prev[name] !== undefined) {
+        deltas.push([name, cur[name], prev[name], cur[name] - prev[name]]);
+      }
+    });
+    const sorted = [...deltas].sort((a, b) => b[3] - a[3]);
+    const surges = sorted.filter(d => d[3] > 0).slice(0, 5);
+    const drops = sorted.filter(d => d[3] < 0).slice(-5).reverse();
+    return { surges, drops, prevDate };
+  }
 
   function computeStoreTotals(rows, metricKey, labelKey) {
     const totals = {};
