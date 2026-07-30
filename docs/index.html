@@ -558,6 +558,7 @@
       const color = COLORS[key];
       const { current, monthLabel, startCur, latestDate } = computeMonthToDateKpi(m.series);
       const dod = computeDayOverDayDelta(m.series);
+      const lastVal = dod ? dod.lastVal : (m.series && m.series.length ? m.series[m.series.length - 1].value : null);
       const sparkPoints = (m.series || []).filter(p => !startCur || p.date >= startCur);
       const sparkSeries = sparkPoints.map(p => p.value);
       const stats = computeSparkStats(sparkPoints);
@@ -567,12 +568,13 @@
             <div class="kpi-label"><span class="kpi-dot" style="background:${color}"></span>${m.label}</div>
           </div>
           <div class="kpi-value-row">
-            <div class="kpi-value">${fmt(current)}<span class="unit">건</span></div>
+            <div class="kpi-value">${fmt(lastVal)}<span class="unit">건</span></div>
             ${dod ? deltaBadge(dod.delta) : ""}
           </div>
           <div class="kpi-spark">${sparklineSvg(sparkSeries, color)}</div>
           ${sparkPoints.length ? `<div style="display:flex; justify-content:space-between; font-size:10px; color:var(--ink-faint); margin-top:2px;"><span>${sparkPoints[0].date.slice(5)}</span><span>${sparkPoints[sparkPoints.length - 1].date.slice(5)}</span></div>` : ""}
-          <div class="kpi-sub">${monthLabel} 누적(1일~${latestDate ? latestDate.slice(5) : "-"})${dod ? ` · 전일 대비 (${fmt(dod.prevVal)}→${fmt(dod.lastVal)}건)` : ""}</div>
+          <div class="kpi-sub">${latestDate ? latestDate.slice(5) : "-"} 기준${dod ? ` · 전일(${dod.prevDate.slice(5)}) ${fmt(dod.prevVal)}건 대비` : ""}</div>
+          <div class="kpi-sub" style="margin-top:2px;">${monthLabel} 누적 ${fmt(current)}건</div>
           ${stats ? `<div class="kpi-sub" style="margin-top:2px;">최고 ${fmt(stats.maxP.value)}건(${stats.maxP.date.slice(5)}) · 최저 ${fmt(stats.minP.value)}건(${stats.minP.date.slice(5)})</div>` : ""}        </div>`;
     });
     return html;
