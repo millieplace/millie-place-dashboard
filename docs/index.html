@@ -455,25 +455,51 @@
 
   /* ================= 일별 트래킹 탭 ================= */
 
+  function sumRangeInclusive(series, startDate, endDate) {
+    return series.filter(p => p.date >= startDate && p.date <= endDate)
+                 .reduce((a, p) => a + p.value, 0);
+  }
+
+  function computeMonthToDateKpi(series) {
+    if (!series || series.length === 0) return { current: null, delta: null, monthLabel: "" };
+    const latest = series[series.length - 1].date;
+    const [y, m, d] = latest.split("-").map(Number);
+
+    const startCur = `${y}-${String(m).padStart(2, "0")}-01`;
+    const current = sumRangeInclusive(series, startCur, latest);
+
+    let prevYear = y, prevMonth = m - 1;
+    if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
+    const daysInPrevMonth = new Date(prevYear, prevMonth, 0).getDate();
+    const prevDay = Math.min(d, daysInPrevMonth);
+    const startPrev = `${prevYear}-${String(prevMonth).padStart(2, "0")}-01`;
+    const endPrev = `${prevYear}-${String(prevMonth).padStart(2, "0")}-${String(prevDay).padStart(2, "0")}`;
+    const prev = sumRangeInclusive(series, startPrev, endPrev);
+
+    let delta = null;
+    if (prev > 0) delta = ((current - prev) / prev) * 100;
+    return { current, delta, monthLabel: `${m}월`, startCur };
+  }
+
   function renderDailyKpiCards() {
     let html = "";
     METRIC_ORDER.forEach(key => {
       const m = METRICS_DATA[key];
       if (!m) return;
       const color = COLORS[key];
-      const recent = (m.series || []).slice(-30).map(p => p.value);
-      const delta = weeklyDelta(m.series);
+      const { current, delta, monthLabel, startCur } = computeMonthToDateKpi(m.series);
+      const sparkSeries = (m.series || []).filter(p => !startCur || p.date >= startCur).map(p => p.value);
       html += `
         <div class="kpi-card">
           <div class="kpi-top">
             <div class="kpi-label"><span class="kpi-dot" style="background:${color}"></span>${m.label}</div>
           </div>
           <div class="kpi-value-row">
-            <div class="kpi-value">${fmt(m.total)}<span class="unit">건</span></div>
+            <div class="kpi-value">${fmt(current)}<span class="unit">건</span></div>
             ${deltaBadge(delta)}
           </div>
-          <div class="kpi-spark">${sparklineSvg(recent, color)}</div>
-          <div class="kpi-sub">최근 30일 합계 · 최근 7일 전주比</div>
+          <div class="kpi-spark">${sparklineSvg(sparkSeries, color)}</div>
+          <div class="kpi-sub">${monthLabel} 누적 · 전월 동기간比</div>
         </div>`;
     });
     return html;
