@@ -187,7 +187,7 @@
   .kpi-delta.up { color: var(--good); background: rgba(21,128,61,0.08); }
   .kpi-delta.down { color: var(--bad); background: rgba(220,38,38,0.08); }
   .kpi-card .kpi-spark {
-    height: 36px;
+    height: 46px;
     margin-top: 6px;
   }
   .kpi-card .kpi-sub {
@@ -405,17 +405,17 @@
 
   function sparklineSvg(values, color) {
     if (!values || values.length < 2) return "";
-    const w = 240, h = 36, pad = 3;
+    const w = 240, h = 46, padX = 4, padTop = 11, padBottom = 13;
     const min = Math.min(...values), max = Math.max(...values);
     const range = (max - min) || 1;
-    const step = (w - pad * 2) / (values.length - 1);
+    const step = (w - padX * 2) / (values.length - 1);
     const coords = values.map((v, i) => {
-      const x = pad + i * step;
-      const y = h - pad - ((v - min) / range) * (h - pad * 2);
+      const x = padX + i * step;
+      const y = h - padBottom - ((v - min) / range) * (h - padTop - padBottom);
       return [x, y];
     });
     const linePts = coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-    const areaPts = `${pad},${h - pad} ${linePts} ${(w - pad).toFixed(1)},${h - pad}`;
+    const areaPts = `${padX},${h - padBottom} ${linePts} ${(w - padX).toFixed(1)},${h - padBottom}`;
     const gradId = "spark-" + color.replace("#", "");
     const [lastX, lastY] = coords[coords.length - 1];
 
@@ -426,9 +426,29 @@
     });
     const [maxX, maxY] = coords[maxIdx];
     const [minX, minY] = coords[minIdx];
+
+    function anchorFor(i) {
+      const ratio = i / (values.length - 1);
+      if (ratio < 0.12) return "start";
+      if (ratio > 0.88) return "end";
+      return "middle";
+    }
+
     const markers = [];
-    if (maxIdx !== values.length - 1) markers.push(`<circle cx="${maxX.toFixed(1)}" cy="${maxY.toFixed(1)}" r="2.2" fill="${color}"/>`);
-    if (minIdx !== values.length - 1 && minIdx !== maxIdx) markers.push(`<circle cx="${minX.toFixed(1)}" cy="${minY.toFixed(1)}" r="2.2" fill="#9ca3af"/>`);
+    const labels = [];
+    const fontProps = `font-size="8" font-family="'IBM Plex Mono', monospace" font-weight="700"`;
+
+    if (maxIdx !== values.length - 1) {
+      markers.push(`<circle cx="${maxX.toFixed(1)}" cy="${maxY.toFixed(1)}" r="2.2" fill="${color}"/>`);
+    }
+    labels.push(`<text x="${maxX.toFixed(1)}" y="${(maxY - 4).toFixed(1)}" ${fontProps} fill="${color}" text-anchor="${anchorFor(maxIdx)}">${Math.round(values[maxIdx]).toLocaleString("ko-KR")}</text>`);
+
+    if (minIdx !== maxIdx) {
+      if (minIdx !== values.length - 1) {
+        markers.push(`<circle cx="${minX.toFixed(1)}" cy="${minY.toFixed(1)}" r="2.2" fill="#9ca3af"/>`);
+      }
+      labels.push(`<text x="${minX.toFixed(1)}" y="${(minY + 10).toFixed(1)}" ${fontProps} fill="#9ca3af" text-anchor="${anchorFor(minIdx)}">${Math.round(values[minIdx]).toLocaleString("ko-KR")}</text>`);
+    }
 
     return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="none">
       <defs>
@@ -441,6 +461,7 @@
       <polyline points="${linePts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       ${markers.join("")}
       <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" fill="${color}"/>
+      ${labels.join("")}
     </svg>`;
   }
 
