@@ -562,6 +562,7 @@
             ${deltaBadge(delta)}
           </div>
           <div class="kpi-spark">${sparklineSvg(sparkSeries, color)}</div>
+          ${sparkPoints.length ? `<div style="display:flex; justify-content:space-between; font-size:10px; color:var(--ink-faint); margin-top:2px;"><span>${sparkPoints[0].date.slice(5)}</span><span>${sparkPoints[sparkPoints.length - 1].date.slice(5)}</span></div>` : ""}
           <div class="kpi-sub">${monthLabel} 누적 · 전월 동기간比</div>
           ${stats ? `<div class="kpi-sub" style="margin-top:2px;">최고 ${fmt(stats.maxP.value)}건(${stats.maxP.date.slice(5)}) · 최저 ${fmt(stats.minP.value)}건(${stats.minP.date.slice(5)})</div>` : ""}        </div>`;
     });
@@ -1047,19 +1048,19 @@
       if (!m || !m.series || !m.series.length) return;
       const color = COLORS[key];
       const agg = aggregateSeries(m.series, "month");
-      const latest = agg[agg.length - 1];
-      const delta = monthOverMonthDelta(agg);
+      const { current, delta, monthLabel } = computeMonthToDateKpi(m.series);
       html += `
         <div class="kpi-card" style="border-left:3px solid ${color};">
           <div class="kpi-top">
             <div class="kpi-label"><span class="kpi-dot" style="background:${color}"></span>${m.label}</div>
           </div>
           <div class="kpi-value-row">
-            <div class="kpi-value">${fmt(latest ? latest.value : null)}<span class="unit">건</span></div>
+            <div class="kpi-value">${fmt(current)}<span class="unit">건</span></div>
             ${deltaBadge(delta)}
           </div>
           <div class="kpi-spark">${sparklineSvg(agg.map(p => p.value), color)}</div>
-          <div class="kpi-sub">${latest ? latest.label : "-"} 합계 · 전월比</div>
+          ${agg.length ? `<div style="display:flex; justify-content:space-between; font-size:10px; color:var(--ink-faint); margin-top:2px;"><span>${agg[0].label}</span><span>${agg[agg.length - 1].label}</span></div>` : ""}
+          <div class="kpi-sub">${monthLabel} 누적(1일~오늘) · 전월 동기간比</div>
         </div>`;
     });
     return html;
@@ -1511,10 +1512,13 @@
         datasets: [
           {
             data: recentDaily.map(p => p.value),
-            borderColor: "#2563eb",
-            backgroundColor: "#2563eb",
+            borderColor: "#6366f1",
+            backgroundColor: "#6366f1",
             tension: 0.3,
-            pointRadius: 0,
+            pointRadius: (ctx) => {
+              const i = ctx.dataIndex, len = ctx.dataset.data.length;
+              return (i % 5 === 0 || i === len - 1) ? 2.5 : 0;
+            },
             borderWidth: 2,
           },
           {
@@ -1531,7 +1535,24 @@
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
-        plugins: { legend: { display: false }, datalabels: { display: false } },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            align: "top",
+            offset: 4,
+            font: { size: 9.5, family: "'IBM Plex Mono', monospace", weight: 600 },
+            color: "#6366f1",
+            backgroundColor: "rgba(255,255,255,0.85)",
+            borderRadius: 3,
+            padding: { top: 1, bottom: 1, left: 3, right: 3 },
+            formatter: (v, ctx) => {
+              if (ctx.datasetIndex !== 0 || v === null) return "";
+              const i = ctx.dataIndex, len = ctx.dataset.data.length;
+              if (i % 5 === 0 || i === len - 1) return Math.round(v).toLocaleString("ko-KR");
+              return "";
+            },
+          },
+        },
         scales: {
           x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 }, maxTicksLimit: 12 } },
           y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
