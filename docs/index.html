@@ -658,6 +658,67 @@
     });
   }
 
+  function computeMonthlyStoreChange(monthlyTotals) {
+    const months = getSortedMonths(monthlyTotals);
+    if (months.length < 2) return { curMonth: null, prevMonth: null, increases: [], decreases: [] };
+    const curMonth = months[months.length - 1];
+    const prevMonth = months[months.length - 2];
+    const cur = monthlyTotals[curMonth] || {};
+    const prev = monthlyTotals[prevMonth] || {};
+    const allNames = new Set([...Object.keys(cur), ...Object.keys(prev)]);
+    const deltas = [];
+    allNames.forEach(name => {
+      const c = cur[name] || 0;
+      const p = prev[name] || 0;
+      deltas.push([name, c, p, c - p]);
+    });
+    const sorted = [...deltas].sort((a, b) => b[3] - a[3]);
+    const increases = sorted.filter(d => d[3] > 0).slice(0, 10);
+    const decreases = sorted.filter(d => d[3] < 0).slice(-10).reverse();
+    return { curMonth, prevMonth, increases, decreases };
+  }
+
+  function renderMonthlyStoreChangeSection() {
+    const storeMetric = METRICS_DATA[STORE_KEY];
+    const area = document.getElementById("monthly-store-change-area");
+    const monthlyTotals = storeMetric && storeMetric.monthly_totals;
+
+    if (!monthlyTotals || Object.keys(monthlyTotals).length < 2) {
+      area.innerHTML = `
+        <div class="section-head"><h2>월별 제휴처 방문자 증감 (TOP 10)</h2></div>
+        <div class="empty-note">비교할 수 있는 두 달치 데이터가 아직 없습니다. 매일 누적되니 조금만 기다려주세요.</div>`;
+      return;
+    }
+
+    const { curMonth, prevMonth, increases, decreases } = computeMonthlyStoreChange(monthlyTotals);
+
+    function rows(list, sign) {
+      if (!list.length) return `<tr><td class="empty-note">해당 매장 없음</td></tr>`;
+      return list.map(([name, c, p, delta], i) => `
+        <tr>
+          <td class="rank-num">${String(i + 1).padStart(2, "0")}</td>
+          <td>${name}</td>
+          <td class="rank-val" style="color:${sign > 0 ? "var(--good)" : "var(--bad)"}">${sign > 0 ? "+" : ""}${fmt(delta)}</td>
+          <td class="rank-val" style="color:var(--ink-faint); font-size:11px;">${fmt(p)}→${fmt(c)}</td>
+        </tr>`).join("");
+    }
+
+    area.innerHTML = `
+      <div class="section-head">
+        <h2>월별 제휴처 방문자 증감 (TOP 10, ${prevMonth} → ${curMonth})</h2>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="section-head"><h2 style="font-size:12.5px; color:var(--ink-soft);">▲ 증가 TOP 10</h2></div>
+          <table class="rank-table"><tbody>${rows(increases, 1)}</tbody></table>
+        </div>
+        <div>
+          <div class="section-head"><h2 style="font-size:12.5px; color:var(--ink-soft);">▼ 감소 TOP 10</h2></div>
+          <table class="rank-table"><tbody>${rows(decreases, -1)}</tbody></table>
+        </div>
+      </div>`;
+  }
+
   function renderDailyTab() {
     const area = document.getElementById("daily-area");
     area.innerHTML = `
@@ -673,9 +734,11 @@
         </div>
         <div class="trend-chart-wrap tall"><canvas id="dailyTrendChart"></canvas></div>
       </div>
-      <div class="section-card" id="daily-store-area"></div>`;
+      <div class="section-card" id="daily-store-area"></div>
+      <div class="section-card" id="monthly-store-change-area"></div>`;
     renderDailyTrendChart();
     renderDailyStoreSection();
+    renderMonthlyStoreChangeSection();
   }
 
   /* ================= 월간 데이터 탭 ================= */
