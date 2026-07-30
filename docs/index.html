@@ -539,7 +539,7 @@
 
     let delta = null;
     if (prev > 0) delta = ((current - prev) / prev) * 100;
-    return { current, prev, delta, monthLabel: `${m}월`, prevMonthLabel: `${prevMonth}월`, startCur };
+    return { current, prev, delta, monthLabel: `${m}월`, prevMonthLabel: `${prevMonth}월`, startCur, latestDate: latest };
   }
 
   function renderDailyKpiCards() {
@@ -548,7 +548,7 @@
       const m = METRICS_DATA[key];
       if (!m) return;
       const color = COLORS[key];
-      const { current, delta, monthLabel, startCur } = computeMonthToDateKpi(m.series);
+      const { current, delta, monthLabel, startCur, latestDate } = computeMonthToDateKpi(m.series);
       const sparkPoints = (m.series || []).filter(p => !startCur || p.date >= startCur);
       const sparkSeries = sparkPoints.map(p => p.value);
       const stats = computeSparkStats(sparkPoints);
@@ -563,7 +563,7 @@
           </div>
           <div class="kpi-spark">${sparklineSvg(sparkSeries, color)}</div>
           ${sparkPoints.length ? `<div style="display:flex; justify-content:space-between; font-size:10px; color:var(--ink-faint); margin-top:2px;"><span>${sparkPoints[0].date.slice(5)}</span><span>${sparkPoints[sparkPoints.length - 1].date.slice(5)}</span></div>` : ""}
-          <div class="kpi-sub">${monthLabel} 누적 · 전월 동기간比</div>
+          <div class="kpi-sub">${monthLabel} 누적(1일~${latestDate ? latestDate.slice(5) : "-"}) · 전월 동기간比</div>
           ${stats ? `<div class="kpi-sub" style="margin-top:2px;">최고 ${fmt(stats.maxP.value)}건(${stats.maxP.date.slice(5)}) · 최저 ${fmt(stats.minP.value)}건(${stats.minP.date.slice(5)})</div>` : ""}        </div>`;
     });
     return html;
@@ -1048,7 +1048,7 @@
       if (!m || !m.series || !m.series.length) return;
       const color = COLORS[key];
       const agg = aggregateSeries(m.series, "month");
-      const { current, delta, monthLabel } = computeMonthToDateKpi(m.series);
+      const { current, delta, monthLabel, latestDate } = computeMonthToDateKpi(m.series);
       html += `
         <div class="kpi-card" style="border-left:3px solid ${color};">
           <div class="kpi-top">
@@ -1060,7 +1060,7 @@
           </div>
           <div class="kpi-spark">${sparklineSvg(agg.map(p => p.value), color)}</div>
           ${agg.length ? `<div style="display:flex; justify-content:space-between; font-size:10px; color:var(--ink-faint); margin-top:2px;"><span>${agg[0].label}</span><span>${agg[agg.length - 1].label}</span></div>` : ""}
-          <div class="kpi-sub">${monthLabel} 누적(1일~오늘) · 전월 동기간比</div>
+          <div class="kpi-sub">${monthLabel} 누적(1일~${latestDate ? latestDate.slice(5) : "-"}) · 전월 동기간比</div>
         </div>`;
     });
     return html;
@@ -1135,13 +1135,14 @@
     const parts = [];
     const momBits = [];
     let bestGrowth = null;
-    let monthLabel = "이번 달", prevMonthLabel = "전월";
+    let monthLabel = "이번 달", prevMonthLabel = "전월", latestDateLabel = "";
     METRIC_ORDER.forEach(key => {
       const m = METRICS_DATA[key];
       if (!m || !m.series || !m.series.length) return;
-      const { current, delta, monthLabel: ml, prevMonthLabel: pml } = computeMonthToDateKpi(m.series);
+      const { current, delta, monthLabel: ml, prevMonthLabel: pml, latestDate } = computeMonthToDateKpi(m.series);
       if (current === null) return;
       monthLabel = ml; prevMonthLabel = pml;
+      if (latestDate) latestDateLabel = latestDate.slice(5);
       let pctStr = "";
       if (delta !== null) {
         const up = delta >= 0;
@@ -1151,7 +1152,7 @@
       momBits.push(`${m.label} ${fmt(current)}건${pctStr}`);
     });
     if (momBits.length) {
-      parts.push(`${monthLabel} 누적(1일~오늘)은 ${momBits.join(" · ")} — ${prevMonthLabel} 동일 기간 대비 변화예요`);
+      parts.push(`${monthLabel} 누적(1일~${latestDateLabel})은 ${momBits.join(" · ")} — ${prevMonthLabel} 동일 기간 대비 변화예요`);
     }
     if (bestGrowth && bestGrowth.delta > 0) {
       parts.push(`${monthLabel} 가장 크게 성장한 지표는 <b>${bestGrowth.label}</b>로, ${prevMonthLabel} 동기간 대비 <span style="color:var(--good); font-weight:600;">▲${bestGrowth.delta.toFixed(1)}%</span> 증가했어요`);
