@@ -4,7 +4,12 @@ on:
   schedule:
     # 매일 08:00 KST (= 23:00 UTC 전날) 실행
     - cron: "0 23 * * *"
-  workflow_dispatch: {}  # Actions 탭에서 수동 실행도 가능
+  workflow_dispatch:
+    inputs:
+      backfill_time_range:
+        description: '백필할 기간 (예: "2024-01-01 : 2026-07-30", 전체 기간은 "No filter". 비워두면 평소처럼 최근 1개월만 가져옴)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -28,6 +33,7 @@ jobs:
         env:
           SUPERSET_USERNAME: ${{ secrets.SUPERSET_USERNAME }}
           SUPERSET_PASSWORD: ${{ secrets.SUPERSET_PASSWORD }}
+          BACKFILL_TIME_RANGE: ${{ github.event.inputs.backfill_time_range }}
         run: python fetch_data.py
 
       - name: data.json 커밋 & 푸시
@@ -35,7 +41,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/data.json docs/history.json
+          git add docs/data.json docs/history.json docs/store_history.json docs/daily_store_history.json
           git diff --staged --quiet
           if ($LASTEXITCODE -ne 0) {
             git commit -m "chore: update dashboard data $(Get-Date -Format 'yyyy-MM-dd')"
