@@ -1135,25 +1135,29 @@
           <div class="kpi-value-row"><div class="kpi-value">${fmt(totalAllTime)}<span class="unit">건</span></div></div>
           <div class="kpi-sub">${dailySeries.length ? dailySeries[0].date + " ~" : "-"}</div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-top"><div class="kpi-label">평균 재방문 배수</div></div>
-          <div class="kpi-value-row"><div class="kpi-value">${repeatRatio !== null ? repeatRatio.toFixed(1) : "-"}<span class="unit">회 / 인</span></div></div>
-          <div class="kpi-sub">세션수 ÷ 순 방문자수</div>
-        </div>
       </div>
 
       <div class="section-card">
-        <div class="section-head"><h2>일별 방문자 추이 (최근 90일)</h2></div>
+        <div class="section-head">
+          <h2>일별 방문자 추이 (최근 90일)</h2>
+          <span style="font-size:11px; color:var(--ink-faint);">혜택클릭 페이지 순 방문자 기준</span>
+        </div>
         <div class="trend-chart-wrap"><canvas id="partnerDailyChart"></canvas></div>
       </div>
 
       <div class="two-col">
         <div class="section-card">
-          <div class="section-head"><h2>월별 누적 추이</h2></div>
+          <div class="section-head">
+            <h2>월별 누적 추이</h2>
+            <span style="font-size:11px; color:var(--ink-faint);">혜택사용+직원사용 합산 회원수 기준</span>
+          </div>
           <div class="bar-chart-wrap"><canvas id="partnerMonthlyChart"></canvas></div>
         </div>
         <div class="section-card">
-          <div class="section-head"><h2>매장 순위 추이</h2></div>
+          <div class="section-head">
+            <h2>매장 순위 추이</h2>
+            <span style="font-size:11px; color:var(--ink-faint);">월별 누적 회원수 기준</span>
+          </div>
           <div class="bar-chart-wrap"><canvas id="partnerRankChart"></canvas></div>
         </div>
       </div>`;
@@ -1263,22 +1267,34 @@
     area.innerHTML = `
       <div class="section-card">
         <div class="section-head"><h2>제휴처 검색</h2></div>
-        <input type="text" id="partner-search" list="partner-datalist" class="store-select"
-               style="width:100%; max-width:420px; padding:9px 14px;"
-               placeholder="매장명을 입력하거나 선택하세요 (예: fyi 역삼)" value="${namesSorted[0] || ""}">
-        <datalist id="partner-datalist">
-          ${namesSorted.map(n => `<option value="${n}">`).join("")}
-        </datalist>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <input type="text" id="partner-search" class="store-select"
+                 style="flex:1; min-width:180px; max-width:240px; padding:9px 14px;"
+                 placeholder="매장명 검색">
+          <select id="partner-select" class="store-select" style="flex:2; min-width:220px; max-width:360px; padding:9px 14px;">
+            ${namesSorted.map(n => `<option value="${n}">${n}</option>`).join("")}
+          </select>
+        </div>
       </div>
       <div id="partner-detail-area"></div>`;
 
     const searchInput = document.getElementById("partner-search");
-    searchInput.addEventListener("input", (e) => {
-      const val = e.target.value;
-      if (namesSorted.includes(val)) {
-        renderPartnerDetail(val);
-      }
+    const selectEl = document.getElementById("partner-select");
+
+    function populateSelect(names) {
+      const prevVal = selectEl.value;
+      selectEl.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join("");
+      if (names.includes(prevVal)) selectEl.value = prevVal;
+    }
+
+    searchInput.addEventListener("input", () => {
+      const q = searchInput.value.trim();
+      const filtered = q ? namesSorted.filter(n => n.includes(q)) : namesSorted;
+      populateSelect(filtered);
+      if (filtered.length) renderPartnerDetail(selectEl.value);
     });
+
+    selectEl.addEventListener("change", () => renderPartnerDetail(selectEl.value));
 
     if (namesSorted.length) renderPartnerDetail(namesSorted[0]);
   }
