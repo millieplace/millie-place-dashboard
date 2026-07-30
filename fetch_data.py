@@ -223,6 +223,27 @@ def fetch_chart_data(session: requests.Session, access_token: str, csrf_token: s
     return data_rows, metric_guess
 
 
+TIME_SERIES_KEYS = ("uv", "benefit_claims", "staff_verifications")
+
+
+def load_history(path: str) -> dict:
+    """이전에 누적 저장된 일별 히스토리를 불러온다 (없으면 빈 dict)."""
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+
+def merge_history(history: dict, key: str, series: list) -> None:
+    """새로 가져온 일별 series를 히스토리에 upsert (같은 날짜는 최신 값으로 덮어씀)."""
+    bucket = history.setdefault(key, {})
+    for point in series:
+        bucket[point["date"]] = point["value"]
+
+
 def main():
     username = os.environ.get("SUPERSET_USERNAME")
     password = os.environ.get("SUPERSET_PASSWORD")
@@ -238,6 +259,11 @@ def main():
     print("CSRF 토큰 발급 중...")
     csrf_token = get_csrf_token(session, access_token)
 
+    docs_dir = os.path.join(os.path.dirname(__file__), "docs")
+    os.makedirs(docs_dir, exist_ok=True)
+    history_path = os.path.join(docs_dir, "history.json")
+    history = load_history(history_path)
+
     output = {
         "updated_at": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M:%S KST"),
         "metrics": {},
@@ -248,6 +274,10 @@ def main():
         try:
             data_rows, metric_guess = fetch_chart_data(session, access_token, csrf_token, chart_id)
             summary = summarize_rows(data_rows, metric_guess)
+
+            if key in TIME_SERIES_KEYS and summary["series"]:
+                merge_history(history, key, summary["series"])
+
             output["metrics"][key] = {
                 "label": LABELS[key],
                 "chart_id": chart_id,
@@ -272,12 +302,23 @@ def main():
                 "response_body": body_snippet,
             }
 
-    out_path = os.path.join(os.path.dirname(__file__), "docs", "data.json")
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    # 누적된 전체 히스토리를 각 시계열 지표의 series로 교체 (월별/분기별 집계를 위해 필요)
+    for key in TIME_SERIES_KEYS:
+        if key in history and key in output["metrics"]:
+            full_series = sorted(
+                [{"date": d, "value": v} for d, v in history[key].items()],
+                key=lambda x: x["date"],
+            )
+            output["metrics"][key]["series"] = full_series
+
+    with open(history_path, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
+    out_path = os.path.join(docs_dir, "data.json")
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
 
-    print(f"완료! {out_path} 에 저장했습니다.")
+    print(f"완료! {out_path} 에 저장했습니다. (히스토리: {history_path})")
 
 
 if __name__ == "__main__":
