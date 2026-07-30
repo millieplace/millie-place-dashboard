@@ -984,6 +984,22 @@
       }
     }
 
+    // 이상치 감지: 최근 7일 중 30일 평균 대비 40% 이상 벗어난 날
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (!m || !m.series || m.series.length < 14) return;
+      const recent30 = m.series.slice(-30);
+      const avg30 = avgOfSeries(recent30);
+      if (!avg30) return;
+      const last7 = recent30.slice(-7);
+      const anomalies = last7.filter(p => Math.abs(p.value - avg30) / avg30 > 0.4);
+      if (anomalies.length) {
+        const a = anomalies.sort((x, y) => Math.abs(y.value - avg30) - Math.abs(x.value - avg30))[0];
+        const up = a.value >= avg30;
+        parts.push(`${m.label}는 <b>${a.date.slice(5)}</b>에 ${fmt(a.value)}건으로, 최근 30일 평균(${fmt(avg30)}건) 대비 <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">${up ? "크게 증가" : "크게 감소"}</span>했어요`);
+      }
+    });
+
     if (!parts.length) return "";
     return `<div class="section-card">
       <div class="section-head"><h2>📌 일별 트래킹 인사이트</h2></div>
@@ -1156,6 +1172,8 @@
       }
     }
 
+    parts.push(...renderStoreLevelInsights());
+
     if (!parts.length) return "";
     return `<div class="section-card">
       <div class="section-head"><h2>📌 월간 데이터 인사이트</h2></div>
@@ -1163,6 +1181,72 @@
         ${parts.map(t => `<li>${t}</li>`).join("")}
       </ul>
     </div>`;
+  }
+
+  function extractBrand(name) {
+    return name.split(" ")[0];
+  }
+
+  function computeBrandChanges(cur, prev) {
+    const brandCur = {}, brandPrev = {};
+    const allNames = new Set([...Object.keys(cur || {}), ...Object.keys(prev || {})]);
+    allNames.forEach(name => {
+      const brand = extractBrand(name);
+      brandCur[brand] = (brandCur[brand] || 0) + ((cur || {})[name] || 0);
+      brandPrev[brand] = (brandPrev[brand] || 0) + ((prev || {})[name] || 0);
+    });
+    const brands = new Set([...Object.keys(brandCur), ...Object.keys(brandPrev)]);
+    return Array.from(brands).map(b => {
+      const c = brandCur[b] || 0;
+      const p = brandPrev[b] || 0;
+      const delta = c - p;
+      const pct = p > 0 ? (delta / p) * 100 : null;
+      return { brand: b, cur: c, prev: p, delta, pct };
+    });
+  }
+
+  function renderStoreLevelInsights() {
+    const storeMetric = METRICS_DATA[STORE_KEY];
+    if (!storeMetric) return [];
+    const monthlyTotals = storeMetric.monthly_totals || {};
+    const dsMetric = METRICS_DATA["daily_store"];
+    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
+    const monthData = getCurPrevMonthStoreData(monthlyTotals, dailyTotals);
+    if (!monthData || !monthData.prevLabel) return [];
+
+    const bits = [];
+    const brandChanges = computeBrandChanges(monthData.cur, monthData.prev);
+
+    // 이탈 의심: 전월에 유의미한 규모(20건 이상)였다가 70% 이상 급감한 브랜드
+    const churnBrands = brandChanges
+      .filter(b => b.prev >= 20 && b.pct !== null && b.pct <= -70)
+      .sort((a, b) => a.pct - b.pct);
+    if (churnBrands.length) {
+      const names = churnBrands.slice(0, 3).map(b =>
+        `<b>${b.brand}</b>(${fmt(b.prev)}→${fmt(b.cur)}건, <span style="color:var(--bad); font-weight:600;">${b.pct.toFixed(0)}%</span>)`
+      ).join(", ");
+      bits.push(`${names} 매장군은 방문자가 급격히 줄었어요 — 제휴 종료 등 운영 변경 가능성이 있어요`);
+    }
+
+    // 급성장 브랜드
+    const growthBrands = brandChanges
+      .filter(b => b.prev >= 10 && b.pct !== null && b.pct > 30)
+      .sort((a, b) => b.pct - a.pct);
+    if (growthBrands.length) {
+      const top = growthBrands[0];
+      bits.push(`<b>${top.brand}</b> 매장군은 ${monthData.prevLabel} 대비 <span style="color:var(--good); font-weight:600;">▲${top.pct.toFixed(0)}%</span> 성장했어요 (${fmt(top.prev)}→${fmt(top.cur)}건)`);
+    }
+
+    // 개별 매장 중 완전히 이탈(전월 10건 이상 → 이번달 0건)
+    const droppedStores = Object.entries(monthData.prev || {})
+      .filter(([name, prevVal]) => prevVal >= 10 && !(monthData.cur || {})[name])
+      .sort((a, b) => b[1] - a[1]);
+    if (droppedStores.length) {
+      const names = droppedStores.slice(0, 5).map(([name, val]) => `${name}(${fmt(val)}건)`).join(", ");
+      bits.push(`${monthData.prevLabel}에는 방문 기록이 있었지만 ${monthData.curLabel}에는 방문이 없는 매장이 ${droppedStores.length}곳 있어요: ${names}${droppedStores.length > 5 ? " 외" : ""}`);
+    }
+
+    return bits;
   }
 
   function renderMonthlyTab() {
