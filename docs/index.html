@@ -1005,7 +1005,6 @@
 
   /* ================= 제휴처별 데이터 탭 ================= */
 
-  let storePeriod = "all";
   let dailyStoreDate = null;
 
   function getSortedDates(dailyTotals) {
@@ -1030,155 +1029,214 @@
     return { surges, drops, prevDate };
   }
 
-  function computeStoreTotals(rows, metricKey, labelKey) {
-    const totals = {};
-    rows.forEach(r => {
-      const name = r[labelKey];
-      totals[name] = (totals[name] || 0) + (Number(r[metricKey]) || 0);
-    });
-    return Object.entries(totals).sort((a, b) => b[1] - a[1]);
-  }
-
   function getSortedMonths(monthlyTotals) {
     return Object.keys(monthlyTotals || {}).sort();
   }
 
-  function filterMonthsByPeriod(months, period) {
-    if (period === "all") return months;
-    const n = period === "1m" ? 1 : period === "3m" ? 3 : 6;
-    return months.slice(-n);
+  let partnerCharts = {};
+  function destroyPartnerCharts() {
+    Object.values(partnerCharts).forEach(c => c && c.destroy());
+    partnerCharts = {};
   }
 
-  function aggregateStoreTotalsFromHistory(monthlyTotals, months) {
-    const totals = {};
-    months.forEach(m => {
+  function getStoreDailySeries(dailyTotals, storeName) {
+    return getSortedDates(dailyTotals).map(d => ({ date: d, value: (dailyTotals[d] || {})[storeName] || 0 }));
+  }
+
+  function getStoreMonthlySeries(monthlyTotals, storeName) {
+    return getSortedMonths(monthlyTotals).map(m => ({ month: m, value: (monthlyTotals[m] || {})[storeName] || 0 }));
+  }
+
+  function getStoreMonthlyRankSeries(monthlyTotals, storeName) {
+    return getSortedMonths(monthlyTotals).map(m => {
       const bucket = monthlyTotals[m] || {};
-      Object.entries(bucket).forEach(([name, val]) => {
-        totals[name] = (totals[name] || 0) + val;
-      });
+      const sorted = Object.entries(bucket).sort((a, b) => b[1] - a[1]);
+      const idx = sorted.findIndex(([n]) => n === storeName);
+      return { month: m, rank: idx >= 0 ? idx + 1 : null, total: sorted.length };
     });
-    return Object.entries(totals).sort((a, b) => b[1] - a[1]);
   }
 
-  function storeMonthlySeriesFromHistory(monthlyTotals, months, storeName) {
-    return months.map(m => ({ label: m, value: (monthlyTotals[m] || {})[storeName] || 0 }));
-  }
-
-  function computeStoreMonthly(rows, metricKey, storeName, labelKey) {
-    const filtered = rows.filter(r => r[labelKey] === storeName);
-    const buckets = {};
-    filtered.forEach(r => {
-      const monthRaw = r["produce_month"];
-      let key = "기타";
-      if (typeof monthRaw === "number") key = new Date(monthRaw).toISOString().slice(0, 7);
-      buckets[key] = (buckets[key] || 0) + (Number(r[metricKey]) || 0);
+  function computeStoreRepeatRatio(dsRawRows, labelKey, metricKey, storeName) {
+    let sessionSum = 0, memberSum = 0;
+    dsRawRows.forEach(r => {
+      if (r[labelKey] === storeName) {
+        memberSum += Number(r[metricKey]) || 0;
+        const sessionKey = Object.keys(r).find(k => k.includes("세션수"));
+        if (sessionKey) sessionSum += Number(r[sessionKey]) || 0;
+      }
     });
-    return Object.keys(buckets).sort().map(k => ({ label: k, value: buckets[k] }));
+    return memberSum > 0 ? sessionSum / memberSum : null;
   }
 
-  function renderStoreChartAndTable() {
+  function renderPartnerDetail(storeName) {
+    destroyPartnerCharts();
+    const detailArea = document.getElementById("partner-detail-area");
     const storeMetric = METRICS_DATA[STORE_KEY];
-    const selectEl = document.getElementById("store-select");
-    const selected = selectEl ? selectEl.value : "__all__";
-    const { data, metric_key, label_key, monthly_totals } = storeMetric;
+    const dsMetric = METRICS_DATA["daily_store"];
+    const monthlyTotals = storeMetric.monthly_totals || {};
+    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
+    const dsRawRows = (dsMetric && dsMetric.data) || [];
+    const dsLabelKey = dsMetric ? dsMetric.label_key : "place_name";
+    const dsMetricKey = dsMetric ? dsMetric.metric_key : null;
 
-    const ctxEl = document.getElementById("storeBarChart");
-    if (storeChartInstance) { storeChartInstance.destroy(); storeChartInstance = null; }
-
-    const hasHistory = monthly_totals && Object.keys(monthly_totals).length > 0;
-    const allMonths = hasHistory ? getSortedMonths(monthly_totals) : [];
-    const activeMonths = hasHistory ? filterMonthsByPeriod(allMonths, storePeriod) : [];
-
-    if (selected === "__all__") {
-      const sorted = hasHistory
-        ? aggregateStoreTotalsFromHistory(monthly_totals, activeMonths).slice(0, 15)
-        : computeStoreTotals(data, metric_key, label_key).slice(0, 15);
-
-      storeChartInstance = new Chart(ctxEl, {
-        type: "bar",
-        data: {
-          labels: sorted.map(([name]) => name),
-          datasets: [{ data: sorted.map(([, v]) => v), backgroundColor: "#a8562a", borderRadius: 4, maxBarThickness: 20 }],
-        },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            datalabels: {
-              anchor: "end", align: "right",
-              font: { size: 10.5, family: "'IBM Plex Mono', monospace", weight: 600 },
-              color: "#374151",
-              formatter: (v) => v.toLocaleString("ko-KR"),
-            },
-          },
-          scales: {
-            x: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
-            y: { grid: { display: false }, ticks: { color: "#374151", font: { size: 12 } } },
-          },
-        },
-      });
-
-      const allSorted = hasHistory
-        ? aggregateStoreTotalsFromHistory(monthly_totals, activeMonths)
-        : computeStoreTotals(data, metric_key, label_key);
-      const rows = allSorted.map(([name, val], i) => `
-        <tr>
-          <td class="rank-num">${String(i + 1).padStart(2, "0")}</td>
-          <td>${name}</td>
-          <td class="rank-val">${fmt(val)}</td>
-        </tr>`).join("");
-      document.getElementById("rank-table-area").innerHTML = `
-        <table class="rank-table">
-          <thead><tr><th>순위</th><th>매장</th><th style="text-align:right">건수</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
-    } else {
-      const monthly = hasHistory
-        ? storeMonthlySeriesFromHistory(monthly_totals, activeMonths, selected)
-        : computeStoreMonthly(data, metric_key, selected, label_key);
-      const total = monthly.reduce((a, p) => a + p.value, 0);
-      const allSorted = hasHistory
-        ? aggregateStoreTotalsFromHistory(monthly_totals, activeMonths)
-        : computeStoreTotals(data, metric_key, label_key);
-      const rank = allSorted.findIndex(([name]) => name === selected) + 1;
-
-      storeChartInstance = new Chart(ctxEl, {
-        type: "bar",
-        data: {
-          labels: monthly.map(p => p.label),
-          datasets: [{ data: monthly.map(p => p.value), backgroundColor: "#a8562a", borderRadius: 5, maxBarThickness: 50 }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            datalabels: {
-              anchor: "end", align: "top",
-              font: { size: 11, family: "'IBM Plex Mono', monospace", weight: 600 },
-              color: "#374151",
-              formatter: (v) => v.toLocaleString("ko-KR"),
-            },
-          },
-          scales: {
-            x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
-            y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
-          },
-        },
-      });
-
-      document.getElementById("rank-table-area").innerHTML = `
-        <div class="store-stats-row">
-          <div class="store-stat"><div class="label">기간 내 순위</div><div class="value">${rank || "-"}위</div></div>
-          <div class="store-stat"><div class="label">기간 내 누적</div><div class="value">${fmt(total)}</div></div>
-        </div>
-        <table class="rank-table">
-          <thead><tr><th>월</th><th style="text-align:right">건수</th></tr></thead>
-          <tbody>${monthly.map(p => `<tr><td>${p.label}</td><td class="rank-val">${fmt(p.value)}</td></tr>`).join("")}</tbody>
-        </table>`;
+    const monthData = getCurPrevMonthStoreData(monthlyTotals, dailyTotals);
+    let curVal = 0, prevVal = 0, curLabel = "-", prevLabel = null, curRank = null, prevRank = null, totalStores = 0;
+    if (monthData) {
+      curLabel = monthData.curLabel;
+      prevLabel = monthData.prevLabel;
+      curVal = monthData.cur[storeName] || 0;
+      prevVal = monthData.prev[storeName] || 0;
+      const curSorted = Object.entries(monthData.cur).sort((a, b) => b[1] - a[1]);
+      totalStores = curSorted.length;
+      const ci = curSorted.findIndex(([n]) => n === storeName);
+      curRank = ci >= 0 ? ci + 1 : null;
+      const prevSorted = Object.entries(monthData.prev).sort((a, b) => b[1] - a[1]);
+      const pi = prevSorted.findIndex(([n]) => n === storeName);
+      prevRank = pi >= 0 ? pi + 1 : null;
     }
+    const monthDelta = prevVal > 0 ? ((curVal - prevVal) / prevVal) * 100 : null;
+    const rankChange = (curRank !== null && prevRank !== null) ? prevRank - curRank : null;
+
+    const dailySeries = getStoreDailySeries(dailyTotals, storeName);
+    const totalAllTime = dailySeries.reduce((a, p) => a + p.value, 0);
+    const recentDaily = dailySeries.slice(-90);
+
+    const monthlySeries = getStoreMonthlySeries(monthlyTotals, storeName);
+    const rankSeries = getStoreMonthlyRankSeries(monthlyTotals, storeName);
+    const repeatRatio = computeStoreRepeatRatio(dsRawRows, dsLabelKey, dsMetricKey, storeName);
+
+    function rankChangeBadge() {
+      if (rankChange === null) return "";
+      if (rankChange > 0) return `<span class="kpi-delta up">▲ ${rankChange}계단</span>`;
+      if (rankChange < 0) return `<span class="kpi-delta down">▼ ${Math.abs(rankChange)}계단</span>`;
+      return `<span class="kpi-delta" style="color:var(--ink-faint); background:#f1f2f5;">- 변동없음</span>`;
+    }
+
+    detailArea.innerHTML = `
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-label">${curLabel} 누적 방문자</div></div>
+          <div class="kpi-value-row">
+            <div class="kpi-value">${fmt(curVal)}<span class="unit">건</span></div>
+            ${deltaBadge(monthDelta)}
+          </div>
+          <div class="kpi-sub">전월(${prevLabel || "-"}) 대비</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-label">이번 달 순위</div></div>
+          <div class="kpi-value-row">
+            <div class="kpi-value">${curRank ? curRank : "-"}<span class="unit">/ ${totalStores}개 매장 중</span></div>
+            ${rankChangeBadge()}
+          </div>
+          <div class="kpi-sub">전월 순위: ${prevRank ? prevRank + "위" : "-"}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-label">누적 방문자 (전체 기간)</div></div>
+          <div class="kpi-value-row"><div class="kpi-value">${fmt(totalAllTime)}<span class="unit">건</span></div></div>
+          <div class="kpi-sub">${dailySeries.length ? dailySeries[0].date + " ~" : "-"}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-label">평균 재방문 배수</div></div>
+          <div class="kpi-value-row"><div class="kpi-value">${repeatRatio !== null ? repeatRatio.toFixed(1) : "-"}<span class="unit">회 / 인</span></div></div>
+          <div class="kpi-sub">세션수 ÷ 순 방문자수</div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h2>일별 방문자 추이 (최근 90일)</h2></div>
+        <div class="trend-chart-wrap"><canvas id="partnerDailyChart"></canvas></div>
+      </div>
+
+      <div class="two-col">
+        <div class="section-card">
+          <div class="section-head"><h2>월별 누적 추이</h2></div>
+          <div class="bar-chart-wrap"><canvas id="partnerMonthlyChart"></canvas></div>
+        </div>
+        <div class="section-card">
+          <div class="section-head"><h2>매장 순위 추이</h2></div>
+          <div class="bar-chart-wrap"><canvas id="partnerRankChart"></canvas></div>
+        </div>
+      </div>`;
+
+    partnerCharts.daily = new Chart(document.getElementById("partnerDailyChart"), {
+      type: "line",
+      data: {
+        labels: recentDaily.map(p => p.date.slice(5)),
+        datasets: [{
+          data: recentDaily.map(p => p.value),
+          borderColor: "#2563eb",
+          backgroundColor: "#2563eb",
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: { legend: { display: false }, datalabels: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 }, maxTicksLimit: 12 } },
+          y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+        },
+      },
+    });
+
+    partnerCharts.monthly = new Chart(document.getElementById("partnerMonthlyChart"), {
+      type: "bar",
+      data: {
+        labels: monthlySeries.map(p => p.month),
+        datasets: [{ data: monthlySeries.map(p => p.value), backgroundColor: "#a8562a", borderRadius: 4, maxBarThickness: 28 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            anchor: "end", align: "top",
+            font: { size: 10, family: "'IBM Plex Mono', monospace", weight: 600 },
+            color: "#374151",
+            formatter: v => v ? v.toLocaleString("ko-KR") : "",
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 10 } } },
+          y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+        },
+      },
+    });
+
+    partnerCharts.rank = new Chart(document.getElementById("partnerRankChart"), {
+      type: "line",
+      data: {
+        labels: rankSeries.map(p => p.month),
+        datasets: [{
+          data: rankSeries.map(p => p.rank),
+          borderColor: "#7c3aed",
+          backgroundColor: "#7c3aed",
+          tension: 0.3,
+          pointRadius: 3,
+          borderWidth: 2,
+          spanGaps: true,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            align: "top",
+            font: { size: 10, family: "'IBM Plex Mono', monospace", weight: 600 },
+            color: "#7c3aed",
+            formatter: v => v ? `${v}위` : "",
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 10 } } },
+          y: { reverse: true, grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 }, precision: 0 } },
+        },
+      },
+    });
   }
 
   function renderPartnerTab() {
@@ -1191,48 +1249,38 @@
       return;
     }
 
-    area.innerHTML = `
-      <div class="two-col">
-        <div class="section-card">
-          <div class="section-head">
-            <h2>제휴처 순위 / 추이</h2>
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-              <div class="segmented" id="store-period-toggle">
-                <button data-period="1m">1개월</button>
-                <button data-period="3m">3개월</button>
-                <button data-period="6m">6개월</button>
-                <button class="active" data-period="all">전체</button>
-              </div>
-              <select class="store-select" id="store-select"><option>매장 불러오는 중...</option></select>
-            </div>
-          </div>
-          <div class="bar-chart-wrap tall"><canvas id="storeBarChart"></canvas></div>
-        </div>
-        <div class="section-card">
-          <div class="section-head"><h2>상세</h2></div>
-          <div id="rank-table-area"></div>
-        </div>
-      </div>`;
+    const { label_key, data, monthly_totals } = storeMetric;
+    const hasHistory = monthly_totals && Object.keys(monthly_totals).length > 0;
+    const namesSorted = hasHistory
+      ? Object.entries(
+          getSortedMonths(monthly_totals).reduce((acc, m) => {
+            Object.entries(monthly_totals[m]).forEach(([n, v]) => { acc[n] = (acc[n] || 0) + v; });
+            return acc;
+          }, {})
+        ).sort((a, b) => b[1] - a[1]).map(([n]) => n)
+      : Array.from(new Set(data.map(r => r[label_key])));
 
-    document.querySelectorAll("#store-period-toggle button").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll("#store-period-toggle button").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        storePeriod = btn.dataset.period;
-        renderStoreChartAndTable();
-      });
+    area.innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><h2>제휴처 검색</h2></div>
+        <input type="text" id="partner-search" list="partner-datalist" class="store-select"
+               style="width:100%; max-width:420px; padding:9px 14px;"
+               placeholder="매장명을 입력하거나 선택하세요 (예: fyi 역삼)" value="${namesSorted[0] || ""}">
+        <datalist id="partner-datalist">
+          ${namesSorted.map(n => `<option value="${n}">`).join("")}
+        </datalist>
+      </div>
+      <div id="partner-detail-area"></div>`;
+
+    const searchInput = document.getElementById("partner-search");
+    searchInput.addEventListener("input", (e) => {
+      const val = e.target.value;
+      if (namesSorted.includes(val)) {
+        renderPartnerDetail(val);
+      }
     });
 
-    const { metric_key, label_key, data, monthly_totals } = storeMetric;
-    const selectEl = document.getElementById("store-select");
-    const hasHistory = monthly_totals && Object.keys(monthly_totals).length > 0;
-    const sorted = hasHistory
-      ? aggregateStoreTotalsFromHistory(monthly_totals, getSortedMonths(monthly_totals))
-      : computeStoreTotals(data, metric_key, label_key);
-    selectEl.innerHTML = `<option value="__all__">전체 제휴처 (TOP 15)</option>` +
-      sorted.map(([name]) => `<option value="${name}">${name}</option>`).join("");
-    selectEl.addEventListener("change", renderStoreChartAndTable);
-    renderStoreChartAndTable();
+    if (namesSorted.length) renderPartnerDetail(namesSorted[0]);
   }
 
   /* ================= 공통 ================= */
