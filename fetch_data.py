@@ -221,6 +221,9 @@ def fetch_chart_data(
     if time_range_override:
         for q in query_context.get("queries", []):
             q["time_range"] = time_range_override
+            # 넓은 기간 백필 시 Superset의 기본 row_limit에 걸려 데이터가
+            # 잘리는 것을 방지하기 위해 넉넉하게 override
+            q["row_limit"] = max(int(q.get("row_limit") or 0), 100000)
 
     resp = session.post(
         f"{SUPERSET_BASE_URL}/api/v1/chart/data",
