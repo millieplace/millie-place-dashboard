@@ -1419,8 +1419,9 @@
     const trendPct = (prev7Avg && prev7Avg > 0) ? ((last7Avg - prev7Avg) / prev7Avg) * 100 : null;
 
     const insights = [];
-    if (hasWeekdayData) {
-      insights.push(`<b>${weekdayNames[bestWd]}요일</b>에 방문자가 가장 많아요 (평균 ${fmt(wdAvgs[bestWd])}명) · <b>${weekdayNames[worstWd]}요일</b>이 가장 적어요 (평균 ${fmt(wdAvgs[worstWd])}명)`);
+    if (trendPct !== null) {
+      const up = trendPct >= 0;
+      insights.push(`최근 7일 평균 방문자는 ${fmt(last7Avg)}명으로, 이전 7일(${fmt(prev7Avg)}명) 대비 <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">${up ? "▲" : "▼"} ${Math.abs(trendPct).toFixed(1)}%</span> ${up ? "증가" : "감소"} 추세예요`);
     }
     if (curRank !== null) {
       if (rankChange === null) {
@@ -1433,9 +1434,8 @@
         insights.push(`이번 달도 <b>${curRank}위</b>로 순위 변동이 없어요`);
       }
     }
-    if (trendPct !== null) {
-      const up = trendPct >= 0;
-      insights.push(`최근 7일 평균 방문자는 ${fmt(last7Avg)}명으로, 이전 7일(${fmt(prev7Avg)}명) 대비 <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">${up ? "▲" : "▼"} ${Math.abs(trendPct).toFixed(1)}%</span> ${up ? "증가" : "감소"} 추세예요`);
+    if (hasWeekdayData) {
+      insights.push(`<b>${weekdayNames[bestWd]}요일</b>에 방문자가 가장 많아요 (평균 ${fmt(wdAvgs[bestWd])}명) · <b>${weekdayNames[worstWd]}요일</b>이 가장 적어요 (평균 ${fmt(wdAvgs[worstWd])}명)`);
     }
 
     function rankChangeBadge() {
@@ -1485,7 +1485,7 @@
           <h2>일별 방문자 추이 (최근 60일)</h2>
           <span style="font-size:11px; color:var(--ink-faint);">혜택클릭 페이지 순 방문자 기준 · 60일 평균 ${dailyAvg !== null ? fmt(dailyAvg) : "-"}명</span>
         </div>
-        <div class="trend-chart-wrap"><canvas id="partnerDailyChart"></canvas></div>
+        <div class="trend-chart-wrap tall"><canvas id="partnerDailyChart"></canvas></div>
       </div>
 
       <div class="two-col">
@@ -1515,10 +1515,7 @@
             borderColor: "#6366f1",
             backgroundColor: "#6366f1",
             tension: 0.3,
-            pointRadius: (ctx) => {
-              const i = ctx.dataIndex, len = ctx.dataset.data.length;
-              return (i % 5 === 0 || i === len - 1) ? 2.5 : 0;
-            },
+            pointRadius: 2,
             borderWidth: 2,
           },
           {
@@ -1539,17 +1536,15 @@
           legend: { display: false },
           datalabels: {
             align: "top",
-            offset: 4,
-            font: { size: 9.5, family: "'IBM Plex Mono', monospace", weight: 600 },
+            offset: 3,
+            font: { size: 8.5, family: "'IBM Plex Mono', monospace", weight: 600 },
             color: "#6366f1",
             backgroundColor: "rgba(255,255,255,0.85)",
             borderRadius: 3,
-            padding: { top: 1, bottom: 1, left: 3, right: 3 },
+            padding: { top: 1, bottom: 1, left: 2, right: 2 },
             formatter: (v, ctx) => {
               if (ctx.datasetIndex !== 0 || v === null) return "";
-              const i = ctx.dataIndex, len = ctx.dataset.data.length;
-              if (i % 5 === 0 || i === len - 1) return Math.round(v).toLocaleString("ko-KR");
-              return "";
+              return Math.round(v).toLocaleString("ko-KR");
             },
           },
         },
