@@ -1099,7 +1099,10 @@
 
     const dailySeries = getStoreDailySeries(dailyTotals, storeName);
     const totalAllTime = dailySeries.reduce((a, p) => a + p.value, 0);
-    const recentDaily = dailySeries.slice(-90);
+    const recentDaily = dailySeries.slice(-60);
+    const dailyAvg = recentDaily.length
+      ? recentDaily.reduce((a, p) => a + p.value, 0) / recentDaily.length
+      : null;
 
     const monthlySeries = getStoreMonthlySeries(monthlyTotals, storeName);
     const rankSeries = getStoreMonthlyRankSeries(monthlyTotals, storeName);
@@ -1139,8 +1142,8 @@
 
       <div class="section-card">
         <div class="section-head">
-          <h2>일별 방문자 추이 (최근 90일)</h2>
-          <span style="font-size:11px; color:var(--ink-faint);">혜택클릭 페이지 순 방문자 기준</span>
+          <h2>일별 방문자 추이 (최근 60일)</h2>
+          <span style="font-size:11px; color:var(--ink-faint);">혜택클릭 페이지 순 방문자 기준 · 60일 평균 ${dailyAvg !== null ? fmt(dailyAvg) : "-"}명</span>
         </div>
         <div class="trend-chart-wrap"><canvas id="partnerDailyChart"></canvas></div>
       </div>
@@ -1166,14 +1169,25 @@
       type: "line",
       data: {
         labels: recentDaily.map(p => p.date.slice(5)),
-        datasets: [{
-          data: recentDaily.map(p => p.value),
-          borderColor: "#2563eb",
-          backgroundColor: "#2563eb",
-          tension: 0.3,
-          pointRadius: 0,
-          borderWidth: 2,
-        }],
+        datasets: [
+          {
+            data: recentDaily.map(p => p.value),
+            borderColor: "#2563eb",
+            backgroundColor: "#2563eb",
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2,
+          },
+          {
+            data: recentDaily.map(() => dailyAvg),
+            borderColor: "#9ca3af",
+            borderDash: [5, 4],
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0,
+            fill: false,
+          },
+        ],
       },
       options: {
         responsive: true, maintainAspectRatio: false,
