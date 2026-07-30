@@ -639,22 +639,30 @@
           </table>
         </div>
         <div>
-          <div class="section-head"><h2 style="font-size:12.5px; color:var(--ink-soft);">전일 대비 급증/급감${prevDate ? ` (vs ${prevDate})` : ""}</h2></div>
+          <div class="section-head"><h2 style="font-size:12.5px; color:var(--ink-soft);">전일 대비 급증·급감${prevDate ? ` (vs ${prevDate})` : ""}</h2></div>
           ${!prevDate ? '<div class="empty-note">비교할 전일 데이터가 없습니다.</div>' : `
-          <table class="rank-table" style="margin-bottom:10px;">
+          <div style="margin-bottom:6px; font-size:11px; font-weight:600; color:var(--good);">▲ 급증 TOP 5</div>
+          <table class="rank-table" style="margin-bottom:14px;">
+            <thead><tr><th>순위</th><th>매장</th><th style="text-align:right">증감</th></tr></thead>
             <tbody>
-              ${surges.length ? surges.map(([name, cur, prev, delta]) => `
+              ${surges.length ? surges.map(([name, cur, prev, delta], i) => `
                 <tr>
-                  <td>▲ ${name}</td>
-                  <td class="rank-val" style="color:var(--good)">+${fmt(delta)}</td>
-                  <td class="rank-val" style="color:var(--ink-faint); font-size:11px;">${fmt(prev)}→${fmt(cur)}</td>
-                </tr>`).join("") : '<tr><td class="empty-note">급증 매장 없음</td></tr>'}
-              ${drops.length ? drops.map(([name, cur, prev, delta]) => `
+                  <td class="rank-num">${String(i + 1).padStart(2, "0")}</td>
+                  <td>${name}</td>
+                  <td class="rank-val" style="color:var(--good)">+${fmt(delta)} <span style="color:var(--ink-faint); font-weight:500;">(${fmt(prev)}→${fmt(cur)})</span></td>
+                </tr>`).join("") : `<tr><td colspan="3" class="empty-note">급증 매장 없음</td></tr>`}
+            </tbody>
+          </table>
+          <div style="margin-bottom:6px; font-size:11px; font-weight:600; color:var(--bad);">▼ 급감 TOP 5</div>
+          <table class="rank-table">
+            <thead><tr><th>순위</th><th>매장</th><th style="text-align:right">증감</th></tr></thead>
+            <tbody>
+              ${drops.length ? drops.map(([name, cur, prev, delta], i) => `
                 <tr>
-                  <td>▼ ${name}</td>
-                  <td class="rank-val" style="color:var(--bad)">${fmt(delta)}</td>
-                  <td class="rank-val" style="color:var(--ink-faint); font-size:11px;">${fmt(prev)}→${fmt(cur)}</td>
-                </tr>`).join("") : ""}
+                  <td class="rank-num">${String(i + 1).padStart(2, "0")}</td>
+                  <td>${name}</td>
+                  <td class="rank-val" style="color:var(--bad)">${fmt(delta)} <span style="color:var(--ink-faint); font-weight:500;">(${fmt(prev)}→${fmt(cur)})</span></td>
+                </tr>`).join("") : `<tr><td colspan="3" class="empty-note">급감 매장 없음</td></tr>`}
             </tbody>
           </table>`}
         </div>
