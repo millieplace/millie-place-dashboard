@@ -658,39 +658,77 @@
     });
   }
 
-  function computeMonthlyStoreChange(monthlyTotals) {
+  function getMonthKeyFromDate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  function aggregateDailyStoreForMonth(dailyTotals, monthKey) {
+    const totals = {};
+    Object.keys(dailyTotals || {}).forEach(date => {
+      if (date.startsWith(monthKey)) {
+        Object.entries(dailyTotals[date]).forEach(([name, v]) => {
+          totals[name] = (totals[name] || 0) + v;
+        });
+      }
+    });
+    return totals;
+  }
+
+  function computeMonthlyStoreChange(monthlyTotals, dailyTotals) {
     const months = getSortedMonths(monthlyTotals);
-    if (months.length < 2) return { curMonth: null, prevMonth: null, increases: [], decreases: [] };
-    const curMonth = months[months.length - 1];
-    const prevMonth = months[months.length - 2];
-    const cur = monthlyTotals[curMonth] || {};
-    const prev = monthlyTotals[prevMonth] || {};
-    const allNames = new Set([...Object.keys(cur), ...Object.keys(prev)]);
+    const today = new Date();
+    const curMonthKey = getMonthKeyFromDate(today);
+    let cur, prev, curLabel, prevLabel, usingFallback = false;
+
+    if (months.includes(curMonthKey)) {
+      const idx = months.indexOf(curMonthKey);
+      curLabel = curMonthKey;
+      cur = monthlyTotals[curMonthKey];
+      prevLabel = idx > 0 ? months[idx - 1] : null;
+      prev = prevLabel ? monthlyTotals[prevLabel] : {};
+    } else if (dailyTotals && Object.keys(dailyTotals).some(d => d.startsWith(curMonthKey))) {
+      curLabel = curMonthKey;
+      cur = aggregateDailyStoreForMonth(dailyTotals, curMonthKey);
+      prevLabel = months.length ? months[months.length - 1] : null;
+      prev = prevLabel ? monthlyTotals[prevLabel] : {};
+      usingFallback = true;
+    } else if (months.length >= 2) {
+      prevLabel = months[months.length - 2];
+      curLabel = months[months.length - 1];
+      prev = monthlyTotals[prevLabel];
+      cur = monthlyTotals[curLabel];
+    } else {
+      return { curLabel: null, prevLabel: null, increases: [], decreases: [], usingFallback: false };
+    }
+
+    const allNames = new Set([...Object.keys(cur || {}), ...Object.keys(prev || {})]);
     const deltas = [];
     allNames.forEach(name => {
-      const c = cur[name] || 0;
-      const p = prev[name] || 0;
+      const c = (cur || {})[name] || 0;
+      const p = (prev || {})[name] || 0;
       deltas.push([name, c, p, c - p]);
     });
     const sorted = [...deltas].sort((a, b) => b[3] - a[3]);
     const increases = sorted.filter(d => d[3] > 0).slice(0, 10);
     const decreases = sorted.filter(d => d[3] < 0).slice(-10).reverse();
-    return { curMonth, prevMonth, increases, decreases };
+    return { curLabel, prevLabel, increases, decreases, usingFallback };
   }
 
   function renderMonthlyStoreChangeSection() {
     const storeMetric = METRICS_DATA[STORE_KEY];
+    const dsMetric = METRICS_DATA["daily_store"];
     const area = document.getElementById("monthly-store-change-area");
-    const monthlyTotals = storeMetric && storeMetric.monthly_totals;
+    const monthlyTotals = (storeMetric && storeMetric.monthly_totals) || {};
+    const dailyTotals = dsMetric && dsMetric.daily_totals;
 
-    if (!monthlyTotals || Object.keys(monthlyTotals).length < 2) {
+    const { curLabel, prevLabel, increases, decreases, usingFallback } = computeMonthlyStoreChange(monthlyTotals, dailyTotals);
+
+    if (!curLabel) {
       area.innerHTML = `
         <div class="section-head"><h2>월별 제휴처 방문자 증감 (TOP 10)</h2></div>
         <div class="empty-note">비교할 수 있는 두 달치 데이터가 아직 없습니다. 매일 누적되니 조금만 기다려주세요.</div>`;
       return;
     }
-
-    const { curMonth, prevMonth, increases, decreases } = computeMonthlyStoreChange(monthlyTotals);
 
     function rows(list, sign) {
       if (!list.length) return `<tr><td class="empty-note">해당 매장 없음</td></tr>`;
@@ -705,8 +743,9 @@
 
     area.innerHTML = `
       <div class="section-head">
-        <h2>월별 제휴처 방문자 증감 (TOP 10, ${prevMonth} → ${curMonth})</h2>
+        <h2>월별 제휴처 방문자 증감 (TOP 10, ${prevLabel || "-"} → ${curLabel})</h2>
       </div>
+      ${usingFallback ? `<div class="empty-note" style="text-align:left; padding:0 0 10px;">※ 이번 달(${curLabel})은 아직 월별 집계 전이라, 일별 매장 데이터(혜택클릭 기준)로 집계한 값이에요.</div>` : ""}
       <div class="two-col">
         <div>
           <div class="section-head"><h2 style="font-size:12.5px; color:var(--ink-soft);">▲ 증가 TOP 10</h2></div>
