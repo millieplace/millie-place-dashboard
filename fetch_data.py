@@ -15,6 +15,13 @@ from datetime import datetime, timezone, timedelta
 
 import requests
 
+# Windows 콘솔(cp949)에서 이모지/특수문자 출력 시 죽는 문제 방지
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 SUPERSET_BASE_URL = "https://superset.data.millie.co.kr"
 
 # 트래킹할 차트 목록 (slice_id 기준)
