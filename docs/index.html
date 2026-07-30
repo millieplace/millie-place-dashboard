@@ -731,6 +731,16 @@
     return totals;
   }
 
+  function getAugmentedMonthlyTotals(monthlyTotals, dailyTotals) {
+    const months = getSortedMonths(monthlyTotals);
+    const curMonthKey = getMonthKeyFromDate(new Date());
+    if (months.includes(curMonthKey)) return monthlyTotals;
+    if (dailyTotals && Object.keys(dailyTotals).some(d => d.startsWith(curMonthKey))) {
+      return { ...monthlyTotals, [curMonthKey]: aggregateDailyStoreForMonth(dailyTotals, curMonthKey) };
+    }
+    return monthlyTotals;
+  }
+
   function getCurPrevMonthStoreData(monthlyTotals, dailyTotals) {
     const months = getSortedMonths(monthlyTotals);
     const today = new Date();
@@ -1272,7 +1282,7 @@
       ? recentDaily.reduce((a, p) => a + p.value, 0) / recentDaily.length
       : null;
 
-    const benefitMonthlyTotals = storeMetric.benefit_monthly_totals || {};
+    const benefitMonthlyTotals = getAugmentedMonthlyTotals(storeMetric.benefit_monthly_totals || {}, dailyTotals);
     const monthlySeries = getStoreMonthlySeries(benefitMonthlyTotals, storeName);
     const rankSeries = getStoreMonthlyRankSeries(benefitMonthlyTotals, storeName);
     const repeatRatio = computeStoreRepeatRatio(dsRawRows, dsLabelKey, dsMetricKey, storeName);
