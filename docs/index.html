@@ -384,6 +384,11 @@
   Chart.register(ChartDataLabels);
 
   const COLORS = { uv: "#2563eb", benefit_claims: "#10b981", staff_verifications: "#f59e0b" };
+  const LABEL_POS = {
+    uv: { align: "top", anchor: "end" },
+    benefit_claims: { align: "top", anchor: "end" },
+    staff_verifications: { align: "bottom", anchor: "start" },
+  };
   const METRIC_ORDER = ["uv", "benefit_claims", "staff_verifications"];
   const STORE_KEY = "store_breakdown";
 
@@ -529,6 +534,7 @@
     const datasets = METRIC_ORDER.filter(k => perMetric[k]).map(key => {
       const valueByKey = {};
       perMetric[key].forEach(p => { valueByKey[p.key] = p.value; });
+      const pos = LABEL_POS[key] || { align: "top", anchor: "end" };
       return {
         label: METRICS_DATA[key].label,
         data: sortedKeys.map(k => valueByKey[k] !== undefined ? valueByKey[k] : null),
@@ -537,11 +543,16 @@
         tension: 0.3,
         pointRadius: (ctx) => {
           const i = ctx.dataIndex, len = ctx.dataset.data.length;
-          return (i % 3 === 0 || i === len - 1) ? 3 : 0;
+          return (i % 2 === 0 || i === len - 1) ? 3 : 0;
         },
         pointBackgroundColor: COLORS[key],
         borderWidth: 2,
         spanGaps: true,
+        datalabels: {
+          align: pos.align,
+          anchor: pos.anchor,
+          offset: 5,
+        },
       };
     });
 
@@ -555,14 +566,15 @@
         plugins: {
           legend: { display: false },
           datalabels: {
-            align: "top",
-            offset: 4,
             font: { size: 10, family: "'IBM Plex Mono', monospace", weight: 600 },
             color: (c) => c.dataset.borderColor,
+            backgroundColor: "rgba(255,255,255,0.85)",
+            borderRadius: 3,
+            padding: { top: 1, bottom: 1, left: 3, right: 3 },
             formatter: (v, ctx) => {
               if (v === null) return "";
               const i = ctx.dataIndex, len = ctx.dataset.data.length;
-              if (i % 3 === 0 || i === len - 1) return Math.round(v).toLocaleString("ko-KR");
+              if (i % 2 === 0 || i === len - 1) return Math.round(v).toLocaleString("ko-KR");
               return "";
             },
           },
@@ -773,11 +785,9 @@
         </div>
         <div class="trend-chart-wrap tall"><canvas id="dailyTrendChart"></canvas></div>
       </div>
-      <div class="section-card" id="daily-store-area"></div>
-      <div class="section-card" id="monthly-store-change-area"></div>`;
+      <div class="section-card" id="daily-store-area"></div>`;
     renderDailyTrendChart();
     renderDailyStoreSection();
-    renderMonthlyStoreChangeSection();
   }
 
   /* ================= 월간 데이터 탭 ================= */
@@ -839,6 +849,7 @@
     const datasets = METRIC_ORDER.filter(k => perMetric[k]).map(key => {
       const valueByKey = {};
       perMetric[key].forEach(p => { valueByKey[p.key] = p.value; });
+      const pos = LABEL_POS[key] || { align: "top", anchor: "end" };
       return {
         label: METRICS_DATA[key].label,
         data: sortedKeys.map(k => valueByKey[k] !== undefined ? valueByKey[k] : null),
@@ -849,6 +860,7 @@
         pointBackgroundColor: COLORS[key],
         borderWidth: 2,
         spanGaps: true,
+        datalabels: { align: pos.align, anchor: pos.anchor, offset: 5 },
       };
     });
 
@@ -862,9 +874,11 @@
         plugins: {
           legend: { display: false },
           datalabels: {
-            align: "top",
             font: { size: 10.5, family: "'IBM Plex Mono', monospace", weight: 600 },
             color: (c) => c.dataset.borderColor,
+            backgroundColor: "rgba(255,255,255,0.85)",
+            borderRadius: 3,
+            padding: { top: 1, bottom: 1, left: 3, right: 3 },
             formatter: (v) => v === null ? "" : Math.round(v).toLocaleString("ko-KR"),
           },
         },
@@ -896,8 +910,10 @@
           </div>
         </div>
         <div class="trend-chart-wrap tall"><canvas id="monthlyTrendChart"></canvas></div>
-      </div>`;
+      </div>
+      <div class="section-card" id="monthly-store-change-area"></div>`;
     renderMonthlyTrendChart();
+    renderMonthlyStoreChangeSection();
     document.querySelectorAll("#monthly-period-toggle button").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll("#monthly-period-toggle button").forEach(b => b.classList.remove("active"));
