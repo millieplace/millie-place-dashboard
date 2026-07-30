@@ -509,7 +509,11 @@
         borderColor: COLORS[key],
         backgroundColor: COLORS[key],
         tension: 0.3,
-        pointRadius: 0,
+        pointRadius: (ctx) => {
+          const i = ctx.dataIndex, len = ctx.dataset.data.length;
+          return (i % 5 === 0 || i === len - 1) ? 3 : 0;
+        },
+        pointBackgroundColor: COLORS[key],
         borderWidth: 2,
         spanGaps: true,
       };
@@ -522,7 +526,21 @@
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
-        plugins: { legend: { display: false }, datalabels: { display: false } },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            align: "top",
+            offset: 4,
+            font: { size: 10, family: "'IBM Plex Mono', monospace", weight: 600 },
+            color: (c) => c.dataset.borderColor,
+            formatter: (v, ctx) => {
+              if (v === null) return "";
+              const i = ctx.dataIndex, len = ctx.dataset.data.length;
+              if (i % 5 === 0 || i === len - 1) return Math.round(v).toLocaleString("ko-KR");
+              return "";
+            },
+          },
+        },
         scales: {
           x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
           y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
@@ -545,6 +563,15 @@
           </div>
         </div>
         <div class="trend-chart-wrap tall"><canvas id="dailyTrendChart"></canvas></div>
+      </div>
+      <div class="section-card">
+        <div class="section-head"><h2>일별 제휴처 방문자 (TOP 10 · 급증·급감)</h2></div>
+        <div class="placeholder-panel" style="padding:36px 20px;">
+          <div class="icon">📅</div>
+          <h3>일별 매장 데이터 연동 대기 중</h3>
+          <p>지금 연동된 매장별 데이터는 월 단위라, 날짜별 매장 방문자 순위·급증/급감을 보여주려면<br>
+          Superset에 <b>매장별 × 일별</b> 지표 차트가 하나 더 필요해요. 그 차트의 slice_id를 알려주시면 바로 연동할게요.</p>
+        </div>
       </div>`;
     renderDailyTrendChart();
   }
@@ -679,6 +706,8 @@
 
   /* ================= 제휴처별 데이터 탭 ================= */
 
+  let storePeriod = "all";
+
   function computeStoreTotals(rows, metricKey, labelKey) {
     const totals = {};
     rows.forEach(r => {
@@ -686,6 +715,31 @@
       totals[name] = (totals[name] || 0) + (Number(r[metricKey]) || 0);
     });
     return Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  }
+
+  function getSortedMonths(monthlyTotals) {
+    return Object.keys(monthlyTotals || {}).sort();
+  }
+
+  function filterMonthsByPeriod(months, period) {
+    if (period === "all") return months;
+    const n = period === "1m" ? 1 : period === "3m" ? 3 : 6;
+    return months.slice(-n);
+  }
+
+  function aggregateStoreTotalsFromHistory(monthlyTotals, months) {
+    const totals = {};
+    months.forEach(m => {
+      const bucket = monthlyTotals[m] || {};
+      Object.entries(bucket).forEach(([name, val]) => {
+        totals[name] = (totals[name] || 0) + val;
+      });
+    });
+    return Object.entries(totals).sort((a, b) => b[1] - a[1]);
+  }
+
+  function storeMonthlySeriesFromHistory(monthlyTotals, months, storeName) {
+    return months.map(m => ({ label: m, value: (monthlyTotals[m] || {})[storeName] || 0 }));
   }
 
   function computeStoreMonthly(rows, metricKey, storeName, labelKey) {
@@ -704,13 +758,20 @@
     const storeMetric = METRICS_DATA[STORE_KEY];
     const selectEl = document.getElementById("store-select");
     const selected = selectEl ? selectEl.value : "__all__";
-    const { data, metric_key, label_key } = storeMetric;
+    const { data, metric_key, label_key, monthly_totals } = storeMetric;
 
     const ctxEl = document.getElementById("storeBarChart");
     if (storeChartInstance) { storeChartInstance.destroy(); storeChartInstance = null; }
 
+    const hasHistory = monthly_totals && Object.keys(monthly_totals).length > 0;
+    const allMonths = hasHistory ? getSortedMonths(monthly_totals) : [];
+    const activeMonths = hasHistory ? filterMonthsByPeriod(allMonths, storePeriod) : [];
+
     if (selected === "__all__") {
-      const sorted = computeStoreTotals(data, metric_key, label_key).slice(0, 15);
+      const sorted = hasHistory
+        ? aggregateStoreTotalsFromHistory(monthly_totals, activeMonths).slice(0, 15)
+        : computeStoreTotals(data, metric_key, label_key).slice(0, 15);
+
       storeChartInstance = new Chart(ctxEl, {
         type: "bar",
         data: {
@@ -737,7 +798,9 @@
         },
       });
 
-      const allSorted = computeStoreTotals(data, metric_key, label_key);
+      const allSorted = hasHistory
+        ? aggregateStoreTotalsFromHistory(monthly_totals, activeMonths)
+        : computeStoreTotals(data, metric_key, label_key);
       const rows = allSorted.map(([name, val], i) => `
         <tr>
           <td class="rank-num">${String(i + 1).padStart(2, "0")}</td>
@@ -750,9 +813,13 @@
           <tbody>${rows}</tbody>
         </table>`;
     } else {
-      const monthly = computeStoreMonthly(data, metric_key, selected, label_key);
+      const monthly = hasHistory
+        ? storeMonthlySeriesFromHistory(monthly_totals, activeMonths, selected)
+        : computeStoreMonthly(data, metric_key, selected, label_key);
       const total = monthly.reduce((a, p) => a + p.value, 0);
-      const allSorted = computeStoreTotals(data, metric_key, label_key);
+      const allSorted = hasHistory
+        ? aggregateStoreTotalsFromHistory(monthly_totals, activeMonths)
+        : computeStoreTotals(data, metric_key, label_key);
       const rank = allSorted.findIndex(([name]) => name === selected) + 1;
 
       storeChartInstance = new Chart(ctxEl, {
@@ -782,8 +849,8 @@
 
       document.getElementById("rank-table-area").innerHTML = `
         <div class="store-stats-row">
-          <div class="store-stat"><div class="label">전체 순위</div><div class="value">${rank || "-"}위</div></div>
-          <div class="store-stat"><div class="label">누적 건수</div><div class="value">${fmt(total)}</div></div>
+          <div class="store-stat"><div class="label">기간 내 순위</div><div class="value">${rank || "-"}위</div></div>
+          <div class="store-stat"><div class="label">기간 내 누적</div><div class="value">${fmt(total)}</div></div>
         </div>
         <table class="rank-table">
           <thead><tr><th>월</th><th style="text-align:right">건수</th></tr></thead>
@@ -807,7 +874,15 @@
         <div class="section-card">
           <div class="section-head">
             <h2>제휴처 순위 / 추이</h2>
-            <select class="store-select" id="store-select"><option>매장 불러오는 중...</option></select>
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <div class="segmented" id="store-period-toggle">
+                <button data-period="1m">1개월</button>
+                <button data-period="3m">3개월</button>
+                <button data-period="6m">6개월</button>
+                <button class="active" data-period="all">전체</button>
+              </div>
+              <select class="store-select" id="store-select"><option>매장 불러오는 중...</option></select>
+            </div>
           </div>
           <div class="bar-chart-wrap tall"><canvas id="storeBarChart"></canvas></div>
         </div>
@@ -817,9 +892,21 @@
         </div>
       </div>`;
 
-    const { metric_key, label_key, data } = storeMetric;
+    document.querySelectorAll("#store-period-toggle button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#store-period-toggle button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        storePeriod = btn.dataset.period;
+        renderStoreChartAndTable();
+      });
+    });
+
+    const { metric_key, label_key, data, monthly_totals } = storeMetric;
     const selectEl = document.getElementById("store-select");
-    const sorted = computeStoreTotals(data, metric_key, label_key);
+    const hasHistory = monthly_totals && Object.keys(monthly_totals).length > 0;
+    const sorted = hasHistory
+      ? aggregateStoreTotalsFromHistory(monthly_totals, getSortedMonths(monthly_totals))
+      : computeStoreTotals(data, metric_key, label_key);
     selectEl.innerHTML = `<option value="__all__">전체 제휴처 (TOP 15)</option>` +
       sorted.map(([name]) => `<option value="${name}">${name}</option>`).join("");
     selectEl.addEventListener("change", renderStoreChartAndTable);
