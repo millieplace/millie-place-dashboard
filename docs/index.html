@@ -20,9 +20,9 @@
     --ink-faint: #9aa2b1;
     --accent: #a8562a;
     --accent-soft: #f6e9dc;
-    --uv-color: #a8562a;
-    --benefit-color: #2563eb;
-    --staff-color: #7c3aed;
+    --uv-color: #2563eb;
+    --benefit-color: #10b981;
+    --staff-color: #f59e0b;
     --good: #15803d;
     --bad: #dc2626;
     --radius: 12px;
@@ -383,7 +383,7 @@
 <script>
   Chart.register(ChartDataLabels);
 
-  const COLORS = { uv: "#a8562a", benefit_claims: "#2563eb", staff_verifications: "#7c3aed" };
+  const COLORS = { uv: "#2563eb", benefit_claims: "#10b981", staff_verifications: "#f59e0b" };
   const METRIC_ORDER = ["uv", "benefit_claims", "staff_verifications"];
   const STORE_KEY = "store_breakdown";
 
@@ -511,7 +511,7 @@
         tension: 0.3,
         pointRadius: (ctx) => {
           const i = ctx.dataIndex, len = ctx.dataset.data.length;
-          return (i % 5 === 0 || i === len - 1) ? 3 : 0;
+          return (i % 3 === 0 || i === len - 1) ? 3 : 0;
         },
         pointBackgroundColor: COLORS[key],
         borderWidth: 2,
@@ -536,7 +536,7 @@
             formatter: (v, ctx) => {
               if (v === null) return "";
               const i = ctx.dataIndex, len = ctx.dataset.data.length;
-              if (i % 5 === 0 || i === len - 1) return Math.round(v).toLocaleString("ko-KR");
+              if (i % 3 === 0 || i === len - 1) return Math.round(v).toLocaleString("ko-KR");
               return "";
             },
           },
