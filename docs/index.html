@@ -1635,11 +1635,14 @@
     }
 
     const { label_key, data, monthly_totals } = storeMetric;
-    const hasHistory = monthly_totals && Object.keys(monthly_totals).length > 0;
+    const dsMetric = METRICS_DATA["daily_store"];
+    const dailyTotalsForNames = (dsMetric && dsMetric.daily_totals) || {};
+    const augmentedMonthlyTotals = getAugmentedMonthlyTotals(monthly_totals || {}, dailyTotalsForNames);
+    const hasHistory = Object.keys(augmentedMonthlyTotals).length > 0;
     const namesSorted = hasHistory
       ? Object.entries(
-          getSortedMonths(monthly_totals).reduce((acc, m) => {
-            Object.entries(monthly_totals[m]).forEach(([n, v]) => { acc[n] = (acc[n] || 0) + v; });
+          getSortedMonths(augmentedMonthlyTotals).reduce((acc, m) => {
+            Object.entries(augmentedMonthlyTotals[m]).forEach(([n, v]) => { acc[n] = (acc[n] || 0) + v; });
             return acc;
           }, {})
         ).sort((a, b) => b[1] - a[1]).map(([n]) => n)
