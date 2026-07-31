@@ -363,6 +363,7 @@
       <button class="active" data-tab="daily">일별 트래킹</button>
       <button data-tab="monthly">월간 데이터</button>
       <button data-tab="partner">제휴처별 데이터</button>
+      <button data-tab="event">이벤트 Tracking</button>
     </div>
 
     <div class="tab-panel active" id="tab-daily">
@@ -375,6 +376,10 @@
 
     <div class="tab-panel" id="tab-partner">
       <div id="partner-area"></div>
+    </div>
+
+    <div class="tab-panel" id="tab-event">
+      <div id="event-area"></div>
     </div>
 
     <div class="footer">밀리의서재 · Millie Place</div>
@@ -1683,6 +1688,16 @@
     if (namesSorted.length) renderPartnerDetail(namesSorted[0]);
   }
 
+  function renderEventTab() {
+    const area = document.getElementById("event-area");
+    area.innerHTML = `
+      <div class="placeholder-panel">
+        <div class="icon">🎯</div>
+        <h3>이벤트 Tracking 준비 중</h3>
+        <p>프로모션·이벤트별 참여 데이터를 연동하면 이 탭에서 확인할 수 있어요.<br>조만간 업데이트될 예정입니다.</p>
+      </div>`;
+  }
+
   /* ================= 공통 ================= */
 
   function setupTabs() {
@@ -1707,6 +1722,7 @@
       renderDailyTab();
       renderMonthlyTab();
       renderPartnerTab();
+      renderEventTab();
 
       document.getElementById("updated-at").textContent = data.updated_at || "-";
     } catch (e) {
