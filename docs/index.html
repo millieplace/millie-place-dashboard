@@ -392,6 +392,7 @@
     <div class="tab-nav" id="tab-nav">
       <button class="active" data-tab="kpi">KPI</button>
       <button data-tab="daily">일별 트래킹</button>
+      <button data-tab="weekly">주간 데이터</button>
       <button data-tab="monthly">월간 데이터</button>
       <button data-tab="partner">제휴처별 데이터</button>
       <button data-tab="event">이벤트 Tracking</button>
@@ -403,6 +404,10 @@
 
     <div class="tab-panel" id="tab-daily">
       <div id="daily-area"></div>
+    </div>
+
+    <div class="tab-panel" id="tab-weekly">
+      <div id="weekly-area"></div>
     </div>
 
     <div class="tab-panel" id="tab-monthly">
@@ -453,6 +458,7 @@
   let METRICS_DATA = {};
   let monthlyPeriod = "month";
   let dailyChartInstance = null;
+  let weeklyChartInstance = null;
   let monthlyChartInstance = null;
   let storeChartInstance = null;
 
@@ -1269,6 +1275,261 @@
       <div class="section-card" id="daily-store-area"></div>`;
     renderDailyTrendChart();
     renderDailyStoreSection();
+  }
+
+  /* ================= 주간 데이터 탭 ================= */
+
+  function getMondayOf(dateStr) {
+    const d = new Date(dateStr + "T00:00:00");
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function aggregateWeekly(series) {
+    if (!series || !series.length) return [];
+    const buckets = {};
+    series.forEach(p => {
+      const wk = getMondayOf(p.date);
+      buckets[wk] = (buckets[wk] || 0) + p.value;
+    });
+    return Object.keys(buckets).sort().map(k => ({ key: k, label: k.slice(5), value: buckets[k] }));
+  }
+
+  function computeWeekToDateKpi(series) {
+    if (!series || !series.length) return { current: null, prev: null, delta: null, weekLabel: "", prevWeekLabel: "", latestDate: null };
+    const latest = series[series.length - 1].date;
+    const curMonday = getMondayOf(latest);
+    const current = series.filter(p => p.date >= curMonday && p.date <= latest).reduce((a, p) => a + p.value, 0);
+
+    const curMondayDate = new Date(curMonday + "T00:00:00");
+    const prevMondayDate = new Date(curMondayDate);
+    prevMondayDate.setDate(prevMondayDate.getDate() - 7);
+    const prevMonday = prevMondayDate.toISOString().slice(0, 10);
+    const daysElapsed = Math.floor((new Date(latest + "T00:00:00") - curMondayDate) / 86400000) + 1;
+    const prevEndDate = new Date(prevMondayDate);
+    prevEndDate.setDate(prevEndDate.getDate() + daysElapsed - 1);
+    const prevEnd = prevEndDate.toISOString().slice(0, 10);
+    const prev = series.filter(p => p.date >= prevMonday && p.date <= prevEnd).reduce((a, p) => a + p.value, 0);
+
+    const delta = prev > 0 ? ((current - prev) / prev) * 100 : null;
+    return {
+      current, prev, delta,
+      weekLabel: `${curMonday.slice(5)}~${latest.slice(5)}`,
+      prevWeekLabel: `${prevMonday.slice(5)}~${prevEnd.slice(5)}`,
+      latestDate: latest,
+    };
+  }
+
+  function aggregateDailyStoreForRange(dailyTotals, startDate, endDate) {
+    const totals = {};
+    Object.keys(dailyTotals || {}).forEach(date => {
+      if (date >= startDate && date <= endDate) {
+        Object.entries(dailyTotals[date]).forEach(([name, v]) => {
+          totals[name] = (totals[name] || 0) + v;
+        });
+      }
+    });
+    return totals;
+  }
+
+  function getWeekOverWeekStoreData(dailyTotals) {
+    const dates = getSortedDates(dailyTotals);
+    if (!dates.length) return null;
+    const latest = dates[dates.length - 1];
+    const curMonday = getMondayOf(latest);
+    const curMondayDate = new Date(curMonday + "T00:00:00");
+    const prevMondayDate = new Date(curMondayDate);
+    prevMondayDate.setDate(prevMondayDate.getDate() - 7);
+    const prevMonday = prevMondayDate.toISOString().slice(0, 10);
+    const daysElapsed = Math.floor((new Date(latest + "T00:00:00") - curMondayDate) / 86400000) + 1;
+    const prevEndDate = new Date(prevMondayDate);
+    prevEndDate.setDate(prevEndDate.getDate() + daysElapsed - 1);
+    const prevEnd = prevEndDate.toISOString().slice(0, 10);
+
+    const cur = aggregateDailyStoreForRange(dailyTotals, curMonday, latest);
+    const prev = aggregateDailyStoreForRange(dailyTotals, prevMonday, prevEnd);
+    return {
+      curLabel: `${curMonday.slice(5)}~${latest.slice(5)}`,
+      prevLabel: `${prevMonday.slice(5)}~${prevEnd.slice(5)}`,
+      cur, prev,
+    };
+  }
+
+  function renderWeeklyKpiCards() {
+    let html = "";
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (!m) return;
+      const color = COLORS[key];
+      const { current, delta, weekLabel, prevWeekLabel } = computeWeekToDateKpi(m.series);
+      const weekly = aggregateWeekly(m.series).slice(-12);
+      const sparkSeries = weekly.map(p => p.value);
+      html += `
+        <div class="kpi-card" style="border-left:3px solid ${color};">
+          <div class="kpi-top">
+            <div class="kpi-label"><span class="kpi-dot" style="background:${color}"></span>${m.label}</div>
+          </div>
+          <div class="kpi-value-row">
+            <div class="kpi-value">${fmt(current)}<span class="unit">건</span></div>
+            ${deltaBadge(delta)}
+          </div>
+          <div class="kpi-spark">${sparklineSvg(sparkSeries, color)}</div>
+          ${weekly.length ? `<div style="display:flex; justify-content:space-between; font-size:10px; color:var(--ink-faint); margin-top:2px;"><span>${weekly[0].label}</span><span>${weekly[weekly.length - 1].label}</span></div>` : ""}
+          <div class="kpi-sub">이번 주(${weekLabel}) 누적 · 전주 동기간(${prevWeekLabel})比</div>
+        </div>`;
+    });
+    return html;
+  }
+
+  function renderWeeklyTrendChart() {
+    const ctx = document.getElementById("weeklyTrendChart");
+    if (!ctx) return;
+    if (weeklyChartInstance) { weeklyChartInstance.destroy(); weeklyChartInstance = null; }
+
+    const perMetric = {};
+    let allKeys = new Set();
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (m && m.series && m.series.length) {
+        const agg = aggregateWeekly(m.series).slice(-16);
+        perMetric[key] = agg;
+        agg.forEach(p => allKeys.add(p.key));
+      }
+    });
+    const sortedKeys = Array.from(allKeys).sort();
+    if (!sortedKeys.length) return;
+    const labelMap = {};
+    METRIC_ORDER.forEach(key => (perMetric[key] || []).forEach(p => { labelMap[p.key] = p.label; }));
+    const labels = sortedKeys.map(k => labelMap[k] || k);
+
+    const datasets = METRIC_ORDER.filter(k => perMetric[k]).map(key => {
+      const valueByKey = {};
+      perMetric[key].forEach(p => { valueByKey[p.key] = p.value; });
+      const pos = LABEL_POS[key] || { align: "top", anchor: "end" };
+      return {
+        label: METRICS_DATA[key].label,
+        data: sortedKeys.map(k => valueByKey[k] !== undefined ? valueByKey[k] : null),
+        borderColor: COLORS[key],
+        backgroundColor: COLORS[key],
+        tension: 0.3,
+        pointRadius: 3,
+        pointBackgroundColor: COLORS[key],
+        borderWidth: 2,
+        spanGaps: true,
+        datalabels: { align: pos.align, anchor: pos.anchor, offset: 5 },
+      };
+    });
+
+    weeklyChartInstance = new Chart(ctx, {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            font: { size: 10, family: "'IBM Plex Mono', monospace", weight: 600 },
+            color: (c) => c.dataset.borderColor,
+            backgroundColor: "rgba(255,255,255,0.85)",
+            borderRadius: 3,
+            padding: { top: 1, bottom: 1, left: 3, right: 3 },
+            formatter: (v) => v === null ? "" : Math.round(v).toLocaleString("ko-KR"),
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+          y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+        },
+      },
+    });
+  }
+
+  function renderWeeklyInsights() {
+    const parts = [];
+    const bits = [];
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (!m || !m.series || !m.series.length) return;
+      const { current, delta } = computeWeekToDateKpi(m.series);
+      if (current === null) return;
+      let pctStr = "";
+      if (delta !== null) {
+        const up = delta >= 0;
+        pctStr = ` <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">(${up ? "▲" : "▼"}${Math.abs(delta).toFixed(1)}%)</span>`;
+      }
+      bits.push(`${m.label} ${fmt(current)}건${pctStr}`);
+    });
+    if (bits.length) parts.push(`이번 주 누적은 ${bits.join(" · ")} — 전주 동기간 대비 변화예요`);
+
+    const uvSeries = METRICS_DATA.uv && METRICS_DATA.uv.series;
+    const wd = computeWeekdayAvgFromSeries(uvSeries);
+    if (wd.hasEnough) {
+      parts.push(`UV 기준 <b>${wd.weekdayNames[wd.bestWd]}요일</b>에 방문자가 가장 많고 (평균 ${fmt(wd.avgs[wd.bestWd])}건), <b>${wd.weekdayNames[wd.worstWd]}요일</b>이 가장 적어요 (평균 ${fmt(wd.avgs[wd.worstWd])}건)`);
+    }
+
+    if (METRICS_DATA.uv && METRICS_DATA.benefit_claims) {
+      const uvW = computeWeekToDateKpi(METRICS_DATA.uv.series || []);
+      const benefitW = computeWeekToDateKpi(METRICS_DATA.benefit_claims.series || []);
+      if (uvW.current && benefitW.current !== null && uvW.current > 0) {
+        const convNow = (benefitW.current / uvW.current) * 100;
+        let cmpStr = "";
+        if (uvW.prev > 0) {
+          const convPrev = (benefitW.prev / uvW.prev) * 100;
+          const diff = convNow - convPrev;
+          const up = diff >= 0;
+          cmpStr = ` (전주 동기간 ${convPrev.toFixed(1)}% 대비 <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">${up ? "▲" : "▼"}${Math.abs(diff).toFixed(1)}%p</span>)`;
+        }
+        parts.push(`혜택받기 전환율(UV 대비)은 이번 주 누적 기준 <b>${convNow.toFixed(1)}%</b>예요${cmpStr}`);
+      }
+    }
+
+    if (!parts.length) return "";
+    return `<div class="section-card">
+      <div class="section-head"><h2>📌 주간 데이터 인사이트</h2></div>
+      <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
+        ${parts.map(t => `<li>${t}</li>`).join("")}
+      </ul>
+    </div>`;
+  }
+
+  function renderWeeklyStoreRankingSection() {
+    const dsMetric = METRICS_DATA["daily_store"];
+    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
+    const weekData = Object.keys(dailyTotals).length ? getWeekOverWeekStoreData(dailyTotals) : null;
+    renderStoreRankingInto("weekly-store-ranking-area", weekData, "※ 혜택클릭 기준, 이번 주(월~오늘)와 전주 동일 요일까지 비교했어요");
+  }
+
+  function renderWeeklyStoreChangeSection() {
+    const dsMetric = METRICS_DATA["daily_store"];
+    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
+    const weekData = Object.keys(dailyTotals).length ? getWeekOverWeekStoreData(dailyTotals) : null;
+    renderStoreChangeInto("weekly-store-change-area", weekData, "※ 혜택클릭 기준, 이번 주(월~오늘)와 전주 동일 요일까지 비교했어요");
+  }
+
+  function renderWeeklyTab() {
+    const area = document.getElementById("weekly-area");
+    area.innerHTML = `
+      ${renderWeeklyInsights()}
+      <div class="kpi-grid">${renderWeeklyKpiCards()}</div>
+      <div class="section-card">
+        <div class="section-head">
+          <h2>주별 추이 (최근 16주)</h2>
+          <div class="legend">
+            ${METRIC_ORDER.filter(k => METRICS_DATA[k]).map(k => `
+              <span class="legend-item"><span class="legend-dot" style="background:${COLORS[k]}"></span>${METRICS_DATA[k].label}</span>
+            `).join("")}
+          </div>
+        </div>
+        <div class="trend-chart-wrap tall"><canvas id="weeklyTrendChart"></canvas></div>
+      </div>
+      <div class="section-card" id="weekly-store-ranking-area"></div>
+      <div class="section-card" id="weekly-store-change-area"></div>`;
+    renderWeeklyTrendChart();
+    renderWeeklyStoreRankingSection();
+    renderWeeklyStoreChangeSection();
   }
 
   /* ================= 월간 데이터 탭 ================= */
@@ -2090,6 +2351,7 @@
       setupTabs();
       renderKpiTab();
       renderDailyTab();
+      renderWeeklyTab();
       renderMonthlyTab();
       renderPartnerTab();
       renderEventTab();
