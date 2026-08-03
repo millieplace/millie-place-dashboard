@@ -390,14 +390,19 @@
     </div>
 
     <div class="tab-nav" id="tab-nav">
-      <button class="active" data-tab="daily">일별 트래킹</button>
+      <button class="active" data-tab="kpi">KPI</button>
+      <button data-tab="daily">일별 트래킹</button>
       <button data-tab="monthly">월간 데이터</button>
       <button data-tab="partner">제휴처별 데이터</button>
       <button data-tab="event">이벤트 Tracking</button>
     </div>
 
-    <div class="tab-panel active" id="tab-daily">
-      <div id="daily-area"><div class="loading">데이터 불러오는 중...</div></div>
+    <div class="tab-panel active" id="tab-kpi">
+      <div id="kpi-area"><div class="loading">데이터 불러오는 중...</div></div>
+    </div>
+
+    <div class="tab-panel" id="tab-daily">
+      <div id="daily-area"></div>
     </div>
 
     <div class="tab-panel" id="tab-monthly">
@@ -426,6 +431,24 @@
   };
   const METRIC_ORDER = ["uv", "benefit_claims", "staff_verifications"];
   const STORE_KEY = "store_breakdown";
+
+  const KPI_TARGETS = {
+    uv: {
+      "2026-01": 50000, "2026-02": 50000, "2026-03": 50000, "2026-04": 50000,
+      "2026-05": 50000, "2026-06": 50000, "2026-07": 30000, "2026-08": 35000,
+      "2026-09": 40000, "2026-10": 45000, "2026-11": 50000, "2026-12": 50000,
+    },
+    benefit_claims: {
+      "2026-01": 5000, "2026-02": 5000, "2026-03": 5000, "2026-04": 5000,
+      "2026-05": 5000, "2026-06": 5000, "2026-07": 3000, "2026-08": 3500,
+      "2026-09": 4000, "2026-10": 4500, "2026-11": 5000, "2026-12": 5000,
+    },
+    staff_verifications: {
+      "2026-01": 6300, "2026-02": 6300, "2026-03": 6300, "2026-04": 6300,
+      "2026-05": 6300, "2026-06": 6300, "2026-07": 2700, "2026-08": 3150,
+      "2026-09": 3600, "2026-10": 4050, "2026-11": 4500, "2026-12": 4500,
+    },
+  };
 
   let METRICS_DATA = {};
   let monthlyPeriod = "month";
@@ -547,6 +570,114 @@
       label: period === "month" ? key : key.replace("-", " "),
       value: buckets[key],
     }));
+  }
+
+  /* ================= KPI 탭 ================= */
+
+  function buildKpiRows(key) {
+    const m = METRICS_DATA[key];
+    const targets = KPI_TARGETS[key];
+    const monthKeys = Object.keys(targets).sort();
+    const actualByMonth = {};
+    if (m && m.series && m.series.length) {
+      aggregateSeries(m.series, "month").forEach(p => { actualByMonth[p.key] = p.value; });
+    }
+
+    return monthKeys.map(mk => {
+      const target = targets[mk];
+      const actual = actualByMonth[mk];
+      const hasActual = actual !== undefined;
+      const achievement = (hasActual && target > 0) ? (actual / target) * 100 : null;
+
+      const [y, mo] = mk.split("-").map(Number);
+      let py = y, pmo = mo - 1;
+      if (pmo === 0) { pmo = 12; py -= 1; }
+      const prevKey = `${py}-${String(pmo).padStart(2, "0")}`;
+      const prevActual = actualByMonth[prevKey];
+      const momDelta = (hasActual && prevActual) ? ((actual - prevActual) / prevActual) * 100 : null;
+
+      const yoyKey = `${y - 1}-${String(mo).padStart(2, "0")}`;
+      const yoyActual = actualByMonth[yoyKey];
+      const yoyDelta = (hasActual && yoyActual) ? ((actual - yoyActual) / yoyActual) * 100 : null;
+
+      return { month: mk, target, actual, hasActual, achievement, momDelta, yoyDelta };
+    });
+  }
+
+  function achievementBadge(pct) {
+    if (pct === null) return `<span style="color:var(--ink-faint);">-</span>`;
+    let color = "var(--bad)";
+    if (pct >= 100) color = "var(--good)";
+    else if (pct >= 80) color = "#b45309";
+    return `<span style="color:${color}; font-weight:700;">${pct.toFixed(0)}%</span>`;
+  }
+
+  function changeText(pct) {
+    if (pct === null) return `<span style="color:var(--ink-faint);">-</span>`;
+    const up = pct >= 0;
+    return `<span style="color:${up ? "var(--good)" : "var(--bad)"};">${up ? "▲" : "▼"} ${Math.abs(pct).toFixed(1)}%</span>`;
+  }
+
+  function renderKpiSummaryCards() {
+    let html = "";
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (!m) return;
+      const color = COLORS[key];
+      const cmp = getCompletedMonthComparison(m.series || []);
+      const target = cmp ? KPI_TARGETS[key][cmp.label] : null;
+      const achievement = (cmp && target) ? (cmp.value / target) * 100 : null;
+      html += `
+        <div class="kpi-card" style="border-left:3px solid ${color};">
+          <div class="kpi-top">
+            <div class="kpi-label"><span class="kpi-dot" style="background:${color}"></span>${m.label} · ${cmp ? cmp.label : "-"}</div>
+          </div>
+          <div class="kpi-value-row">
+            <div class="kpi-value">${cmp ? fmt(cmp.value) : "-"}<span class="unit">건</span></div>
+            ${achievement !== null ? `<span class="kpi-delta ${achievement >= 100 ? "up" : "down"}">달성률 ${achievement.toFixed(0)}%</span>` : ""}
+          </div>
+          <div class="kpi-sub">목표 ${target ? fmt(target) : "-"}건 · 전월비 ${cmp && cmp.delta !== null ? (cmp.delta >= 0 ? "▲" : "▼") + Math.abs(cmp.delta).toFixed(1) + "%" : "-"}</div>
+        </div>`;
+    });
+    return html;
+  }
+
+  function renderKpiTable(key) {
+    const m = METRICS_DATA[key];
+    const color = COLORS[key];
+    const rows = buildKpiRows(key);
+    return `
+      <div class="section-card">
+        <div class="section-head">
+          <h2><span class="kpi-dot" style="background:${color}; display:inline-block; margin-right:6px;"></span>${m ? m.label : key} 목표 Tracking</h2>
+        </div>
+        <table class="rank-table">
+          <thead>
+            <tr>
+              <th>월</th><th style="text-align:right">목표</th><th style="text-align:right">실적</th>
+              <th style="text-align:right">달성률</th><th style="text-align:right">전월비</th><th style="text-align:right">전년비</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td>${r.month}</td>
+                <td class="rank-val">${fmt(r.target)}</td>
+                <td class="rank-val">${r.hasActual ? fmt(r.actual) : `<span style="color:var(--ink-faint);">-</span>`}</td>
+                <td class="rank-val">${achievementBadge(r.achievement)}</td>
+                <td class="rank-val">${changeText(r.momDelta)}</td>
+                <td class="rank-val">${changeText(r.yoyDelta)}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function renderKpiTab() {
+    const area = document.getElementById("kpi-area");
+    area.innerHTML = `
+      <div class="kpi-grid">${renderKpiSummaryCards()}</div>
+      ${METRIC_ORDER.map(key => renderKpiTable(key)).join("")}`;
   }
 
   /* ================= 일별 트래킹 탭 ================= */
@@ -1957,6 +2088,7 @@
       METRICS_DATA = data.metrics || {};
 
       setupTabs();
+      renderKpiTab();
       renderDailyTab();
       renderMonthlyTab();
       renderPartnerTab();
@@ -1964,7 +2096,9 @@
 
       document.getElementById("updated-at").textContent = data.updated_at || "-";
     } catch (e) {
-      document.getElementById("daily-area").innerHTML = `<div class="error">데이터를 불러오지 못했습니다.<br>${e.message}</div>`;
+      const errHtml = `<div class="error">데이터를 불러오지 못했습니다.<br>${e.message}</div>`;
+      document.getElementById("kpi-area").innerHTML = errHtml;
+      document.getElementById("daily-area").innerHTML = errHtml;
       document.getElementById("updated-at").textContent = "오류";
     }
   }
