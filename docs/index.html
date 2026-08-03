@@ -783,6 +783,8 @@
     const months = getSortedMonths(monthlyTotals);
     const today = new Date();
     const curMonthKey = getMonthKeyFromDate(today);
+    const dayOfMonth = today.getDate();
+    const curMonthHasDailyData = dailyTotals && Object.keys(dailyTotals).some(d => d.startsWith(curMonthKey));
     let cur, prev, curLabel, prevLabel, usingFallback = false;
 
     if (months.includes(curMonthKey)) {
@@ -791,7 +793,8 @@
       cur = monthlyTotals[curMonthKey];
       prevLabel = idx > 0 ? months[idx - 1] : null;
       prev = prevLabel ? monthlyTotals[prevLabel] : {};
-    } else if (dailyTotals && Object.keys(dailyTotals).some(d => d.startsWith(curMonthKey))) {
+    } else if (curMonthHasDailyData && dayOfMonth >= 5) {
+      // 이번 달이 최소 5일 이상 쌓였을 때만 진행중인 달로 비교 (그 전엔 완료된 두 달 비교가 더 정확함)
       curLabel = curMonthKey;
       cur = aggregateDailyStoreForMonth(dailyTotals, curMonthKey);
       prevLabel = months.length ? months[months.length - 1] : null;
@@ -802,6 +805,12 @@
       curLabel = months[months.length - 1];
       prev = monthlyTotals[prevLabel];
       cur = monthlyTotals[curLabel];
+    } else if (curMonthHasDailyData) {
+      curLabel = curMonthKey;
+      cur = aggregateDailyStoreForMonth(dailyTotals, curMonthKey);
+      prevLabel = months.length ? months[months.length - 1] : null;
+      prev = prevLabel ? monthlyTotals[prevLabel] : {};
+      usingFallback = true;
     } else if (months.length === 1) {
       curLabel = months[0];
       cur = monthlyTotals[curLabel];
@@ -1190,11 +1199,77 @@
       }
     }
 
+    if (!parts.length) return "";
+    return `<div class="section-card">
+      <div class="section-head"><h2>📌 이번 달(${monthLabel}, 진행중) 인사이트</h2></div>
+      <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
+        ${parts.map(t => `<li>${t}</li>`).join("")}
+      </ul>
+    </div>`;
+  }
+
+  function getCompletedMonthComparison(series) {
+    const agg = aggregateSeries(series, "month");
+    if (!agg.length) return null;
+    const curRealMonth = getMonthKeyFromDate(new Date());
+    let idx = agg.length - 1;
+    if (agg[idx].label === curRealMonth) idx -= 1;
+    if (idx < 0) return null;
+    const completed = agg[idx];
+    const prev = idx > 0 ? agg[idx - 1] : null;
+    const delta = (prev && prev.value > 0) ? ((completed.value - prev.value) / prev.value) * 100 : null;
+    return {
+      label: completed.label, value: completed.value,
+      prevLabel: prev ? prev.label : null, prevValue: prev ? prev.value : null, delta,
+    };
+  }
+
+  function renderCompletedMonthInsights() {
+    const parts = [];
+    const bits = [];
+    let bestGrowth = null;
+    let label = null, prevLabel = null;
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (!m || !m.series || !m.series.length) return;
+      const cmp = getCompletedMonthComparison(m.series);
+      if (!cmp) return;
+      label = cmp.label; prevLabel = cmp.prevLabel;
+      let pctStr = "";
+      if (cmp.delta !== null) {
+        const up = cmp.delta >= 0;
+        pctStr = ` <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">(${up ? "▲" : "▼"}${Math.abs(cmp.delta).toFixed(1)}%)</span>`;
+        if (bestGrowth === null || cmp.delta > bestGrowth.delta) bestGrowth = { label: m.label, delta: cmp.delta };
+      }
+      bits.push(`${m.label} ${fmt(cmp.value)}건${pctStr}`);
+    });
+    if (!label) return "";
+    parts.push(`<b>${label}</b> 전체 합계는 ${bits.join(" · ")} — ${prevLabel ? `${prevLabel} 대비 변화예요` : "이전 데이터가 없어 비교하지 못했어요"}`);
+    if (bestGrowth && bestGrowth.delta > 0) {
+      parts.push(`${label}에 가장 크게 성장한 지표는 <b>${bestGrowth.label}</b>로, ${prevLabel} 대비 <span style="color:var(--good); font-weight:600;">▲${bestGrowth.delta.toFixed(1)}%</span> 증가했어요`);
+    }
+
+    if (METRICS_DATA.uv && METRICS_DATA.benefit_claims) {
+      const uvCmp = getCompletedMonthComparison(METRICS_DATA.uv.series || []);
+      const benefitCmp = getCompletedMonthComparison(METRICS_DATA.benefit_claims.series || []);
+      if (uvCmp && benefitCmp && uvCmp.value > 0) {
+        const convNow = (benefitCmp.value / uvCmp.value) * 100;
+        let cmpStr = "";
+        if (uvCmp.prevValue > 0) {
+          const convPrev = (benefitCmp.prevValue / uvCmp.prevValue) * 100;
+          const diff = convNow - convPrev;
+          const up = diff >= 0;
+          cmpStr = ` (${prevLabel} ${convPrev.toFixed(1)}% 대비 <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">${up ? "▲" : "▼"}${Math.abs(diff).toFixed(1)}%p</span>)`;
+        }
+        parts.push(`혜택받기 전환율(UV 대비)은 ${label} 기준 <b>${convNow.toFixed(1)}%</b>예요${cmpStr}`);
+      }
+    }
+
     parts.push(...renderStoreLevelInsights());
 
     if (!parts.length) return "";
     return `<div class="section-card">
-      <div class="section-head"><h2>📌 월간 데이터 인사이트</h2></div>
+      <div class="section-head"><h2>📌 지난달(${label}) 종합 인사이트</h2></div>
       <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
         ${parts.map(t => `<li>${t}</li>`).join("")}
       </ul>
@@ -1271,6 +1346,7 @@
     const area = document.getElementById("monthly-area");
     area.innerHTML = `
       ${renderMonthlyInsights()}
+      ${renderCompletedMonthInsights()}
       <div class="kpi-grid">${renderMonthlyKpiCards()}</div>
       <div class="section-card">
         <div class="section-head">
