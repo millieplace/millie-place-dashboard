@@ -852,6 +852,37 @@
     return { curLabel, prevLabel, cur: cur || {}, prev: prev || {}, usingFallback };
   }
 
+  function aggregateDailyStoreForMonthUpTo(dailyTotals, monthKey, dayCutoff) {
+    const totals = {};
+    Object.keys(dailyTotals || {}).forEach(date => {
+      if (date.startsWith(monthKey)) {
+        const day = parseInt(date.slice(8, 10), 10);
+        if (day <= dayCutoff) {
+          Object.entries(dailyTotals[date]).forEach(([name, v]) => {
+            totals[name] = (totals[name] || 0) + v;
+          });
+        }
+      }
+    });
+    return totals;
+  }
+
+  function getSameDateCutoffStoreData(dailyTotals) {
+    const today = new Date();
+    const dayCutoff = today.getDate();
+    const curMonthKey = getMonthKeyFromDate(today);
+    const curMonthNum = today.getMonth() + 1;
+    let py = today.getFullYear(), pm = curMonthNum - 1;
+    if (pm === 0) { pm = 12; py -= 1; }
+    const prevMonthKey = `${py}-${String(pm).padStart(2, "0")}`;
+    const daysInPrevMonth = new Date(py, pm, 0).getDate();
+    const prevCutoff = Math.min(dayCutoff, daysInPrevMonth);
+
+    const cur = aggregateDailyStoreForMonthUpTo(dailyTotals, curMonthKey, dayCutoff);
+    const prev = aggregateDailyStoreForMonthUpTo(dailyTotals, prevMonthKey, prevCutoff);
+    return { curLabel: `${curMonthKey}(1~${dayCutoff}일)`, prevLabel: `${prevMonthKey}(1~${prevCutoff}일)`, cur, prev };
+  }
+
   function computeMonthlyStoreRanking(cur, prev) {
     const curSorted = Object.entries(cur).sort((a, b) => b[1] - a[1]);
     const prevSorted = Object.entries(prev).sort((a, b) => b[1] - a[1]);
@@ -877,20 +908,16 @@
     return { curLabel, prevLabel, cur: monthlyTotals[curLabel], prev: monthlyTotals[prevLabel] };
   }
 
-  function renderMonthlyStoreRankingSection() {
-    const storeMetric = METRICS_DATA[STORE_KEY];
-    const area = document.getElementById("monthly-store-ranking-area");
-    const monthlyTotals = (storeMetric && storeMetric.monthly_totals) || {};
-
-    const monthData = getLastTwoCompleteMonths(monthlyTotals);
+  function renderStoreRankingInto(containerId, monthData, note) {
+    const area = document.getElementById(containerId);
     if (!monthData) {
       area.innerHTML = `
         <div class="section-head"><h2>매장 방문자수 TOP 20</h2></div>
-        <div class="empty-note">아직 표시할 월별 데이터가 없습니다.</div>`;
+        <div class="empty-note">아직 표시할 데이터가 없습니다.</div>`;
       return;
     }
     const { curLabel, prevLabel, cur, prev } = monthData;
-    const ranking = computeMonthlyStoreRanking(cur, prev);
+    const ranking = computeMonthlyStoreRanking(cur || {}, prev || {});
 
     function changeCell(item) {
       if (item.change === "new") return `<span style="color:var(--accent); font-weight:600;">NEW</span>`;
@@ -901,8 +928,9 @@
 
     area.innerHTML = `
       <div class="section-head">
-        <h2>매장 방문자수 TOP 20 (${curLabel}${prevLabel ? `, 전월(${prevLabel}) 대비 순위 변화` : ""})</h2>
+        <h2>매장 방문자수 TOP 20 (${curLabel}${prevLabel ? `, ${prevLabel} 대비 순위 변화` : ""})</h2>
       </div>
+      ${note ? `<div class="empty-note" style="text-align:left; padding:0 0 10px;">${note}</div>` : ""}
       <table class="rank-table">
         <thead><tr><th>순위</th><th>매장</th><th style="text-align:right">방문자수</th><th style="text-align:right">순위 변화</th></tr></thead>
         <tbody>
@@ -917,11 +945,7 @@
       </table>`;
   }
 
-  function computeMonthlyStoreChange(monthlyTotals) {
-    const monthData = getLastTwoCompleteMonths(monthlyTotals);
-    if (!monthData) return { curLabel: null, prevLabel: null, increases: [], decreases: [] };
-    const { curLabel, prevLabel, cur, prev } = monthData;
-
+  function computeStoreChangeFromPair(cur, prev) {
     const allNames = new Set([...Object.keys(cur || {}), ...Object.keys(prev || {})]);
     const deltas = [];
     allNames.forEach(name => {
@@ -930,24 +954,22 @@
       deltas.push([name, c, p, c - p]);
     });
     const sorted = [...deltas].sort((a, b) => b[3] - a[3]);
-    const increases = sorted.filter(d => d[3] > 0).slice(0, 10);
-    const decreases = sorted.filter(d => d[3] < 0).slice(-10).reverse();
-    return { curLabel, prevLabel, increases, decreases };
+    return {
+      increases: sorted.filter(d => d[3] > 0).slice(0, 10),
+      decreases: sorted.filter(d => d[3] < 0).slice(-10).reverse(),
+    };
   }
 
-  function renderMonthlyStoreChangeSection() {
-    const storeMetric = METRICS_DATA[STORE_KEY];
-    const area = document.getElementById("monthly-store-change-area");
-    const monthlyTotals = (storeMetric && storeMetric.monthly_totals) || {};
-
-    const { curLabel, prevLabel, increases, decreases } = computeMonthlyStoreChange(monthlyTotals);
-
-    if (!curLabel) {
+  function renderStoreChangeInto(containerId, monthData, note) {
+    const area = document.getElementById(containerId);
+    if (!monthData) {
       area.innerHTML = `
-        <div class="section-head"><h2>월별 제휴처 방문자 증감 (TOP 10)</h2></div>
-        <div class="empty-note">비교할 수 있는 두 달치 데이터가 아직 없습니다. 매일 누적되니 조금만 기다려주세요.</div>`;
+        <div class="section-head"><h2>제휴처 방문자 증감 (TOP 10)</h2></div>
+        <div class="empty-note">비교할 수 있는 데이터가 아직 없습니다.</div>`;
       return;
     }
+    const { curLabel, prevLabel, cur, prev } = monthData;
+    const { increases, decreases } = computeStoreChangeFromPair(cur, prev);
 
     function rows(list, sign) {
       if (!list.length) return `<tr><td class="empty-note">해당 매장 없음</td></tr>`;
@@ -962,8 +984,9 @@
 
     area.innerHTML = `
       <div class="section-head">
-        <h2>월별 제휴처 방문자 증감 (TOP 10, ${prevLabel || "-"} → ${curLabel})</h2>
+        <h2>제휴처 방문자 증감 (TOP 10, ${prevLabel || "-"} → ${curLabel})</h2>
       </div>
+      ${note ? `<div class="empty-note" style="text-align:left; padding:0 0 10px;">${note}</div>` : ""}
       <div class="two-col">
         <div>
           <div class="section-head"><h2 style="font-size:12.5px; color:var(--ink-soft);">▲ 증가 TOP 10</h2></div>
@@ -974,6 +997,32 @@
           <table class="rank-table"><tbody>${rows(decreases, -1)}</tbody></table>
         </div>
       </div>`;
+  }
+
+  function renderMonthlyStoreRankingSection() {
+    const storeMetric = METRICS_DATA[STORE_KEY];
+    const monthlyTotals = (storeMetric && storeMetric.monthly_totals) || {};
+    renderStoreRankingInto("monthly-store-ranking-area", getLastTwoCompleteMonths(monthlyTotals));
+  }
+
+  function renderMonthlyStoreChangeSection() {
+    const storeMetric = METRICS_DATA[STORE_KEY];
+    const monthlyTotals = (storeMetric && storeMetric.monthly_totals) || {};
+    renderStoreChangeInto("monthly-store-change-area", getLastTwoCompleteMonths(monthlyTotals));
+  }
+
+  function renderCurrentStoreRankingSection() {
+    const dsMetric = METRICS_DATA["daily_store"];
+    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
+    const monthData = Object.keys(dailyTotals).length ? getSameDateCutoffStoreData(dailyTotals) : null;
+    renderStoreRankingInto("current-store-ranking-area", monthData, "※ 전월과 동일한 날짜(1일~오늘)까지만 집계해서 비교했어요 (혜택클릭 기준)");
+  }
+
+  function renderCurrentStoreChangeSection() {
+    const dsMetric = METRICS_DATA["daily_store"];
+    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
+    const monthData = Object.keys(dailyTotals).length ? getSameDateCutoffStoreData(dailyTotals) : null;
+    renderStoreChangeInto("current-store-change-area", monthData, "※ 전월과 동일한 날짜(1일~오늘)까지만 집계해서 비교했어요 (혜택클릭 기준)");
   }
 
   function computeWeekdayAvgFromSeries(series) {
@@ -1434,20 +1483,25 @@
       </div>
 
       <div class="sub-tab-nav" id="monthly-subtab-nav">
-        <button class="active" data-subtab="prev">📅 전월 종합 리뷰 (${completedLabel})</button>
-        <button data-subtab="cur">📆 이번 달 현황 (${curMonthNum}월, 진행중)</button>
+        <button class="active" data-subtab="cur">📆 이번 달 현황 (${curMonthNum}월, 진행중)</button>
+        <button data-subtab="prev">📅 전월 종합 리뷰 (${completedLabel})</button>
       </div>
 
-      <div class="sub-tab-panel active" id="monthly-subtab-prev">
+      <div class="sub-tab-panel active" id="monthly-subtab-cur">
+        ${renderMonthlyInsights()}
+        <div class="kpi-grid">${renderMonthlyKpiCards()}</div>
+        <div class="section-card" id="current-store-ranking-area"></div>
+        <div class="section-card" id="current-store-change-area"></div>
+      </div>
+
+      <div class="sub-tab-panel" id="monthly-subtab-prev">
         ${renderCompletedMonthInsights()}
         <div class="section-card" id="monthly-store-ranking-area"></div>
         <div class="section-card" id="monthly-store-change-area"></div>
-      </div>
-
-      <div class="sub-tab-panel" id="monthly-subtab-cur">
-        ${renderMonthlyInsights()}
-        <div class="kpi-grid">${renderMonthlyKpiCards()}</div>
       </div>`;
+
+    renderCurrentStoreRankingSection();
+    renderCurrentStoreChangeSection();
 
     document.querySelectorAll("#monthly-subtab-nav button").forEach(btn => {
       btn.addEventListener("click", () => {
