@@ -1369,7 +1369,10 @@
           if (!cmp || cmp.delta === null || cmp.delta >= 0) return null;
           const declineAbs = cmp.prevValue - cmp.value;
           if (declineAbs <= 0) return null;
-          const ratio = Math.min(100, (churnAmount / declineAbs) * 100);
+          const ratio = (churnAmount / declineAbs) * 100;
+          if (ratio > 100) {
+            return `${metricLabel} 감소분(${fmt(declineAbs)}건)의 약 <b>${ratio.toFixed(0)}%</b> (다른 매장 성장으로 일부 상쇄됨)`;
+          }
           return `${metricLabel} 감소분(${fmt(declineAbs)}건)의 약 <b>${ratio.toFixed(0)}%</b>`;
         }
 
