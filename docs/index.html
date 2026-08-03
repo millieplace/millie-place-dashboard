@@ -1351,25 +1351,39 @@
 
     parts.push(...renderStoreLevelInsights());
 
-    // 종합 분석: 매장 이탈/성장이 전체 UV·혜택받기 변화와 어느 정도 맞물리는지 연결
+    // 종합 분석: 매장 이탈/성장이 전체 UV·혜택받기·직원확인 변화와 어느 정도 맞물리는지 연결
     const storeMetric = METRICS_DATA[STORE_KEY];
     if (storeMetric) {
       const monthlyTotals = storeMetric.monthly_totals || {};
       const monthData = getLastTwoCompleteMonths(monthlyTotals);
       const uvCmp = getCompletedMonthComparison(METRICS_DATA.uv ? METRICS_DATA.uv.series || [] : []);
+      const benefitCmp = getCompletedMonthComparison(METRICS_DATA.benefit_claims ? METRICS_DATA.benefit_claims.series || [] : []);
+      const staffCmp = getCompletedMonthComparison(METRICS_DATA.staff_verifications ? METRICS_DATA.staff_verifications.series || [] : []);
 
       if (monthData && monthData.prevLabel && uvCmp && uvCmp.delta !== null) {
         const brandChanges = computeBrandChanges(monthData.cur, monthData.prev);
         const churnBrands = brandChanges.filter(b => b.prev >= 20 && b.pct !== null && b.pct <= -70);
         const growthBrands = brandChanges.filter(b => b.prev >= 10 && b.pct !== null && b.pct > 30);
 
+        function ratioText(metricLabel, cmp, churnAmount) {
+          if (!cmp || cmp.delta === null || cmp.delta >= 0) return null;
+          const declineAbs = cmp.prevValue - cmp.value;
+          if (declineAbs <= 0) return null;
+          const ratio = Math.min(100, (churnAmount / declineAbs) * 100);
+          return `${metricLabel} 감소분(${fmt(declineAbs)}건)의 약 <b>${ratio.toFixed(0)}%</b>`;
+        }
+
         if (churnBrands.length) {
           const totalChurnDecline = churnBrands.reduce((a, b) => a + (b.prev - b.cur), 0);
           const brandNames = churnBrands.map(b => b.brand).join("·");
           if (uvCmp.delta < 0) {
-            const uvDeclineAbs = uvCmp.prevValue - uvCmp.value;
-            const ratio = uvDeclineAbs > 0 ? Math.min(100, (totalChurnDecline / uvDeclineAbs) * 100) : null;
-            parts.unshift(`<b>${brandNames}</b> 매장군의 제휴 종료로 인한 방문 감소분(약 ${fmt(totalChurnDecline)}건)이, ${label} UV 전체 감소분(${fmt(uvDeclineAbs)}건)${ratio !== null ? `의 약 <b>${ratio.toFixed(0)}%</b>를 차지` : "과 비슷한 규모"}해요 — 이번 UV·혜택받기 감소는 이 매장군 이탈 영향이 큰 것으로 보여요`);
+            const ratioBits = [
+              ratioText("UV", uvCmp, totalChurnDecline),
+              ratioText("혜택받기", benefitCmp, totalChurnDecline),
+              ratioText("직원확인", staffCmp, totalChurnDecline),
+            ].filter(Boolean);
+            const ratioStr = ratioBits.length ? ratioBits.join(", ") : "일부";
+            parts.unshift(`<b>${brandNames}</b> 매장군의 제휴 종료로 인한 방문 감소분(약 ${fmt(totalChurnDecline)}건)이, ${label} ${ratioStr}를 차지해요 — 이번 감소는 이 매장군 이탈 영향이 큰 것으로 보여요`);
           } else {
             parts.unshift(`<b>${brandNames}</b> 매장군이 제휴 종료로 이탈했지만, 다른 매장들의 성장 덕분에 ${label} 전체 UV는 오히려 <span style="color:var(--good); font-weight:600;">▲${uvCmp.delta.toFixed(1)}%</span> 증가했어요 — 이탈 영향이 상쇄된 것으로 보여요`);
           }
