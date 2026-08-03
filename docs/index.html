@@ -349,6 +349,11 @@
     text-align: right;
     font-weight: 600;
   }
+  table.rank-table tr.highlight td {
+    background: var(--accent-soft);
+    border-top: 2px solid var(--accent);
+    border-bottom: none;
+  }
 
   .empty-note {
     font-size: 12.5px;
@@ -648,10 +653,20 @@
     return html;
   }
 
+  function computeYtdSummary(rows) {
+    const elapsed = rows.filter(r => r.hasActual);
+    const cumulativeTarget = elapsed.reduce((a, r) => a + r.target, 0);
+    const cumulativeActual = elapsed.reduce((a, r) => a + (r.actual || 0), 0);
+    const achievement = cumulativeTarget > 0 ? (cumulativeActual / cumulativeTarget) * 100 : null;
+    const annualTarget = rows.reduce((a, r) => a + r.target, 0);
+    return { cumulativeTarget, cumulativeActual, achievement, annualTarget, monthsElapsed: elapsed.length };
+  }
+
   function renderKpiTable(key) {
     const m = METRICS_DATA[key];
     const color = COLORS[key];
     const rows = buildKpiRows(key);
+    const ytd = computeYtdSummary(rows);
     return `
       <div class="section-card">
         <div class="section-head">
@@ -674,8 +689,17 @@
                 <td class="rank-val">${changeText(r.momDelta)}</td>
                 <td class="rank-val">${changeText(r.yoyDelta)}</td>
               </tr>`).join("")}
+            <tr class="highlight">
+              <td><b>2026년 누적(YTD, ${ytd.monthsElapsed}개월)</b></td>
+              <td class="rank-val"><b>${fmt(ytd.cumulativeTarget)}</b></td>
+              <td class="rank-val"><b>${fmt(ytd.cumulativeActual)}</b></td>
+              <td class="rank-val">${achievementBadge(ytd.achievement)}</td>
+              <td class="rank-val">-</td>
+              <td class="rank-val">-</td>
+            </tr>
           </tbody>
         </table>
+        <div class="kpi-sub" style="margin-top:8px;">참고: 2026년 연간 목표 총합 ${fmt(ytd.annualTarget)}건</div>
       </div>`;
   }
 
