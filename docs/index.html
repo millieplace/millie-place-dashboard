@@ -1591,6 +1591,8 @@
     return html;
   }
 
+  let weeklyPeriod = 12;
+
   function renderWeeklyTrendChart() {
     const ctx = document.getElementById("weeklyTrendChart");
     if (!ctx) return;
@@ -1601,7 +1603,7 @@
     METRIC_ORDER.forEach(key => {
       const m = METRICS_DATA[key];
       if (m && m.series && m.series.length) {
-        const agg = aggregateWeekly(m.series).slice(-16);
+        const agg = weeklyPeriod === Infinity ? aggregateWeekly(m.series) : aggregateWeekly(m.series).slice(-weeklyPeriod);
         perMetric[key] = agg;
         agg.forEach(p => allKeys.add(p.key));
       }
@@ -1611,6 +1613,8 @@
     const labelMap = {};
     METRIC_ORDER.forEach(key => (perMetric[key] || []).forEach(p => { labelMap[p.key] = p.label; }));
     const labels = sortedKeys.map(k => labelMap[k] || k);
+
+    const labelInterval = sortedKeys.length > 20 ? 2 : 1;
 
     const datasets = METRIC_ORDER.filter(k => perMetric[k]).map(key => {
       const valueByKey = {};
@@ -1622,7 +1626,10 @@
         borderColor: COLORS[key],
         backgroundColor: COLORS[key],
         tension: 0.3,
-        pointRadius: 3,
+        pointRadius: (ctx2) => {
+          const i = ctx2.dataIndex, len = ctx2.dataset.data.length;
+          return (i % labelInterval === 0 || i === len - 1) ? 3 : 0;
+        },
         pointBackgroundColor: COLORS[key],
         borderWidth: 2,
         spanGaps: true,
@@ -1644,7 +1651,12 @@
             backgroundColor: "rgba(255,255,255,0.85)",
             borderRadius: 3,
             padding: { top: 1, bottom: 1, left: 3, right: 3 },
-            formatter: (v) => v === null ? "" : Math.round(v).toLocaleString("ko-KR"),
+            formatter: (v, ctx2) => {
+              if (v === null) return "";
+              const i = ctx2.dataIndex, len = ctx2.dataset.data.length;
+              if (i % labelInterval === 0 || i === len - 1) return Math.round(v).toLocaleString("ko-KR");
+              return "";
+            },
           },
         },
         scales: {
@@ -1724,11 +1736,19 @@
       <div class="kpi-grid">${renderWeeklyKpiCards()}</div>
       <div class="section-card">
         <div class="section-head">
-          <h2>주별 추이 (최근 16주)</h2>
-          <div class="legend">
-            ${METRIC_ORDER.filter(k => METRICS_DATA[k]).map(k => `
-              <span class="legend-item"><span class="legend-dot" style="background:${COLORS[k]}"></span>${METRICS_DATA[k].label}</span>
-            `).join("")}
+          <h2>주별 추이</h2>
+          <div style="display:flex; align-items:center; gap:16px;">
+            <div class="legend">
+              ${METRIC_ORDER.filter(k => METRICS_DATA[k]).map(k => `
+                <span class="legend-item"><span class="legend-dot" style="background:${COLORS[k]}"></span>${METRICS_DATA[k].label}</span>
+              `).join("")}
+            </div>
+            <div class="segmented" id="weekly-period-toggle">
+              <button data-period="8">8주</button>
+              <button class="active" data-period="12">12주</button>
+              <button data-period="26">26주</button>
+              <button data-period="all">전체</button>
+            </div>
           </div>
         </div>
         <div class="trend-chart-wrap tall"><canvas id="weeklyTrendChart"></canvas></div>
@@ -1738,6 +1758,14 @@
     renderWeeklyTrendChart();
     renderWeeklyStoreRankingSection();
     renderWeeklyStoreChangeSection();
+    document.querySelectorAll("#weekly-period-toggle button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#weekly-period-toggle button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        weeklyPeriod = btn.dataset.period === "all" ? Infinity : parseInt(btn.dataset.period, 10);
+        renderWeeklyTrendChart();
+      });
+    });
   }
 
   /* ================= 월간 데이터 탭 ================= */
