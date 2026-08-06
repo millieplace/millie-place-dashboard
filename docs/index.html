@@ -645,6 +645,45 @@
   };
 
   let METRICS_DATA = {};
+
+  function buildTruncatedMetricsData(cutoffDate) {
+    const truncated = {};
+    const cutoffMonth = cutoffDate.slice(0, 7);
+    Object.keys(METRICS_DATA).forEach(key => {
+      const m = METRICS_DATA[key];
+      const clone = Object.assign({}, m);
+      if (clone.series) clone.series = clone.series.filter(p => p.date <= cutoffDate);
+      if (clone.daily_totals) {
+        const dt = {};
+        Object.keys(clone.daily_totals).forEach(d => { if (d <= cutoffDate) dt[d] = clone.daily_totals[d]; });
+        clone.daily_totals = dt;
+      }
+      if (clone.monthly_totals) {
+        const mt = {};
+        Object.keys(clone.monthly_totals).forEach(mk => { if (mk <= cutoffMonth) mt[mk] = clone.monthly_totals[mk]; });
+        clone.monthly_totals = mt;
+      }
+      if (clone.benefit_monthly_totals) {
+        const bmt = {};
+        Object.keys(clone.benefit_monthly_totals).forEach(mk => { if (mk <= cutoffMonth) bmt[mk] = clone.benefit_monthly_totals[mk]; });
+        clone.benefit_monthly_totals = bmt;
+      }
+      truncated[key] = clone;
+    });
+    return truncated;
+  }
+
+  function withTruncatedData(cutoffDate, fn) {
+    if (!cutoffDate) { fn(); return; }
+    const original = METRICS_DATA;
+    METRICS_DATA = buildTruncatedMetricsData(cutoffDate);
+    try {
+      fn();
+    } finally {
+      METRICS_DATA = original;
+    }
+  }
+
   let monthlyPeriod = "month";
   let dailyChartInstance = null;
   let weeklyChartInstance = null;
@@ -1213,11 +1252,13 @@
   }
 
   function getSameDateCutoffStoreData(dailyTotals) {
-    const today = new Date();
-    const dayCutoff = today.getDate();
-    const curMonthKey = getMonthKeyFromDate(today);
-    const curMonthNum = today.getMonth() + 1;
-    let py = today.getFullYear(), pm = curMonthNum - 1;
+    const dates = getSortedDates(dailyTotals);
+    if (!dates.length) return null;
+    const latest = dates[dates.length - 1];
+    const [ly, lmo, ld] = latest.split("-").map(Number);
+    const dayCutoff = ld;
+    const curMonthKey = `${ly}-${String(lmo).padStart(2, "0")}`;
+    let py = ly, pm = lmo - 1;
     if (pm === 0) { pm = 12; py -= 1; }
     const prevMonthKey = `${py}-${String(pm).padStart(2, "0")}`;
     const daysInPrevMonth = new Date(py, pm, 0).getDate();
@@ -1360,14 +1401,14 @@
     const dsMetric = METRICS_DATA["daily_store"];
     const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
     const monthData = Object.keys(dailyTotals).length ? getSameDateCutoffStoreData(dailyTotals) : null;
-    renderStoreRankingInto("current-store-ranking-area", monthData, "※ 전월과 동일한 날짜(1일~오늘)까지만 집계해서 비교했어요 (혜택클릭 기준)");
+    renderStoreRankingInto("current-store-ranking-area", monthData, "※ 전월 동일 날짜까지만 집계해서 비교했어요 (혜택클릭 기준)");
   }
 
   function renderCurrentStoreChangeSection() {
     const dsMetric = METRICS_DATA["daily_store"];
     const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
     const monthData = Object.keys(dailyTotals).length ? getSameDateCutoffStoreData(dailyTotals) : null;
-    renderStoreChangeInto("current-store-change-area", monthData, "※ 전월과 동일한 날짜(1일~오늘)까지만 집계해서 비교했어요 (혜택클릭 기준)");
+    renderStoreChangeInto("current-store-change-area", monthData, "※ 전월 동일 날짜까지만 집계해서 비교했어요 (혜택클릭 기준)");
   }
 
   function computeWeekdayAvgFromSeries(series) {
@@ -1464,11 +1505,38 @@
     </div>`;
   }
 
+  function getAvailableDailyDates() {
+    const anyMetric = METRICS_DATA.uv || METRICS_DATA.benefit_claims || METRICS_DATA.staff_verifications;
+    if (!anyMetric || !anyMetric.series) return [];
+    return anyMetric.series.map(p => p.date).slice().reverse();
+  }
+
+  let selectedDailyDate = null;
+
+  function renderDailyDetailSections(cutoffDate) {
+    withTruncatedData(cutoffDate, () => {
+      document.getElementById("daily-insights-area").innerHTML = renderDailyInsights();
+      document.getElementById("daily-kpi-area").innerHTML = renderDailyKpiCards();
+      renderDailyTrendChart();
+      dailyStoreDate = cutoffDate;
+      renderDailyStoreSection();
+    });
+  }
+
   function renderDailyTab() {
     const area = document.getElementById("daily-area");
+    const dates = getAvailableDailyDates();
+    selectedDailyDate = dates.length ? dates[0] : null;
+
     area.innerHTML = `
-      ${renderDailyInsights()}
-      <div class="kpi-grid">${renderDailyKpiCards()}</div>
+      <div class="section-card">
+        <div class="section-head"><h2>날짜 선택</h2></div>
+        <select id="daily-date-select" class="store-select" style="max-width:220px; padding:9px 14px;">
+          ${dates.map(d => `<option value="${d}">${d}${d === selectedDailyDate ? " (최신)" : ""}</option>`).join("")}
+        </select>
+      </div>
+      <div id="daily-insights-area"></div>
+      <div class="kpi-grid" id="daily-kpi-area"></div>
       <div class="section-card">
         <div class="section-head">
           <h2>일별 추이 (최근 30일)</h2>
@@ -1481,8 +1549,16 @@
         <div class="trend-chart-wrap tall"><canvas id="dailyTrendChart"></canvas></div>
       </div>
       <div class="section-card" id="daily-store-area"></div>`;
-    renderDailyTrendChart();
-    renderDailyStoreSection();
+
+    renderDailyDetailSections(selectedDailyDate);
+
+    const dateSelect = document.getElementById("daily-date-select");
+    if (dateSelect) {
+      dateSelect.addEventListener("change", () => {
+        selectedDailyDate = dateSelect.value;
+        renderDailyDetailSections(selectedDailyDate);
+      });
+    }
   }
 
   /* ================= 주간 데이터 탭 ================= */
@@ -2204,6 +2280,34 @@
     return bits;
   }
 
+  function getAvailableMonths() {
+    const anyMetric = METRICS_DATA.uv || METRICS_DATA.benefit_claims || METRICS_DATA.staff_verifications;
+    if (!anyMetric || !anyMetric.series || !anyMetric.series.length) return [];
+    const months = new Set(anyMetric.series.map(p => p.date.slice(0, 7)));
+    return Array.from(months).sort().reverse();
+  }
+
+  function monthEndCutoff(monthKey) {
+    const anyMetric = METRICS_DATA.uv || METRICS_DATA.benefit_claims || METRICS_DATA.staff_verifications;
+    const latest = anyMetric && anyMetric.series && anyMetric.series.length ? anyMetric.series[anyMetric.series.length - 1].date : null;
+    const [y, mo] = monthKey.split("-").map(Number);
+    const lastDay = new Date(y, mo, 0).getDate();
+    const monthEnd = `${monthKey}-${String(lastDay).padStart(2, "0")}`;
+    return (latest && monthEnd > latest) ? latest : monthEnd;
+  }
+
+  let selectedCurMonth = null;
+
+  function renderCurrentMonthDetailSections(monthKey) {
+    const cutoffDate = monthEndCutoff(monthKey);
+    withTruncatedData(cutoffDate, () => {
+      document.getElementById("monthly-cur-insights-area").innerHTML = renderMonthlyInsights();
+      document.getElementById("monthly-cur-kpi-area").innerHTML = renderMonthlyKpiCards();
+      renderCurrentStoreRankingSection();
+      renderCurrentStoreChangeSection();
+    });
+  }
+
   function renderMonthlyTab() {
     const area = document.getElementById("monthly-area");
     const curMonthKey = getMonthKeyFromDate(new Date());
@@ -2213,6 +2317,8 @@
       const cmp = getCompletedMonthComparison(METRICS_DATA.uv.series);
       if (cmp) completedLabel = cmp.label;
     }
+    const availableMonths = getAvailableMonths();
+    selectedCurMonth = availableMonths.length ? availableMonths[0] : null;
 
     area.innerHTML = `
       <div class="section-card">
@@ -2239,8 +2345,14 @@
       </div>
 
       <div class="sub-tab-panel active" id="monthly-subtab-cur">
-        ${renderMonthlyInsights()}
-        <div class="kpi-grid">${renderMonthlyKpiCards()}</div>
+        <div class="section-card">
+          <div class="section-head"><h2>월 선택</h2></div>
+          <select id="monthly-cur-select" class="store-select" style="max-width:200px; padding:9px 14px;">
+            ${availableMonths.map(mk => `<option value="${mk}">${mk}${mk === selectedCurMonth ? " (최신)" : ""}</option>`).join("")}
+          </select>
+        </div>
+        <div id="monthly-cur-insights-area"></div>
+        <div class="kpi-grid" id="monthly-cur-kpi-area"></div>
         <div class="section-card" id="current-store-ranking-area"></div>
         <div class="section-card" id="current-store-change-area"></div>
       </div>
@@ -2251,8 +2363,15 @@
         <div class="section-card" id="monthly-store-change-area"></div>
       </div>`;
 
-    renderCurrentStoreRankingSection();
-    renderCurrentStoreChangeSection();
+    renderCurrentMonthDetailSections(selectedCurMonth);
+
+    const monthSelect = document.getElementById("monthly-cur-select");
+    if (monthSelect) {
+      monthSelect.addEventListener("change", () => {
+        selectedCurMonth = monthSelect.value;
+        renderCurrentMonthDetailSections(selectedCurMonth);
+      });
+    }
 
     document.querySelectorAll("#monthly-subtab-nav button").forEach(btn => {
       btn.addEventListener("click", () => {
