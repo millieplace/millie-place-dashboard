@@ -1487,12 +1487,19 @@
 
   /* ================= 주간 데이터 탭 ================= */
 
+  function toLocalDateStr(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
   function getMondayOf(dateStr) {
     const d = new Date(dateStr + "T00:00:00");
     const day = d.getDay();
     const diff = day === 0 ? -6 : 1 - day;
     d.setDate(d.getDate() + diff);
-    return d.toISOString().slice(0, 10);
+    return toLocalDateStr(d);
   }
 
   function aggregateWeekly(series) {
@@ -1514,11 +1521,11 @@
     const curMondayDate = new Date(curMonday + "T00:00:00");
     const prevMondayDate = new Date(curMondayDate);
     prevMondayDate.setDate(prevMondayDate.getDate() - 7);
-    const prevMonday = prevMondayDate.toISOString().slice(0, 10);
-    const daysElapsed = Math.floor((new Date(latest + "T00:00:00") - curMondayDate) / 86400000) + 1;
+    const prevMonday = toLocalDateStr(prevMondayDate);
+    const daysElapsed = Math.round((new Date(latest + "T00:00:00") - curMondayDate) / 86400000) + 1;
     const prevEndDate = new Date(prevMondayDate);
     prevEndDate.setDate(prevEndDate.getDate() + daysElapsed - 1);
-    const prevEnd = prevEndDate.toISOString().slice(0, 10);
+    const prevEnd = toLocalDateStr(prevEndDate);
     const prev = series.filter(p => p.date >= prevMonday && p.date <= prevEnd).reduce((a, p) => a + p.value, 0);
 
     const delta = prev > 0 ? ((current - prev) / prev) * 100 : null;
@@ -1542,36 +1549,80 @@
     return totals;
   }
 
-  function getWeekOverWeekStoreData(dailyTotals) {
+  function getWeekOverWeekStoreData(dailyTotals, weekMonday) {
     const dates = getSortedDates(dailyTotals);
     if (!dates.length) return null;
     const latest = dates[dates.length - 1];
-    const curMonday = getMondayOf(latest);
-    const curMondayDate = new Date(curMonday + "T00:00:00");
-    const prevMondayDate = new Date(curMondayDate);
+    const targetMonday = weekMonday || getMondayOf(latest);
+    if (targetMonday > latest) return null;
+
+    const mondayDate = new Date(targetMonday + "T00:00:00");
+    const weekEndFullDate = new Date(mondayDate);
+    weekEndFullDate.setDate(weekEndFullDate.getDate() + 6);
+    const weekEndFull = toLocalDateStr(weekEndFullDate);
+    const weekEnd = weekEndFull <= latest ? weekEndFull : latest;
+
+    const prevMondayDate = new Date(mondayDate);
     prevMondayDate.setDate(prevMondayDate.getDate() - 7);
-    const prevMonday = prevMondayDate.toISOString().slice(0, 10);
-    const daysElapsed = Math.floor((new Date(latest + "T00:00:00") - curMondayDate) / 86400000) + 1;
+    const prevMonday = toLocalDateStr(prevMondayDate);
+    const daysElapsed = Math.round((new Date(weekEnd + "T00:00:00") - mondayDate) / 86400000) + 1;
     const prevEndDate = new Date(prevMondayDate);
     prevEndDate.setDate(prevEndDate.getDate() + daysElapsed - 1);
-    const prevEnd = prevEndDate.toISOString().slice(0, 10);
+    const prevEnd = toLocalDateStr(prevEndDate);
 
-    const cur = aggregateDailyStoreForRange(dailyTotals, curMonday, latest);
+    const cur = aggregateDailyStoreForRange(dailyTotals, targetMonday, weekEnd);
     const prev = aggregateDailyStoreForRange(dailyTotals, prevMonday, prevEnd);
     return {
-      curLabel: `${curMonday.slice(5)}~${latest.slice(5)}`,
+      curLabel: `${targetMonday.slice(5)}~${weekEnd.slice(5)}`,
       prevLabel: `${prevMonday.slice(5)}~${prevEnd.slice(5)}`,
       cur, prev,
     };
   }
 
-  function renderWeeklyKpiCards() {
+  function computeWeekKpiForWeek(series, weekMonday) {
+    if (!series || !series.length) return { current: null, prev: null, delta: null, weekLabel: "", prevWeekLabel: "", isPartial: false };
+    const latestDate = series[series.length - 1].date;
+    if (weekMonday > latestDate) return { current: null, prev: null, delta: null, weekLabel: "", prevWeekLabel: "", isPartial: false };
+
+    const weekMondayDate = new Date(weekMonday + "T00:00:00");
+    const weekEndFullDate = new Date(weekMondayDate);
+    weekEndFullDate.setDate(weekEndFullDate.getDate() + 6);
+    const weekEndFull = toLocalDateStr(weekEndFullDate);
+    const weekEnd = weekEndFull <= latestDate ? weekEndFull : latestDate;
+    const isPartial = weekEnd < weekEndFull;
+
+    const current = series.filter(p => p.date >= weekMonday && p.date <= weekEnd).reduce((a, p) => a + p.value, 0);
+    const daysElapsed = Math.round((new Date(weekEnd + "T00:00:00") - weekMondayDate) / 86400000) + 1;
+
+    const prevMondayDate = new Date(weekMondayDate);
+    prevMondayDate.setDate(prevMondayDate.getDate() - 7);
+    const prevMonday = toLocalDateStr(prevMondayDate);
+    const prevEndDate = new Date(prevMondayDate);
+    prevEndDate.setDate(prevEndDate.getDate() + daysElapsed - 1);
+    const prevEnd = toLocalDateStr(prevEndDate);
+    const prev = series.filter(p => p.date >= prevMonday && p.date <= prevEnd).reduce((a, p) => a + p.value, 0);
+
+    const delta = prev > 0 ? ((current - prev) / prev) * 100 : null;
+    return {
+      current, prev, delta, isPartial,
+      weekLabel: `${weekMonday.slice(5)}~${weekEnd.slice(5)}`,
+      prevWeekLabel: `${prevMonday.slice(5)}~${prevEnd.slice(5)}`,
+    };
+  }
+
+  function computeWeekToDateKpi(series) {
+    if (!series || !series.length) return computeWeekKpiForWeek(series, null);
+    const latest = series[series.length - 1].date;
+    return computeWeekKpiForWeek(series, getMondayOf(latest));
+  }
+
+  function renderWeeklyKpiCards(weekMonday) {
     let html = "";
     METRIC_ORDER.forEach(key => {
       const m = METRICS_DATA[key];
       if (!m) return;
       const color = COLORS[key];
-      const { current, delta, weekLabel, prevWeekLabel } = computeWeekToDateKpi(m.series);
+      const { current, delta, weekLabel, prevWeekLabel } = computeWeekKpiForWeek(m.series, weekMonday);
       const weekly = aggregateWeekly(m.series).slice(-12);
       const sparkSeries = weekly.map(p => p.value);
       html += `
@@ -1585,13 +1636,14 @@
           </div>
           <div class="kpi-spark">${sparklineSvg(sparkSeries, color)}</div>
           ${weekly.length ? `<div style="display:flex; justify-content:space-between; font-size:10px; color:var(--ink-faint); margin-top:2px;"><span>${weekly[0].label}</span><span>${weekly[weekly.length - 1].label}</span></div>` : ""}
-          <div class="kpi-sub">이번 주(${weekLabel}) 누적 · 전주 동기간(${prevWeekLabel})比</div>
+          <div class="kpi-sub">선택 주(${weekLabel}) 누적 · 전주 동기간(${prevWeekLabel})比</div>
         </div>`;
     });
     return html;
   }
 
   let weeklyPeriod = 12;
+  let selectedWeekMonday = null;
 
   function renderWeeklyTrendChart() {
     const ctx = document.getElementById("weeklyTrendChart");
@@ -1667,13 +1719,13 @@
     });
   }
 
-  function renderWeeklyInsights() {
+  function renderWeeklyInsights(weekMonday) {
     const parts = [];
     const bits = [];
     METRIC_ORDER.forEach(key => {
       const m = METRICS_DATA[key];
       if (!m || !m.series || !m.series.length) return;
-      const { current, delta } = computeWeekToDateKpi(m.series);
+      const { current, delta } = computeWeekKpiForWeek(m.series, weekMonday);
       if (current === null) return;
       let pctStr = "";
       if (delta !== null) {
@@ -1682,7 +1734,7 @@
       }
       bits.push(`${m.label} ${fmt(current)}건${pctStr}`);
     });
-    if (bits.length) parts.push(`이번 주 누적은 ${bits.join(" · ")} — 전주 동기간 대비 변화예요`);
+    if (bits.length) parts.push(`선택한 주 누적은 ${bits.join(" · ")} — 전주 동기간 대비 변화예요`);
 
     const uvSeries = METRICS_DATA.uv && METRICS_DATA.uv.series;
     const wd = computeWeekdayAvgFromSeries(uvSeries);
@@ -1691,8 +1743,8 @@
     }
 
     if (METRICS_DATA.uv && METRICS_DATA.benefit_claims) {
-      const uvW = computeWeekToDateKpi(METRICS_DATA.uv.series || []);
-      const benefitW = computeWeekToDateKpi(METRICS_DATA.benefit_claims.series || []);
+      const uvW = computeWeekKpiForWeek(METRICS_DATA.uv.series || [], weekMonday);
+      const benefitW = computeWeekKpiForWeek(METRICS_DATA.benefit_claims.series || [], weekMonday);
       if (uvW.current && benefitW.current !== null && uvW.current > 0) {
         const convNow = (benefitW.current / uvW.current) * 100;
         let cmpStr = "";
@@ -1702,7 +1754,7 @@
           const up = diff >= 0;
           cmpStr = ` (전주 동기간 ${convPrev.toFixed(1)}% 대비 <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">${up ? "▲" : "▼"}${Math.abs(diff).toFixed(1)}%p</span>)`;
         }
-        parts.push(`혜택받기 전환율(UV 대비)은 이번 주 누적 기준 <b>${convNow.toFixed(1)}%</b>예요${cmpStr}`);
+        parts.push(`혜택받기 전환율(UV 대비)은 선택한 주 누적 기준 <b>${convNow.toFixed(1)}%</b>예요${cmpStr}`);
       }
     }
 
@@ -1715,25 +1767,70 @@
     </div>`;
   }
 
-  function renderWeeklyStoreRankingSection() {
+  function renderWeeklyStoreRankingSection(weekMonday) {
     const dsMetric = METRICS_DATA["daily_store"];
     const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
-    const weekData = Object.keys(dailyTotals).length ? getWeekOverWeekStoreData(dailyTotals) : null;
-    renderStoreRankingInto("weekly-store-ranking-area", weekData, "※ 혜택클릭 기준, 이번 주(월~오늘)와 전주 동일 요일까지 비교했어요");
+    const weekData = Object.keys(dailyTotals).length ? getWeekOverWeekStoreData(dailyTotals, weekMonday) : null;
+    renderStoreRankingInto("weekly-store-ranking-area", weekData, "※ 혜택클릭 기준, 선택한 주(월~일)와 전주 동일 요일까지 비교했어요");
   }
 
-  function renderWeeklyStoreChangeSection() {
+  function renderWeeklyStoreChangeSection(weekMonday) {
     const dsMetric = METRICS_DATA["daily_store"];
     const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
-    const weekData = Object.keys(dailyTotals).length ? getWeekOverWeekStoreData(dailyTotals) : null;
-    renderStoreChangeInto("weekly-store-change-area", weekData, "※ 혜택클릭 기준, 이번 주(월~오늘)와 전주 동일 요일까지 비교했어요");
+    const weekData = Object.keys(dailyTotals).length ? getWeekOverWeekStoreData(dailyTotals, weekMonday) : null;
+    renderStoreChangeInto("weekly-store-change-area", weekData, "※ 혜택클릭 기준, 선택한 주(월~일)와 전주 동일 요일까지 비교했어요");
+  }
+
+  function getAvailableWeekMondays() {
+    const anyMetric = METRICS_DATA.uv || METRICS_DATA.benefit_claims || METRICS_DATA.staff_verifications;
+    if (!anyMetric || !anyMetric.series || !anyMetric.series.length) return [];
+    const first = anyMetric.series[0].date;
+    const last = anyMetric.series[anyMetric.series.length - 1].date;
+    const firstMonday = getMondayOf(first);
+    const lastMonday = getMondayOf(last);
+    const weeks = [];
+    let cur = firstMonday;
+    while (cur <= lastMonday) {
+      weeks.push(cur);
+      const d = new Date(cur + "T00:00:00");
+      d.setDate(d.getDate() + 7);
+      cur = toLocalDateStr(d);
+    }
+    return weeks.reverse();
+  }
+
+  function weekOptionLabel(weekMonday, latestDate) {
+    const mondayDate = new Date(weekMonday + "T00:00:00");
+    const sundayDate = new Date(mondayDate);
+    sundayDate.setDate(sundayDate.getDate() + 6);
+    const sunday = toLocalDateStr(sundayDate);
+    const isPartial = sunday > latestDate;
+    return `${weekMonday} ~ ${sunday}${isPartial ? " (진행중)" : ""}`;
+  }
+
+  function renderWeeklyDetailSections(weekMonday) {
+    document.getElementById("weekly-insights-area").innerHTML = renderWeeklyInsights(weekMonday);
+    document.getElementById("weekly-kpi-area").innerHTML = renderWeeklyKpiCards(weekMonday);
+    renderWeeklyStoreRankingSection(weekMonday);
+    renderWeeklyStoreChangeSection(weekMonday);
   }
 
   function renderWeeklyTab() {
     const area = document.getElementById("weekly-area");
+    const weeks = getAvailableWeekMondays();
+    const anyMetric = METRICS_DATA.uv || METRICS_DATA.benefit_claims || METRICS_DATA.staff_verifications;
+    const latestDate = anyMetric && anyMetric.series && anyMetric.series.length ? anyMetric.series[anyMetric.series.length - 1].date : null;
+    selectedWeekMonday = weeks.length ? weeks[0] : null;
+
     area.innerHTML = `
-      ${renderWeeklyInsights()}
-      <div class="kpi-grid">${renderWeeklyKpiCards()}</div>
+      <div class="section-card">
+        <div class="section-head"><h2>주 선택</h2></div>
+        <select id="weekly-week-select" class="store-select" style="max-width:340px; padding:9px 14px;">
+          ${weeks.map(wk => `<option value="${wk}">${weekOptionLabel(wk, latestDate)}</option>`).join("")}
+        </select>
+      </div>
+      <div id="weekly-insights-area"></div>
+      <div class="kpi-grid" id="weekly-kpi-area"></div>
       <div class="section-card">
         <div class="section-head">
           <h2>주별 추이</h2>
@@ -1755,9 +1852,18 @@
       </div>
       <div class="section-card" id="weekly-store-ranking-area"></div>
       <div class="section-card" id="weekly-store-change-area"></div>`;
+
+    renderWeeklyDetailSections(selectedWeekMonday);
     renderWeeklyTrendChart();
-    renderWeeklyStoreRankingSection();
-    renderWeeklyStoreChangeSection();
+
+    const weekSelect = document.getElementById("weekly-week-select");
+    if (weekSelect) {
+      weekSelect.addEventListener("change", () => {
+        selectedWeekMonday = weekSelect.value;
+        renderWeeklyDetailSections(selectedWeekMonday);
+      });
+    }
+
     document.querySelectorAll("#weekly-period-toggle button").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll("#weekly-period-toggle button").forEach(b => b.classList.remove("active"));
