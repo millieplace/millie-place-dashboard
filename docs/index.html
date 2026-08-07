@@ -2308,6 +2308,184 @@
     });
   }
 
+  /* ================= 구독자 Demo 분석 (공통) ================= */
+
+  function demoAgeLabel(age) {
+    return age === "영유아" ? "영유아" : `${age}대`;
+  }
+  function demoSexLabel(s) {
+    return s === "F" ? "여성" : s === "M" ? "남성" : (s || "-");
+  }
+  function demoGroupLabel(key) {
+    const [sex, age] = key.split("_");
+    return `${demoAgeLabel(age)} ${demoSexLabel(sex)}`;
+  }
+  function aggregateDemoByGroup(rows, metricKey) {
+    const groups = {};
+    (rows || []).forEach(r => {
+      const key = `${r.sex}_${r.age_band}`;
+      groups[key] = (groups[key] || 0) + (Number(r[metricKey]) || 0);
+    });
+    return groups;
+  }
+  function demoSexShare(groups) {
+    const total = Object.values(groups).reduce((a, v) => a + v, 0);
+    if (total <= 0) return null;
+    const f = Object.entries(groups).filter(([k]) => k.startsWith("F_")).reduce((a, [, v]) => a + v, 0);
+    return (f / total) * 100;
+  }
+  function demoShareOf(groups, total, key) {
+    return total > 0 ? ((groups[key] || 0) / total) * 100 : 0;
+  }
+
+  function renderMonthlyDemoSection() {
+    const sd = METRICS_DATA.store_demo;
+    if (!sd || !sd.monthly_rows || Object.keys(sd.monthly_rows).length === 0) return "";
+    const metricKey = sd.metric_key || "SUM(회원수(유니크))";
+    const months = Object.keys(sd.monthly_rows).sort();
+    const latestMonth = months[months.length - 1];
+    const prevMonth = months.length >= 2 ? months[months.length - 2] : null;
+
+    const allRows = months.flatMap(m => sd.monthly_rows[m]);
+    const cumGroups = aggregateDemoByGroup(allRows, metricKey);
+    const cumTotal = Object.values(cumGroups).reduce((a, v) => a + v, 0);
+    const cumSorted = Object.entries(cumGroups).sort((a, b) => b[1] - a[1]);
+
+    const curGroups = aggregateDemoByGroup(sd.monthly_rows[latestMonth], metricKey);
+    const curTotal = Object.values(curGroups).reduce((a, v) => a + v, 0);
+    const curSorted = Object.entries(curGroups).sort((a, b) => b[1] - a[1]);
+
+    const prevGroups = prevMonth ? aggregateDemoByGroup(sd.monthly_rows[prevMonth], metricKey) : {};
+    const prevTotal = Object.values(prevGroups).reduce((a, v) => a + v, 0);
+
+    const insights = [];
+    const topCum = cumSorted[0];
+    const topCur = curSorted[0];
+    if (topCum) {
+      const topCumShare = demoShareOf(cumGroups, cumTotal, topCum[0]);
+      insights.push(`누적 기준 혜택사용 이용자 중 가장 큰 그룹은 <b>${demoGroupLabel(topCum[0])}</b>로, 전체의 <b>${topCumShare.toFixed(1)}%</b>를 차지해요`);
+    }
+    if (topCur) {
+      const topCurShare = demoShareOf(curGroups, curTotal, topCur[0]);
+      if (topCum && topCur[0] !== topCum[0]) {
+        insights.push(`${latestMonth}에는 <b>${demoGroupLabel(topCur[0])}</b>이 가장 많이 이용해서 (${topCurShare.toFixed(1)}%), 누적 1위였던 <b>${demoGroupLabel(topCum[0])}</b>과 순위가 바뀌었어요`);
+      } else {
+        insights.push(`${latestMonth}에도 <b>${demoGroupLabel(topCur[0])}</b>이 가장 많이 이용했어요 (${topCurShare.toFixed(1)}%)`);
+      }
+    }
+    const cumFShare = demoSexShare(cumGroups);
+    const curFShare = demoSexShare(curGroups);
+    const prevFShare = demoSexShare(prevGroups);
+    if (curFShare !== null) {
+      let cmp = "";
+      if (prevFShare !== null) {
+        const diff = curFShare - prevFShare;
+        const up = diff >= 0;
+        cmp = ` (전월 ${prevFShare.toFixed(1)}% 대비 <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">${up ? "▲" : "▼"}${Math.abs(diff).toFixed(1)}%p</span>)`;
+      }
+      insights.push(`${latestMonth} 여성 이용 비중은 <b>${curFShare.toFixed(1)}%</b>예요${cmp} · 누적 평균은 ${cumFShare !== null ? cumFShare.toFixed(1) : "-"}%예요`);
+    }
+
+    const top8 = cumSorted.slice(0, 8);
+    const rows = top8.map(([key, cumVal]) => {
+      const cumShare = demoShareOf(cumGroups, cumTotal, key);
+      const curShare = demoShareOf(curGroups, curTotal, key);
+      const prevShare = demoShareOf(prevGroups, prevTotal, key);
+      return { key, cumShare, curShare, prevShare };
+    });
+
+    return `<div class="section-card">
+      <div class="section-head"><h2>📊 혜택사용 구독자 Demo 분석</h2></div>
+      <ul style="margin:0 0 14px; padding-left:18px; font-size:13.5px; line-height:1.9;">
+        ${insights.map(t => `<li>${t}</li>`).join("")}
+      </ul>
+      <table class="rank-table">
+        <thead><tr><th>연령대·성별</th><th style="text-align:right">누적 비중</th><th style="text-align:right">${latestMonth} 비중</th><th style="text-align:right">${prevMonth || "-"} 비중</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${demoGroupLabel(r.key)}</td>
+              <td class="rank-val">${r.cumShare.toFixed(1)}%</td>
+              <td class="rank-val">${r.curShare.toFixed(1)}%</td>
+              <td class="rank-val" style="color:var(--ink-faint);">${r.prevShare.toFixed(1)}%</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+      <div class="kpi-sub" style="margin-top:8px;">혜택사용 순 방문자수(SUM(회원수(유니크))) 기준 · 매장 149곳 통합</div>
+    </div>`;
+  }
+
+  function renderStoreDemoSection(storeName) {
+    const sd = METRICS_DATA.store_demo;
+    if (!sd || !sd.monthly_rows || Object.keys(sd.monthly_rows).length === 0) return "";
+    const metricKey = sd.metric_key || "SUM(회원수(유니크))";
+    const months = Object.keys(sd.monthly_rows).sort();
+    const latestMonth = months[months.length - 1];
+    const prevMonth = months.length >= 2 ? months[months.length - 2] : null;
+
+    const storeCurRows = (sd.monthly_rows[latestMonth] || []).filter(r => r.place_name === storeName);
+    if (!storeCurRows.length) return "";
+
+    const storeCurGroups = aggregateDemoByGroup(storeCurRows, metricKey);
+    const storeCurTotal = Object.values(storeCurGroups).reduce((a, v) => a + v, 0);
+    const storeCurSorted = Object.entries(storeCurGroups).sort((a, b) => b[1] - a[1]);
+
+    const storePrevRows = prevMonth ? (sd.monthly_rows[prevMonth] || []).filter(r => r.place_name === storeName) : [];
+    const storePrevGroups = aggregateDemoByGroup(storePrevRows, metricKey);
+    const storePrevTotal = Object.values(storePrevGroups).reduce((a, v) => a + v, 0);
+
+    const allCurRows = sd.monthly_rows[latestMonth] || [];
+    const allCurGroups = aggregateDemoByGroup(allCurRows, metricKey);
+    const allCurTotal = Object.values(allCurGroups).reduce((a, v) => a + v, 0);
+
+    const insights = [];
+    const topStore = storeCurSorted[0];
+    if (topStore) {
+      const storeShare = demoShareOf(storeCurGroups, storeCurTotal, topStore[0]);
+      const avgShare = demoShareOf(allCurGroups, allCurTotal, topStore[0]);
+      const diff = storeShare - avgShare;
+      insights.push(`이 매장은 <b>${demoGroupLabel(topStore[0])}</b> 방문객이 가장 많아요 (${storeShare.toFixed(1)}%) — 전체 매장 평균(${avgShare.toFixed(1)}%) 대비 <span style="color:${diff >= 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${diff >= 0 ? "▲" : "▼"}${Math.abs(diff).toFixed(1)}%p</span>`);
+    }
+
+    const storeF = demoSexShare(storeCurGroups);
+    const avgF = demoSexShare(allCurGroups);
+    const prevF = demoSexShare(storePrevGroups);
+    if (storeF !== null && avgF !== null) {
+      const diff = storeF - avgF;
+      insights.push(`여성 비중은 <b>${storeF.toFixed(1)}%</b>로, 전체 매장 평균(${avgF.toFixed(1)}%) 대비 <span style="color:${diff >= 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${diff >= 0 ? "▲" : "▼"}${Math.abs(diff).toFixed(1)}%p</span> ${diff >= 0 ? "높아요" : "낮아요"}`);
+    }
+    if (storeF !== null && prevF !== null) {
+      const diff = storeF - prevF;
+      insights.push(`전월(${prevF.toFixed(1)}%) 대비 여성 비중이 <span style="color:${diff >= 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${diff >= 0 ? "▲" : "▼"}${Math.abs(diff).toFixed(1)}%p</span> ${diff >= 0 ? "증가" : "감소"}했어요`);
+    }
+
+    const top5 = storeCurSorted.slice(0, 5);
+    const rows = top5.map(([key]) => ({
+      key,
+      storeShare: demoShareOf(storeCurGroups, storeCurTotal, key),
+      avgShare: demoShareOf(allCurGroups, allCurTotal, key),
+    }));
+
+    return `<div class="section-card">
+      <div class="section-head"><h2>📊 방문객 Demo (${latestMonth})</h2></div>
+      <ul style="margin:0 0 14px; padding-left:18px; font-size:13.5px; line-height:1.9;">
+        ${insights.map(t => `<li>${t}</li>`).join("")}
+      </ul>
+      <table class="rank-table">
+        <thead><tr><th>연령대·성별</th><th style="text-align:right">이 매장 비중</th><th style="text-align:right">전체 매장 평균</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${demoGroupLabel(r.key)}</td>
+              <td class="rank-val">${r.storeShare.toFixed(1)}%</td>
+              <td class="rank-val" style="color:var(--ink-faint);">${r.avgShare.toFixed(1)}%</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+      <div class="kpi-sub" style="margin-top:8px;">혜택사용 순 방문자수 기준</div>
+    </div>`;
+  }
+
   function renderMonthlyTab() {
     const area = document.getElementById("monthly-area");
     const curMonthKey = getMonthKeyFromDate(new Date());
@@ -2361,7 +2539,9 @@
         ${renderCompletedMonthInsights()}
         <div class="section-card" id="monthly-store-ranking-area"></div>
         <div class="section-card" id="monthly-store-change-area"></div>
-      </div>`;
+      </div>
+
+      ${renderMonthlyDemoSection()}`;
 
     renderCurrentMonthDetailSections(selectedCurMonth);
 
@@ -2611,7 +2791,9 @@
           </div>
           <div class="bar-chart-wrap"><canvas id="partnerRankChart"></canvas></div>
         </div>
-      </div>`;
+      </div>
+
+      ${renderStoreDemoSection(storeName)}`;
 
     partnerCharts.daily = new Chart(document.getElementById("partnerDailyChart"), {
       type: "line",
