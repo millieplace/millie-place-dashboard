@@ -3156,6 +3156,14 @@
     renderStoreDemoCharts(storeName);
   }
 
+  function getPrevCalendarMonthKey() {
+    const today = new Date();
+    const curMonthNum = today.getMonth() + 1;
+    let py = today.getFullYear(), pm = curMonthNum - 1;
+    if (pm === 0) { pm = 12; py -= 1; }
+    return `${py}-${String(pm).padStart(2, "0")}`;
+  }
+
   function renderPartnerTab() {
     const area = document.getElementById("partner-area");
     const storeMetric = METRICS_DATA[STORE_KEY];
@@ -3171,7 +3179,7 @@
     const dailyTotalsForNames = (dsMetric && dsMetric.daily_totals) || {};
     const augmentedMonthlyTotals = getAugmentedMonthlyTotals(monthly_totals || {}, dailyTotalsForNames);
     const hasHistory = Object.keys(augmentedMonthlyTotals).length > 0;
-    const namesSorted = hasHistory
+    const fallbackNamesSorted = hasHistory
       ? Object.entries(
           getSortedMonths(augmentedMonthlyTotals).reduce((acc, m) => {
             Object.entries(augmentedMonthlyTotals[m]).forEach(([n, v]) => { acc[n] = (acc[n] || 0) + v; });
@@ -3179,6 +3187,15 @@
           }, {})
         ).sort((a, b) => b[1] - a[1]).map(([n]) => n)
       : Array.from(new Set(data.map(r => r[label_key])));
+
+    // 매장 선택 순서는 "지난달 혜택클릭" 기준으로 정렬 (오늘이 8월이면 7월, 9월이 되면 자동으로 8월 기준)
+    const prevMonthKey = getPrevCalendarMonthKey();
+    const prevMonthClickTotals = aggregateDailyStoreForMonth(dailyTotalsForNames, prevMonthKey);
+    const rankedByClick = Object.entries(prevMonthClickTotals).sort((a, b) => b[1] - a[1]).map(([n]) => n);
+    const namesSorted = [
+      ...rankedByClick,
+      ...fallbackNamesSorted.filter(n => !rankedByClick.includes(n)),
+    ];
 
     area.innerHTML = `
       <div class="section-card">
