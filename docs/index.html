@@ -688,6 +688,7 @@
   let dailyChartInstance = null;
   let weeklyChartInstance = null;
   let monthlyChartInstance = null;
+  let monthlyDemoCharts = {};
   let storeChartInstance = null;
 
   function fmt(n) {
@@ -2396,10 +2397,24 @@
 
     return `<div class="section-card">
       <div class="section-head"><h2>📊 혜택사용 구독자 Demo 분석</h2></div>
-      <ul style="margin:0 0 14px; padding-left:18px; font-size:13.5px; line-height:1.9;">
+      <ul style="margin:0 0 16px; padding-left:18px; font-size:13.5px; line-height:1.9;">
         ${insights.map(t => `<li>${t}</li>`).join("")}
       </ul>
-      <table class="rank-table">
+      <div class="two-col">
+        <div>
+          <div style="text-align:center; font-size:12px; color:var(--ink-faint); margin-bottom:6px;">${latestMonth} 성별 비중</div>
+          <div style="height:210px;"><canvas id="monthlyDemoGenderChart"></canvas></div>
+        </div>
+        <div>
+          <div style="text-align:center; font-size:12px; color:var(--ink-faint); margin-bottom:6px;">${latestMonth} 연령대 비중</div>
+          <div style="height:210px;"><canvas id="monthlyDemoAgeChart"></canvas></div>
+        </div>
+      </div>
+      <div style="margin-top:22px;">
+        <div style="text-align:center; font-size:12px; color:var(--ink-faint); margin-bottom:6px;">연령대·성별 비중 — ${latestMonth} vs 누적 평균</div>
+        <div style="height:260px;"><canvas id="monthlyDemoBarChart"></canvas></div>
+      </div>
+      <table class="rank-table" style="margin-top:20px;">
         <thead><tr><th>연령대·성별</th><th style="text-align:right">누적 비중</th><th style="text-align:right">${latestMonth} 비중</th><th style="text-align:right">${prevMonth || "-"} 비중</th></tr></thead>
         <tbody>
           ${rows.map(r => `
@@ -2413,6 +2428,118 @@
       </table>
       <div class="kpi-sub" style="margin-top:8px;">혜택사용 순 방문자수(SUM(회원수(유니크))) 기준 · 매장 149곳 통합</div>
     </div>`;
+  }
+
+  function renderMonthlyDemoCharts() {
+    const genderCanvas = document.getElementById("monthlyDemoGenderChart");
+    if (!genderCanvas) return;
+    const sd = METRICS_DATA.store_demo;
+    const metricKey = sd.metric_key || "SUM(회원수(유니크))";
+    const months = Object.keys(sd.monthly_rows).sort();
+    const latestMonth = months[months.length - 1];
+    const allRows = months.flatMap(m => sd.monthly_rows[m]);
+    const cumGroups = aggregateDemoByGroup(allRows, metricKey);
+    const cumTotal = Object.values(cumGroups).reduce((a, v) => a + v, 0);
+    const curGroups = aggregateDemoByGroup(sd.monthly_rows[latestMonth], metricKey);
+    const curTotal = Object.values(curGroups).reduce((a, v) => a + v, 0);
+
+    const genderData = { F: 0, M: 0 };
+    Object.entries(curGroups).forEach(([k, v]) => {
+      const sex = k.split("_")[0];
+      if (genderData[sex] !== undefined) genderData[sex] += v;
+    });
+
+    if (monthlyDemoCharts.gender) monthlyDemoCharts.gender.destroy();
+    monthlyDemoCharts.gender = new Chart(genderCanvas, {
+      type: "doughnut",
+      data: {
+        labels: ["여성", "남성"],
+        datasets: [{ data: [genderData.F, genderData.M], backgroundColor: ["#f472b6", "#60a5fa"], borderWidth: 2, borderColor: "#fff" }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: "bottom", labels: { font: { size: 11 }, boxWidth: 10, padding: 12 } },
+          datalabels: {
+            color: "#fff", font: { size: 11, weight: 700 },
+            formatter: (v, ctx) => {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              return total > 0 ? Math.round(v / total * 100) + "%" : "";
+            },
+          },
+        },
+      },
+    });
+
+    const AGE_ORDER = ["영유아", "10", "20", "30", "40", "50", "60", "70", "80", "90"];
+    const AGE_COLORS = ["#f59e0b", "#6366f1", "#06b6d4", "#10b981", "#ec4899", "#8b5cf6", "#f97316", "#14b8a6", "#84cc16", "#ef4444"];
+    const ageData = {};
+    AGE_ORDER.forEach(a => { ageData[a] = 0; });
+    Object.entries(curGroups).forEach(([k, v]) => {
+      const age = k.split("_")[1];
+      if (ageData[age] !== undefined) ageData[age] += v;
+    });
+    const ageLabels = AGE_ORDER.filter(a => ageData[a] > 0);
+    const ageValues = ageLabels.map(a => ageData[a]);
+    const ageColors = ageLabels.map(a => AGE_COLORS[AGE_ORDER.indexOf(a)]);
+
+    if (monthlyDemoCharts.age) monthlyDemoCharts.age.destroy();
+    monthlyDemoCharts.age = new Chart(document.getElementById("monthlyDemoAgeChart"), {
+      type: "doughnut",
+      data: {
+        labels: ageLabels.map(demoAgeLabel),
+        datasets: [{ data: ageValues, backgroundColor: ageColors, borderWidth: 2, borderColor: "#fff" }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: "bottom", labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } },
+          datalabels: {
+            color: "#fff", font: { size: 10, weight: 700 },
+            formatter: (v, ctx) => {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = total > 0 ? v / total * 100 : 0;
+              return pct >= 6 ? Math.round(pct) + "%" : "";
+            },
+          },
+        },
+      },
+    });
+
+    const curSorted = Object.entries(curGroups).sort((a, b) => b[1] - a[1]);
+    const top8 = curSorted.slice(0, 8);
+    const barLabels = top8.map(([k]) => demoGroupLabel(k));
+    const barCur = top8.map(([k]) => demoShareOf(curGroups, curTotal, k));
+    const barCum = top8.map(([k]) => demoShareOf(cumGroups, cumTotal, k));
+    const barColors = barCur.map((v, i) => v > barCum[i] ? "#10b981" : "#94a3b8");
+
+    if (monthlyDemoCharts.bar) monthlyDemoCharts.bar.destroy();
+    monthlyDemoCharts.bar = new Chart(document.getElementById("monthlyDemoBarChart"), {
+      type: "bar",
+      data: {
+        labels: barLabels,
+        datasets: [
+          { label: latestMonth, data: barCur, backgroundColor: barColors, borderRadius: 4, maxBarThickness: 26 },
+          { label: "누적 평균", data: barCum, backgroundColor: "#d1d5db", borderRadius: 4, maxBarThickness: 26 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: "top", align: "end", labels: { font: { size: 11 }, boxWidth: 10 } },
+          datalabels: {
+            anchor: "end", align: "top",
+            font: { size: 9.5, family: "'IBM Plex Mono', monospace", weight: 600 },
+            color: "#374151",
+            formatter: v => v.toFixed(1) + "%",
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#6b7280", font: { size: 10.5 } } },
+          y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 10.5 }, callback: v => v + "%" } },
+        },
+      },
+    });
   }
 
   function renderStoreDemoSection(storeName) {
@@ -2571,12 +2698,14 @@
     const barStore = top8.map(([k]) => demoShareOf(storeCurGroups, storeCurTotal, k));
     const barAvg = top8.map(([k]) => demoShareOf(allCurGroups, allCurTotal, k));
 
+    const barColors = barStore.map((v, i) => v > barAvg[i] ? "#10b981" : "#94a3b8");
+
     partnerCharts.demoBar = new Chart(document.getElementById("storeDemoBarChart"), {
       type: "bar",
       data: {
         labels: barLabels,
         datasets: [
-          { label: "이 매장", data: barStore, backgroundColor: "#6366f1", borderRadius: 4, maxBarThickness: 26 },
+          { label: "이 매장", data: barStore, backgroundColor: barColors, borderRadius: 4, maxBarThickness: 26 },
           { label: "전체 평균", data: barAvg, backgroundColor: "#d1d5db", borderRadius: 4, maxBarThickness: 26 },
         ],
       },
@@ -2678,6 +2807,7 @@
     renderMonthlyTrendChart();
     renderMonthlyStoreRankingSection();
     renderMonthlyStoreChangeSection();
+    renderMonthlyDemoCharts();
     document.querySelectorAll("#monthly-period-toggle button").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll("#monthly-period-toggle button").forEach(b => b.classList.remove("active"));
