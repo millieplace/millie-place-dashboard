@@ -2393,8 +2393,16 @@
       const cumShare = demoShareOf(cumGroups, cumTotal, key);
       const curShare = demoShareOf(curGroups, curTotal, key);
       const prevShare = demoShareOf(prevGroups, prevTotal, key);
-      return { key, cumShare, curShare, prevShare };
+      const diffVsCum = curShare - cumShare;
+      const diffVsPrev = prevMonth ? curShare - prevShare : null;
+      return { key, cumShare, curShare, prevShare, diffVsCum, diffVsPrev };
     });
+
+    function diffSpan(diff) {
+      if (diff === null || isNaN(diff)) return "-";
+      const up = diff >= 0;
+      return `<span style="color:${up ? "var(--good)" : "var(--bad)"};">${up ? "+" : ""}${diff.toFixed(1)}%p</span>`;
+    }
 
     return `<div class="section-card">
       <div class="section-head"><h2>📊 혜택사용 구독자 Demo 분석</h2></div>
@@ -2422,7 +2430,7 @@
             <tr>
               <td>${demoGroupLabel(r.key)}</td>
               <td class="rank-val">${r.cumShare.toFixed(1)}%</td>
-              <td class="rank-val">${r.curShare.toFixed(1)}%</td>
+              <td class="rank-val">${r.curShare.toFixed(1)}%<br><span style="font-size:10px; font-weight:500; color:var(--ink-faint);">(누적比 ${diffSpan(r.diffVsCum)}, 전월比 ${diffSpan(r.diffVsPrev)})</span></td>
               <td class="rank-val" style="color:var(--ink-faint);">${r.prevShare.toFixed(1)}%</td>
             </tr>`).join("")}
         </tbody>
