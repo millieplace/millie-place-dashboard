@@ -31,6 +31,7 @@ CHARTS = {
     "staff_verifications": 3085,
     "store_breakdown": 3037,
     "daily_store": 3611,
+    "store_demo": 3079,
 }
 
 # 사람이 읽을 한글 라벨 (웹페이지에서 그대로 사용)
@@ -40,6 +41,7 @@ LABELS = {
     "staff_verifications": "직원확인",
     "store_breakdown": "매장별 데이터",
     "daily_store": "일별 매장 데이터",
+    "store_demo": "매장별 혜택사용 구독자 Demo",
 }
 
 
@@ -266,6 +268,28 @@ def merge_history(history: dict, key: str, series: list) -> None:
         bucket[point["date"]] = point["value"]
 
 
+def merge_raw_row_history(history: dict, rows: list, month_field_guess: str = "produce_month") -> None:
+    """다차원(연령대/성별 등) 원본 row를 월별로 통째 누적한다.
+    이번 fetch에 포함된 월은 통째로 교체하고, 포함되지 않은 과거 월은 유지한다."""
+    fresh = {}
+    for r in rows:
+        month_raw = r.get(month_field_guess)
+        if month_raw is None:
+            # produce_month 필드가 없으면 날짜형으로 보이는 다른 필드를 찾아본다
+            for k, v in r.items():
+                if isinstance(v, (int, float)) and v > 1_000_000_000_000:
+                    month_raw = v
+                    break
+        if month_raw is None:
+            continue
+        month = to_date_str(month_raw)[:7]
+        fresh.setdefault(month, [])
+        fresh[month].append(r)
+
+    for month, bucket in fresh.items():
+        history[month] = bucket
+
+
 def merge_store_history(store_history: dict, rows: list, metric_key: str, label_key: str, division_filter: str = None) -> None:
     """매장별 데이터를 월별로 누적한다. 이번 fetch에 포함된 월은 통째로 교체하고,
     포함되지 않은 과거 월은 기존 값을 그대로 유지한다.
@@ -330,6 +354,8 @@ def main():
     benefit_store_history = load_history(benefit_store_history_path)
     daily_store_history_path = os.path.join(docs_dir, "daily_store_history.json")
     daily_store_history = load_history(daily_store_history_path)
+    store_demo_history_path = os.path.join(docs_dir, "store_demo_history.json")
+    store_demo_history = load_history(store_demo_history_path)
 
     output = {
         "updated_at": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M:%S KST"),
@@ -361,6 +387,9 @@ def main():
                 merge_daily_store_history(
                     daily_store_history, summary["rows"], summary["metric_key"], summary["label_key"], summary["time_key"]
                 )
+
+            if key == "store_demo" and summary["rows"]:
+                merge_raw_row_history(store_demo_history, summary["rows"])
 
             output["metrics"][key] = {
                 "label": LABELS[key],
@@ -407,12 +436,18 @@ def main():
     with open(daily_store_history_path, "w", encoding="utf-8") as f:
         json.dump(daily_store_history, f, ensure_ascii=False, indent=2)
 
+    with open(store_demo_history_path, "w", encoding="utf-8") as f:
+        json.dump(store_demo_history, f, ensure_ascii=False, indent=2)
+
     if "store_breakdown" in output["metrics"]:
         output["metrics"]["store_breakdown"]["monthly_totals"] = store_history
         output["metrics"]["store_breakdown"]["benefit_monthly_totals"] = benefit_store_history
 
     if "daily_store" in output["metrics"]:
         output["metrics"]["daily_store"]["daily_totals"] = daily_store_history
+
+    if "store_demo" in output["metrics"]:
+        output["metrics"]["store_demo"]["monthly_rows"] = store_demo_history
 
     out_path = os.path.join(docs_dir, "data.json")
     with open(out_path, "w", encoding="utf-8") as f:
