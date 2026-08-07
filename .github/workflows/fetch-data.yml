@@ -41,7 +41,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/data.json docs/history.json docs/store_history.json docs/benefit_store_history.json docs/daily_store_history.json
+          git add docs/data.json docs/history.json docs/store_history.json docs/benefit_store_history.json docs/daily_store_history.json docs/store_demo_history.json
           git diff --staged --quiet
           if ($LASTEXITCODE -ne 0) {
             git commit -m "chore: update dashboard data $(Get-Date -Format 'yyyy-MM-dd')"
