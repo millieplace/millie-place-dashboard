@@ -362,6 +362,8 @@ def main():
     store_demo_history = load_history(store_demo_history_path)
     daily_store_uv_history_path = os.path.join(docs_dir, "daily_store_uv_history.json")
     daily_store_uv_history = load_history(daily_store_uv_history_path)
+    qr_daily_store_uv_history_path = os.path.join(docs_dir, "qr_daily_store_uv_history.json")
+    qr_daily_store_uv_history = load_history(qr_daily_store_uv_history_path)
 
     output = {
         "updated_at": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M:%S KST"),
@@ -406,6 +408,10 @@ def main():
                 merge_daily_store_history(
                     daily_store_uv_history, summary["rows"], summary["metric_key"], summary["label_key"], summary["time_key"]
                 )
+                if data_rows and "QR회원수(유니크)" in data_rows[0]:
+                    merge_daily_store_history(
+                        qr_daily_store_uv_history, summary["rows"], "QR회원수(유니크)", summary["label_key"], summary["time_key"]
+                    )
 
             if key == "store_demo" and summary["rows"]:
                 merge_raw_row_history(store_demo_history, summary["rows"])
@@ -461,6 +467,9 @@ def main():
     with open(daily_store_uv_history_path, "w", encoding="utf-8") as f:
         json.dump(daily_store_uv_history, f, ensure_ascii=False, indent=2)
 
+    with open(qr_daily_store_uv_history_path, "w", encoding="utf-8") as f:
+        json.dump(qr_daily_store_uv_history, f, ensure_ascii=False, indent=2)
+
     with open(store_demo_history_path, "w", encoding="utf-8") as f:
         json.dump(store_demo_history, f, ensure_ascii=False, indent=2)
 
@@ -474,6 +483,7 @@ def main():
 
     if "daily_store_uv" in output["metrics"]:
         output["metrics"]["daily_store_uv"]["daily_totals"] = daily_store_uv_history
+        output["metrics"]["daily_store_uv"]["qr_daily_totals"] = qr_daily_store_uv_history
 
     if "store_demo" in output["metrics"]:
         output["metrics"]["store_demo"]["monthly_rows"] = store_demo_history
