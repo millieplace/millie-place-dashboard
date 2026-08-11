@@ -3338,11 +3338,11 @@
     const area = document.getElementById("newstores-area");
     const dsMetric = METRICS_DATA["daily_store"];
     const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
-    const storeMetric = METRICS_DATA[STORE_KEY];
-    const staffMonthlyTotals = (storeMetric && storeMetric.staff_monthly_totals) || {};
     const uvMetric = METRICS_DATA["daily_store_uv"];
     const uvDailyTotals = (uvMetric && uvMetric.daily_totals) || {};
     const qrDailyTotals = (uvMetric && uvMetric.qr_daily_totals) || {};
+    const staffMetric = METRICS_DATA["daily_store_staff"];
+    const staffDailyTotals = (staffMetric && staffMetric.daily_totals) || {};
 
     if (!Object.keys(dailyTotals).length) {
       area.innerHTML = `<div class="placeholder-panel"><div class="icon">🆕</div><h3>데이터 없음</h3><p>일별 매장 데이터가 아직 없습니다.</p></div>`;
@@ -3360,10 +3360,12 @@
     const monthlyClickTotals = {};
     const monthlyUvTotals = {};
     const monthlyQrTotals = {};
+    const monthlyStaffTotals = {};
     targetMonths.forEach(m => {
       monthlyClickTotals[m] = aggregateDailyStoreForMonth(dailyTotals, m);
       monthlyUvTotals[m] = aggregateDailyStoreForMonth(uvDailyTotals, m);
       monthlyQrTotals[m] = aggregateDailyStoreForMonth(qrDailyTotals, m);
+      monthlyStaffTotals[m] = aggregateDailyStoreForMonth(staffDailyTotals, m);
     });
 
     const latestRanking = Object.entries(monthlyClickTotals[latestMonth] || {}).sort((a, b) => b[1] - a[1]);
@@ -3390,15 +3392,14 @@
       const idx = targetMonths.indexOf(launchMonth);
       targetMonths.slice(idx).forEach(m => {
         totalNewClicks += (monthlyClickTotals[m] || {})[name] || 0;
-        totalNewStaff += (staffMonthlyTotals[m] || {})[name] || 0;
+        totalNewStaff += (monthlyStaffTotals[m] || {})[name] || 0;
         totalNewUv += (monthlyUvTotals[m] || {})[name] || 0;
         totalNewQr += (monthlyQrTotals[m] || {})[name] || 0;
       });
     });
     const totalClicksAll = targetMonths.reduce((a, m) => a + Object.values(monthlyClickTotals[m] || {}).reduce((x, y) => x + y, 0), 0);
     const totalUvAll = targetMonths.reduce((a, m) => a + Object.values(monthlyUvTotals[m] || {}).reduce((x, y) => x + y, 0), 0);
-    const staffSeries = METRICS_DATA.staff_verifications && METRICS_DATA.staff_verifications.series;
-    const totalStaffAll = targetMonths.reduce((a, m) => a + monthSumFromSeries(staffSeries, m), 0);
+    const totalStaffAll = targetMonths.reduce((a, m) => a + Object.values(monthlyStaffTotals[m] || {}).reduce((x, y) => x + y, 0), 0);
     const newClickPct = totalClicksAll > 0 ? (totalNewClicks / totalClicksAll) * 100 : null;
     const newStaffPct = totalStaffAll > 0 ? (totalNewStaff / totalStaffAll) * 100 : null;
     const newUvPct = totalUvAll > 0 ? (totalNewUv / totalUvAll) * 100 : null;
@@ -3420,7 +3421,7 @@
         const cells = monthCols.map(m => `
           <td class="rank-val">${uvCell((monthlyUvTotals[m] || {})[name], (monthlyQrTotals[m] || {})[name])}</td>
           <td class="rank-val">${cell((monthlyClickTotals[m] || {})[name])}</td>
-          <td class="rank-val" style="color:var(--ink-soft);">${cell((staffMonthlyTotals[m] || {})[name])}</td>`).join("");
+          <td class="rank-val" style="color:var(--ink-soft);">${cell((monthlyStaffTotals[m] || {})[name])}</td>`).join("");
         const rank = rankMap[name];
         return `<tr>
           <td>${name}</td>
@@ -3434,8 +3435,8 @@
         const clickSum = storesThisMonth.reduce((a, name) => a + ((monthlyClickTotals[m] || {})[name] || 0), 0);
         const clickTotal = Object.values(monthlyClickTotals[m] || {}).reduce((a, v) => a + v, 0);
         const clickPct = clickTotal > 0 ? (clickSum / clickTotal) * 100 : null;
-        const staffSum = storesThisMonth.reduce((a, name) => a + ((staffMonthlyTotals[m] || {})[name] || 0), 0);
-        const staffTotal = monthSumFromSeries(staffSeries, m);
+        const staffSum = storesThisMonth.reduce((a, name) => a + ((monthlyStaffTotals[m] || {})[name] || 0), 0);
+        const staffTotal = Object.values(monthlyStaffTotals[m] || {}).reduce((a, v) => a + v, 0);
         const staffPct = staffTotal > 0 ? (staffSum / staffTotal) * 100 : null;
         const uvSum = storesThisMonth.reduce((a, name) => a + ((monthlyUvTotals[m] || {})[name] || 0), 0);
         const qrSum = storesThisMonth.reduce((a, name) => a + ((monthlyQrTotals[m] || {})[name] || 0), 0);
@@ -3497,7 +3498,7 @@
         </div>
       </div>
       ${tablesHtml || `<div class="section-card"><div class="empty-note">해당 기간 신규 매장이 없습니다</div></div>`}
-      <div class="kpi-sub" style="margin:4px 2px 0;">UV = 매장 상세페이지 유입 회원수(유니크), 괄호는 QR 유입 · 혜택클릭 = 일별 매장 데이터(daily_store) 순 방문자 기준 · 직원확인 = 매장별 직원확인(store_breakdown, 월별) 기준</div>`;
+      <div class="kpi-sub" style="margin:4px 2px 0;">UV = 매장 상세페이지 유입 회원수(유니크), 괄호는 QR 유입 · 혜택클릭 = 일별 매장 데이터(daily_store) 순 방문자 기준 · 직원확인 = 일별 매장 직원확인(daily_store_staff) 순 방문자 기준</div>`;
   }
 
   /* ================= 공통 ================= */
