@@ -32,6 +32,7 @@ CHARTS = {
     "store_breakdown": 3037,
     "daily_store": 3611,
     "store_demo": 3079,
+    "daily_store_uv": 3608,
 }
 
 # 사람이 읽을 한글 라벨 (웹페이지에서 그대로 사용)
@@ -42,6 +43,7 @@ LABELS = {
     "store_breakdown": "매장별 데이터",
     "daily_store": "일별 매장 데이터",
     "store_demo": "매장별 혜택사용 구독자 Demo",
+    "daily_store_uv": "일별 매장 상세페이지 UV",
 }
 
 
@@ -358,6 +360,8 @@ def main():
     daily_store_history = load_history(daily_store_history_path)
     store_demo_history_path = os.path.join(docs_dir, "store_demo_history.json")
     store_demo_history = load_history(store_demo_history_path)
+    daily_store_uv_history_path = os.path.join(docs_dir, "daily_store_uv_history.json")
+    daily_store_uv_history = load_history(daily_store_uv_history_path)
 
     output = {
         "updated_at": datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M:%S KST"),
@@ -392,6 +396,11 @@ def main():
             if key == "daily_store" and summary["metric_key"] and summary["label_key"] and summary["time_key"]:
                 merge_daily_store_history(
                     daily_store_history, summary["rows"], summary["metric_key"], summary["label_key"], summary["time_key"]
+                )
+
+            if key == "daily_store_uv" and summary["metric_key"] and summary["label_key"] and summary["time_key"]:
+                merge_daily_store_history(
+                    daily_store_uv_history, summary["rows"], summary["metric_key"], summary["label_key"], summary["time_key"]
                 )
 
             if key == "store_demo" and summary["rows"]:
@@ -445,6 +454,9 @@ def main():
     with open(daily_store_history_path, "w", encoding="utf-8") as f:
         json.dump(daily_store_history, f, ensure_ascii=False, indent=2)
 
+    with open(daily_store_uv_history_path, "w", encoding="utf-8") as f:
+        json.dump(daily_store_uv_history, f, ensure_ascii=False, indent=2)
+
     with open(store_demo_history_path, "w", encoding="utf-8") as f:
         json.dump(store_demo_history, f, ensure_ascii=False, indent=2)
 
@@ -455,6 +467,9 @@ def main():
 
     if "daily_store" in output["metrics"]:
         output["metrics"]["daily_store"]["daily_totals"] = daily_store_history
+
+    if "daily_store_uv" in output["metrics"]:
+        output["metrics"]["daily_store_uv"]["daily_totals"] = daily_store_uv_history
 
     if "store_demo" in output["metrics"]:
         output["metrics"]["store_demo"]["monthly_rows"] = store_demo_history
