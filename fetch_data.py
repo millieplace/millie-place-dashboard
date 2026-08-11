@@ -379,6 +379,10 @@ def main():
             )
             summary = summarize_rows(data_rows, metric_guess)
 
+            if key == "daily_store_uv" and data_rows and "회원수(유니크)" in data_rows[0]:
+                summary["metric_key"] = "회원수(유니크)"
+                summary["total"] = sum(float(r.get("회원수(유니크)") or 0) for r in data_rows)
+
             if key in TIME_SERIES_KEYS and summary["series"]:
                 merge_history(history, key, summary["series"])
 
