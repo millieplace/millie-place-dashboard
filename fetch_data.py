@@ -352,6 +352,8 @@ def main():
     store_history = load_history(store_history_path)
     benefit_store_history_path = os.path.join(docs_dir, "benefit_store_history.json")
     benefit_store_history = load_history(benefit_store_history_path)
+    staff_store_history_path = os.path.join(docs_dir, "staff_store_history.json")
+    staff_store_history = load_history(staff_store_history_path)
     daily_store_history_path = os.path.join(docs_dir, "daily_store_history.json")
     daily_store_history = load_history(daily_store_history_path)
     store_demo_history_path = os.path.join(docs_dir, "store_demo_history.json")
@@ -381,6 +383,10 @@ def main():
                 merge_store_history(
                     benefit_store_history, summary["rows"], summary["metric_key"], summary["label_key"],
                     division_filter="혜택사용_매장별",
+                )
+                merge_store_history(
+                    staff_store_history, summary["rows"], summary["metric_key"], summary["label_key"],
+                    division_filter="직원사용_매장별",
                 )
 
             if key == "daily_store" and summary["metric_key"] and summary["label_key"] and summary["time_key"]:
@@ -433,6 +439,9 @@ def main():
     with open(benefit_store_history_path, "w", encoding="utf-8") as f:
         json.dump(benefit_store_history, f, ensure_ascii=False, indent=2)
 
+    with open(staff_store_history_path, "w", encoding="utf-8") as f:
+        json.dump(staff_store_history, f, ensure_ascii=False, indent=2)
+
     with open(daily_store_history_path, "w", encoding="utf-8") as f:
         json.dump(daily_store_history, f, ensure_ascii=False, indent=2)
 
@@ -442,6 +451,7 @@ def main():
     if "store_breakdown" in output["metrics"]:
         output["metrics"]["store_breakdown"]["monthly_totals"] = store_history
         output["metrics"]["store_breakdown"]["benefit_monthly_totals"] = benefit_store_history
+        output["metrics"]["store_breakdown"]["staff_monthly_totals"] = staff_store_history
 
     if "daily_store" in output["metrics"]:
         output["metrics"]["daily_store"]["daily_totals"] = daily_store_history
