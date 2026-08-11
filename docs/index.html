@@ -3338,6 +3338,8 @@
     const area = document.getElementById("newstores-area");
     const dsMetric = METRICS_DATA["daily_store"];
     const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
+    const storeMetric = METRICS_DATA[STORE_KEY];
+    const staffMonthlyTotals = (storeMetric && storeMetric.staff_monthly_totals) || {};
 
     if (!Object.keys(dailyTotals).length) {
       area.innerHTML = `<div class="placeholder-panel"><div class="icon">🆕</div><h3>데이터 없음</h3><p>일별 매장 데이터가 아직 없습니다.</p></div>`;
@@ -3363,6 +3365,26 @@
     function cell(v) {
       return (v !== undefined && v !== null) ? fmt(v) : `<span style="color:var(--ink-faint);">-</span>`;
     }
+    function monthSumFromSeries(series, month) {
+      return (series || []).filter(p => p.date.startsWith(month)).reduce((a, p) => a + p.value, 0);
+    }
+
+    // 최근 3개월 신규매장 Total 계산
+    const newStoresAllMonths = Object.keys(firstMonthOf).filter(name => targetSet.has(firstMonthOf[name]));
+    let totalNewClicks = 0, totalNewStaff = 0;
+    newStoresAllMonths.forEach(name => {
+      const launchMonth = firstMonthOf[name];
+      const idx = targetMonths.indexOf(launchMonth);
+      targetMonths.slice(idx).forEach(m => {
+        totalNewClicks += (monthlyClickTotals[m] || {})[name] || 0;
+        totalNewStaff += (staffMonthlyTotals[m] || {})[name] || 0;
+      });
+    });
+    const totalClicksAll = targetMonths.reduce((a, m) => a + Object.values(monthlyClickTotals[m] || {}).reduce((x, y) => x + y, 0), 0);
+    const staffSeries = METRICS_DATA.staff_verifications && METRICS_DATA.staff_verifications.series;
+    const totalStaffAll = targetMonths.reduce((a, m) => a + monthSumFromSeries(staffSeries, m), 0);
+    const newClickPct = totalClicksAll > 0 ? (totalNewClicks / totalClicksAll) * 100 : null;
+    const newStaffPct = totalStaffAll > 0 ? (totalNewStaff / totalStaffAll) * 100 : null;
 
     const summaryBits = [];
     let tablesHtml = "";
@@ -3378,7 +3400,9 @@
 
       const monthCols = targetMonths.slice(idx); // 진입월부터 최신월까지만 컬럼 표시
       const rows = storesThisMonth.map(name => {
-        const cells = monthCols.map(m => `<td class="rank-val">${cell((monthlyClickTotals[m] || {})[name])}</td>`).join("");
+        const cells = monthCols.map(m => `
+          <td class="rank-val">${cell((monthlyClickTotals[m] || {})[name])}</td>
+          <td class="rank-val" style="color:var(--ink-soft);">${cell((staffMonthlyTotals[m] || {})[name])}</td>`).join("");
         const rank = rankMap[name];
         return `<tr>
           <td>${name}</td>
@@ -3389,15 +3413,20 @@
       }).join("");
 
       const colSums = monthCols.map(m => {
-        const sum = storesThisMonth.reduce((a, name) => a + ((monthlyClickTotals[m] || {})[name] || 0), 0);
-        const total = Object.values(monthlyClickTotals[m] || {}).reduce((a, v) => a + v, 0);
-        const pct = total > 0 ? (sum / total) * 100 : null;
-        return { sum, pct };
+        const clickSum = storesThisMonth.reduce((a, name) => a + ((monthlyClickTotals[m] || {})[name] || 0), 0);
+        const clickTotal = Object.values(monthlyClickTotals[m] || {}).reduce((a, v) => a + v, 0);
+        const clickPct = clickTotal > 0 ? (clickSum / clickTotal) * 100 : null;
+        const staffSum = storesThisMonth.reduce((a, name) => a + ((staffMonthlyTotals[m] || {})[name] || 0), 0);
+        const staffTotal = monthSumFromSeries(staffSeries, m);
+        const staffPct = staffTotal > 0 ? (staffSum / staffTotal) * 100 : null;
+        return { clickSum, clickPct, staffSum, staffPct };
       });
       const sumRow = `<tr class="highlight">
         <td><b>신규 매장 합계</b></td>
         <td></td>
-        ${colSums.map(c => `<td class="rank-val"><b>${fmt(c.sum)}</b><br><span style="font-size:10px; font-weight:500; color:var(--ink-faint);">전체의 ${c.pct !== null ? c.pct.toFixed(1) : "-"}%</span></td>`).join("")}
+        ${colSums.map(c => `
+          <td class="rank-val"><b>${fmt(c.clickSum)}</b><br><span style="font-size:10px; font-weight:500; color:var(--ink-faint);">전체의 ${c.clickPct !== null ? c.clickPct.toFixed(1) : "-"}%</span></td>
+          <td class="rank-val"><b>${fmt(c.staffSum)}</b><br><span style="font-size:10px; font-weight:500; color:var(--ink-faint);">전체의 ${c.staffPct !== null ? c.staffPct.toFixed(1) : "-"}%</span></td>`).join("")}
         <td></td>
       </tr>`;
 
@@ -3408,7 +3437,7 @@
             <thead>
               <tr>
                 <th>매장명</th><th>최초 등장일</th>
-                ${monthCols.map(m => `<th style="text-align:right">${m}<br>혜택클릭</th>`).join("")}
+                ${monthCols.map(m => `<th style="text-align:right">${m}<br>혜택클릭</th><th style="text-align:right">${m}<br>직원확인</th>`).join("")}
                 <th style="text-align:right">전체 순위<br>(${latestMonth} 혜택클릭)</th>
               </tr>
             </thead>
@@ -3423,12 +3452,24 @@
         <div style="font-size:12.5px; color:var(--ink-faint); margin-bottom:10px;">
           ${targetMonths[0]} ~ ${latestMonth} 사이에 일별 매장 데이터(혜택클릭)가 처음 잡히기 시작한 매장들이에요. 오늘 날짜 기준 자동으로 최근 3개월로 갱신돼요.
         </div>
-        <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
+        <ul style="margin:0 0 16px; padding-left:18px; font-size:13.5px; line-height:1.9;">
           <li>${summaryBits.join(" · ")}</li>
         </ul>
+        <div class="kpi-grid" style="grid-template-columns: repeat(2, 1fr);">
+          <div class="kpi-card" style="border-left:3px solid #6366f1;">
+            <div class="kpi-top"><div class="kpi-label"><span class="kpi-dot" style="background:#6366f1"></span>신규 매장 혜택클릭 Total</div></div>
+            <div class="kpi-value-row"><div class="kpi-value">${fmt(totalNewClicks)}<span class="unit">건</span></div></div>
+            <div class="kpi-sub">${targetMonths[0]}~${latestMonth} 전체 혜택클릭의 <b>${newClickPct !== null ? newClickPct.toFixed(1) : "-"}%</b></div>
+          </div>
+          <div class="kpi-card" style="border-left:3px solid #f59e0b;">
+            <div class="kpi-top"><div class="kpi-label"><span class="kpi-dot" style="background:#f59e0b"></span>신규 매장 직원확인 Total</div></div>
+            <div class="kpi-value-row"><div class="kpi-value">${fmt(totalNewStaff)}<span class="unit">건</span></div></div>
+            <div class="kpi-sub">${targetMonths[0]}~${latestMonth} 전체 직원확인의 <b>${newStaffPct !== null ? newStaffPct.toFixed(1) : "-"}%</b></div>
+          </div>
+        </div>
       </div>
       ${tablesHtml || `<div class="section-card"><div class="empty-note">해당 기간 신규 매장이 없습니다</div></div>`}
-      <div class="kpi-sub" style="margin:4px 2px 0;">혜택클릭 = 일별 매장 데이터(daily_store) 순 방문자 기준 · 매장별 UV 데이터는 별도로 존재하지 않아 제외했어요</div>`;
+      <div class="kpi-sub" style="margin:4px 2px 0;">혜택클릭 = 일별 매장 데이터(daily_store) 순 방문자 기준 · 직원확인 = 매장별 직원확인(store_breakdown, 월별) 기준 · 매장별 UV 데이터는 별도로 존재하지 않아 제외했어요</div>`;
   }
 
   /* ================= 공통 ================= */
