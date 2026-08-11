@@ -3322,26 +3322,22 @@
     return keys;
   }
 
-  function detectStoreFirstMonth(dailyTotals) {
+  function detectStoreFirstAppearance(dailyTotals) {
     const dates = getSortedDates(dailyTotals);
-    if (!dates.length) return {};
-    const months = Array.from(new Set(dates.map(d => d.slice(0, 7)))).sort();
-    const firstMonth = {};
-    months.forEach(m => {
-      const totals = aggregateDailyStoreForMonth(dailyTotals, m);
-      Object.keys(totals).forEach(name => {
-        if (firstMonth[name] === undefined) firstMonth[name] = m;
+    const firstDate = {};
+    dates.forEach(d => {
+      const bucket = dailyTotals[d] || {};
+      Object.keys(bucket).forEach(name => {
+        if (firstDate[name] === undefined) firstDate[name] = d;
       });
     });
-    return firstMonth;
+    return firstDate;
   }
 
   function renderNewStoresTab() {
     const area = document.getElementById("newstores-area");
     const dsMetric = METRICS_DATA["daily_store"];
     const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
-    const storeMetric = METRICS_DATA[STORE_KEY];
-    const monthlyTotals = (storeMetric && storeMetric.monthly_totals) || {};
 
     if (!Object.keys(dailyTotals).length) {
       area.innerHTML = `<div class="placeholder-panel"><div class="icon">🆕</div><h3>데이터 없음</h3><p>일별 매장 데이터가 아직 없습니다.</p></div>`;
@@ -3350,10 +3346,11 @@
 
     const targetMonths = getRecentCalendarMonthKeys(3);
     const latestMonth = targetMonths[targetMonths.length - 1];
-
-    const firstMonth = detectStoreFirstMonth(dailyTotals);
     const targetSet = new Set(targetMonths);
-    const newStoreNames = Object.keys(firstMonth).filter(name => targetSet.has(firstMonth[name]));
+
+    const firstDate = detectStoreFirstAppearance(dailyTotals);
+    const firstMonthOf = {};
+    Object.entries(firstDate).forEach(([name, d]) => { firstMonthOf[name] = d.slice(0, 7); });
 
     const monthlyClickTotals = {};
     targetMonths.forEach(m => { monthlyClickTotals[m] = aggregateDailyStoreForMonth(dailyTotals, m); });
@@ -3363,37 +3360,49 @@
     latestRanking.forEach(([name], i) => { rankMap[name] = i + 1; });
     const totalStores = latestRanking.length;
 
-    const grouped = {};
-    targetMonths.forEach(m => { grouped[m] = []; });
-    newStoreNames.forEach(name => { grouped[firstMonth[name]].push(name); });
-    targetMonths.forEach(m => {
-      grouped[m].sort((a, b) => ((monthlyClickTotals[latestMonth][b] || 0) - (monthlyClickTotals[latestMonth][a] || 0)));
-    });
-
     function cell(v) {
       return (v !== undefined && v !== null) ? fmt(v) : `<span style="color:var(--ink-faint);">-</span>`;
     }
 
-    let bodyRows = "";
-    targetMonths.forEach(launchMonth => {
-      grouped[launchMonth].forEach(name => {
-        const monthCells = targetMonths.map(m => {
-          const uv = (monthlyTotals[m] || {})[name];
-          const click = (monthlyClickTotals[m] || {})[name];
-          return `<td class="rank-val">${cell(uv)}</td><td class="rank-val">${cell(click)}</td>`;
-        }).join("");
+    const summaryBits = [];
+    let tablesHtml = "";
+
+    targetMonths.forEach((launchMonth, idx) => {
+      const storesThisMonth = Object.keys(firstMonthOf)
+        .filter(name => firstMonthOf[name] === launchMonth)
+        // 데이터가 가장 먼저 잡힌 날짜 기준 오름차순 정렬
+        .sort((a, b) => firstDate[a] < firstDate[b] ? -1 : firstDate[a] > firstDate[b] ? 1 : 0);
+
+      summaryBits.push(`${launchMonth} 신규 <b>${storesThisMonth.length}곳</b>`);
+      if (!storesThisMonth.length) return;
+
+      const monthCols = targetMonths.slice(idx); // 진입월부터 최신월까지만 컬럼 표시
+      const rows = storesThisMonth.map(name => {
+        const cells = monthCols.map(m => `<td class="rank-val">${cell((monthlyClickTotals[m] || {})[name])}</td>`).join("");
         const rank = rankMap[name];
-        bodyRows += `<tr>
+        return `<tr>
           <td>${name}</td>
-          <td class="rank-val" style="color:var(--accent); font-weight:700;">${launchMonth}</td>
-          ${monthCells}
+          <td class="rank-val" style="color:var(--ink-faint); font-size:11px;">${firstDate[name]}</td>
+          ${cells}
           <td class="rank-val">${rank ? `${rank}위 / ${totalStores}` : `<span style="color:var(--ink-faint);">-</span>`}</td>
         </tr>`;
-      });
-    });
+      }).join("");
 
-    const summaryBits = targetMonths.map(m => `${m} 신규 <b>${grouped[m].length}곳</b>`).join(" · ");
-    const colCount = 2 + targetMonths.length * 2 + 1;
+      tablesHtml += `
+        <div class="section-card">
+          <div class="section-head"><h2>${launchMonth} 신규 매장 (${storesThisMonth.length}곳)</h2></div>
+          <table class="rank-table">
+            <thead>
+              <tr>
+                <th>매장명</th><th>최초 등장일</th>
+                ${monthCols.map(m => `<th style="text-align:right">${m}<br>혜택클릭</th>`).join("")}
+                <th style="text-align:right">전체 순위<br>(${latestMonth} 혜택클릭)</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    });
 
     area.innerHTML = `
       <div class="section-card">
@@ -3401,23 +3410,12 @@
         <div style="font-size:12.5px; color:var(--ink-faint); margin-bottom:10px;">
           ${targetMonths[0]} ~ ${latestMonth} 사이에 일별 매장 데이터(혜택클릭)가 처음 잡히기 시작한 매장들이에요. 오늘 날짜 기준 자동으로 최근 3개월로 갱신돼요.
         </div>
-        <ul style="margin:0 0 14px; padding-left:18px; font-size:13.5px; line-height:1.9;">
-          <li>${summaryBits}</li>
+        <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
+          <li>${summaryBits.join(" · ")}</li>
         </ul>
-        <table class="rank-table">
-          <thead>
-            <tr>
-              <th>매장명</th><th>신규 진입월</th>
-              ${targetMonths.map(m => `<th style="text-align:right">${m}<br>UV</th><th style="text-align:right">${m}<br>혜택클릭</th>`).join("")}
-              <th style="text-align:right">전체 순위<br>(${latestMonth} 혜택클릭)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${bodyRows || `<tr><td colspan="${colCount}" class="empty-note">해당 기간 신규 매장이 없습니다</td></tr>`}
-          </tbody>
-        </table>
-        <div class="kpi-sub" style="margin-top:8px;">UV = 매장 방문자수(store_breakdown, 혜택사용+직원사용 합산) · 혜택클릭 = 일별 매장 데이터(daily_store) 순 방문자 기준</div>
-      </div>`;
+      </div>
+      ${tablesHtml || `<div class="section-card"><div class="empty-note">해당 기간 신규 매장이 없습니다</div></div>`}
+      <div class="kpi-sub" style="margin:4px 2px 0;">혜택클릭 = 일별 매장 데이터(daily_store) 순 방문자 기준 · 매장별 UV 데이터는 별도로 존재하지 않아 제외했어요</div>`;
   }
 
   /* ================= 공통 ================= */
