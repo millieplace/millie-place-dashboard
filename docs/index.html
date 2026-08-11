@@ -399,10 +399,10 @@
       <button data-tab="daily">일별 트래킹</button>
       <button data-tab="weekly">주간 데이터</button>
       <button data-tab="monthly">월간 데이터</button>
+      <button data-tab="newstores">신규 매장 분석</button>
       <button data-tab="partner">제휴처별 데이터</button>
       <button data-tab="event">이벤트 Tracking</button>
       <button data-tab="hub">밀플 허브 페이지</button>
-      <button data-tab="newstores">신규 매장 분석</button>
     </div>
 
     <div class="tab-panel active" id="tab-kpi">
@@ -3338,9 +3338,6 @@
     const area = document.getElementById("newstores-area");
     const dsMetric = METRICS_DATA["daily_store"];
     const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
-    const uvMetric = METRICS_DATA["daily_store_uv"];
-    const uvDailyTotals = (uvMetric && uvMetric.daily_totals) || {};
-    const qrDailyTotals = (uvMetric && uvMetric.qr_daily_totals) || {};
     const staffMetric = METRICS_DATA["daily_store_staff"];
     const staffDailyTotals = (staffMetric && staffMetric.daily_totals) || {};
 
@@ -3358,13 +3355,9 @@
     Object.entries(firstDate).forEach(([name, d]) => { firstMonthOf[name] = d.slice(0, 7); });
 
     const monthlyClickTotals = {};
-    const monthlyUvTotals = {};
-    const monthlyQrTotals = {};
     const monthlyStaffTotals = {};
     targetMonths.forEach(m => {
       monthlyClickTotals[m] = aggregateDailyStoreForMonth(dailyTotals, m);
-      monthlyUvTotals[m] = aggregateDailyStoreForMonth(uvDailyTotals, m);
-      monthlyQrTotals[m] = aggregateDailyStoreForMonth(qrDailyTotals, m);
       monthlyStaffTotals[m] = aggregateDailyStoreForMonth(staffDailyTotals, m);
     });
 
@@ -3376,33 +3369,22 @@
     function cell(v) {
       return (v !== undefined && v !== null) ? fmt(v) : `<span style="color:var(--ink-faint);">-</span>`;
     }
-    function uvCell(uv, qr) {
-      if (uv === undefined || uv === null) return `<span style="color:var(--ink-faint);">-</span>`;
-      return `${fmt(uv)} <span style="color:var(--ink-faint); font-weight:500;">(${fmt(qr || 0)})</span>`;
-    }
-    function monthSumFromSeries(series, month) {
-      return (series || []).filter(p => p.date.startsWith(month)).reduce((a, p) => a + p.value, 0);
-    }
 
     // 최근 3개월 신규매장 Total 계산
     const newStoresAllMonths = Object.keys(firstMonthOf).filter(name => targetSet.has(firstMonthOf[name]));
-    let totalNewClicks = 0, totalNewStaff = 0, totalNewUv = 0, totalNewQr = 0;
+    let totalNewClicks = 0, totalNewStaff = 0;
     newStoresAllMonths.forEach(name => {
       const launchMonth = firstMonthOf[name];
       const idx = targetMonths.indexOf(launchMonth);
       targetMonths.slice(idx).forEach(m => {
         totalNewClicks += (monthlyClickTotals[m] || {})[name] || 0;
         totalNewStaff += (monthlyStaffTotals[m] || {})[name] || 0;
-        totalNewUv += (monthlyUvTotals[m] || {})[name] || 0;
-        totalNewQr += (monthlyQrTotals[m] || {})[name] || 0;
       });
     });
     const totalClicksAll = targetMonths.reduce((a, m) => a + Object.values(monthlyClickTotals[m] || {}).reduce((x, y) => x + y, 0), 0);
-    const totalUvAll = targetMonths.reduce((a, m) => a + Object.values(monthlyUvTotals[m] || {}).reduce((x, y) => x + y, 0), 0);
     const totalStaffAll = targetMonths.reduce((a, m) => a + Object.values(monthlyStaffTotals[m] || {}).reduce((x, y) => x + y, 0), 0);
     const newClickPct = totalClicksAll > 0 ? (totalNewClicks / totalClicksAll) * 100 : null;
     const newStaffPct = totalStaffAll > 0 ? (totalNewStaff / totalStaffAll) * 100 : null;
-    const newUvPct = totalUvAll > 0 ? (totalNewUv / totalUvAll) * 100 : null;
 
     const summaryBits = [];
     let tablesHtml = "";
@@ -3419,7 +3401,6 @@
       const monthCols = targetMonths.slice(idx); // 진입월부터 최신월까지만 컬럼 표시
       const rows = storesThisMonth.map(name => {
         const cells = monthCols.map(m => `
-          <td class="rank-val">${uvCell((monthlyUvTotals[m] || {})[name], (monthlyQrTotals[m] || {})[name])}</td>
           <td class="rank-val">${cell((monthlyClickTotals[m] || {})[name])}</td>
           <td class="rank-val" style="color:var(--ink-soft);">${cell((monthlyStaffTotals[m] || {})[name])}</td>`).join("");
         const rank = rankMap[name];
@@ -3438,17 +3419,12 @@
         const staffSum = storesThisMonth.reduce((a, name) => a + ((monthlyStaffTotals[m] || {})[name] || 0), 0);
         const staffTotal = Object.values(monthlyStaffTotals[m] || {}).reduce((a, v) => a + v, 0);
         const staffPct = staffTotal > 0 ? (staffSum / staffTotal) * 100 : null;
-        const uvSum = storesThisMonth.reduce((a, name) => a + ((monthlyUvTotals[m] || {})[name] || 0), 0);
-        const qrSum = storesThisMonth.reduce((a, name) => a + ((monthlyQrTotals[m] || {})[name] || 0), 0);
-        const uvTotal = Object.values(monthlyUvTotals[m] || {}).reduce((a, v) => a + v, 0);
-        const uvPct = uvTotal > 0 ? (uvSum / uvTotal) * 100 : null;
-        return { clickSum, clickPct, staffSum, staffPct, uvSum, qrSum, uvPct };
+        return { clickSum, clickPct, staffSum, staffPct };
       });
       const sumRow = `<tr class="highlight">
         <td><b>신규 매장 합계</b></td>
         <td></td>
         ${colSums.map(c => `
-          <td class="rank-val"><b>${uvCell(c.uvSum, c.qrSum)}</b><br><span style="font-size:10px; font-weight:500; color:var(--ink-faint);">전체의 ${c.uvPct !== null ? c.uvPct.toFixed(1) : "-"}%</span></td>
           <td class="rank-val"><b>${fmt(c.clickSum)}</b><br><span style="font-size:10px; font-weight:500; color:var(--ink-faint);">전체의 ${c.clickPct !== null ? c.clickPct.toFixed(1) : "-"}%</span></td>
           <td class="rank-val"><b>${fmt(c.staffSum)}</b><br><span style="font-size:10px; font-weight:500; color:var(--ink-faint);">전체의 ${c.staffPct !== null ? c.staffPct.toFixed(1) : "-"}%</span></td>`).join("")}
         <td></td>
@@ -3461,7 +3437,7 @@
             <thead>
               <tr>
                 <th>매장명</th><th>최초 등장일</th>
-                ${monthCols.map(m => `<th style="text-align:right">${m}<br>UV (QR)</th><th style="text-align:right">${m}<br>혜택클릭</th><th style="text-align:right">${m}<br>직원확인</th>`).join("")}
+                ${monthCols.map(m => `<th style="text-align:right">${m}<br>혜택클릭</th><th style="text-align:right">${m}<br>직원확인</th>`).join("")}
                 <th style="text-align:right">전체 순위<br>(${latestMonth} 혜택클릭)</th>
               </tr>
             </thead>
@@ -3479,12 +3455,7 @@
         <ul style="margin:0 0 16px; padding-left:18px; font-size:13.5px; line-height:1.9;">
           <li>${summaryBits.join(" · ")}</li>
         </ul>
-        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
-          <div class="kpi-card" style="border-left:3px solid #10b981;">
-            <div class="kpi-top"><div class="kpi-label"><span class="kpi-dot" style="background:#10b981"></span>신규 매장 UV Total</div></div>
-            <div class="kpi-value-row"><div class="kpi-value">${fmt(totalNewUv)}<span class="unit">건</span></div></div>
-            <div class="kpi-sub">${targetMonths[0]}~${latestMonth} 전체 UV의 <b>${newUvPct !== null ? newUvPct.toFixed(1) : "-"}%</b> · QR ${fmt(totalNewQr)}건</div>
-          </div>
+        <div class="kpi-grid" style="grid-template-columns: repeat(2, 1fr);">
           <div class="kpi-card" style="border-left:3px solid #6366f1;">
             <div class="kpi-top"><div class="kpi-label"><span class="kpi-dot" style="background:#6366f1"></span>신규 매장 혜택클릭 Total</div></div>
             <div class="kpi-value-row"><div class="kpi-value">${fmt(totalNewClicks)}<span class="unit">건</span></div></div>
@@ -3498,7 +3469,7 @@
         </div>
       </div>
       ${tablesHtml || `<div class="section-card"><div class="empty-note">해당 기간 신규 매장이 없습니다</div></div>`}
-      <div class="kpi-sub" style="margin:4px 2px 0;">UV = 매장 상세페이지 유입 회원수(유니크), 괄호는 QR 유입 · 혜택클릭 = 일별 매장 데이터(daily_store) 순 방문자 기준 · 직원확인 = 일별 매장 직원확인(daily_store_staff) 순 방문자 기준</div>`;
+      <div class="kpi-sub" style="margin:4px 2px 0;">혜택클릭 = 일별 매장 데이터(daily_store) 순 방문자 기준 · 직원확인 = 일별 매장 직원확인(daily_store_staff) 순 방문자 기준</div>`;
   }
 
   /* ================= 공통 ================= */
