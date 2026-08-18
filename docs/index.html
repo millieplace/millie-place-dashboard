@@ -1947,10 +1947,12 @@
 
     // 1. 월 목표 대비 달성률
     const targetBits = [];
+    let mtdLatestDayLabel = "";
     METRIC_ORDER.forEach(key => {
       const m = METRICS_DATA[key];
       if (!m || !m.series || !m.series.length) return;
       const mtd = computeMonthToDateKpi(m.series);
+      if (mtd.latestDate) mtdLatestDayLabel = String(parseInt(mtd.latestDate.slice(8, 10), 10));
       const target = KPI_TARGETS[key] && KPI_TARGETS[key][curMonthKey];
       if (mtd.current !== null && target) {
         const pct = ((mtd.current / target) * 100).toFixed(0);
@@ -1958,17 +1960,18 @@
       }
     });
     if (targetBits.length) {
-      parts.push({ heading: `${monthNum}월 목표 대비 달성률`, lines: [targetBits.join(", ")] });
+      parts.push({ heading: `${monthNum}월 목표 대비 달성률 (${monthNum}월 1일~${mtdLatestDayLabel}일 누적)`, lines: [targetBits.join(", ")] });
     }
 
     // 2. 전주 대비 (완결된 마지막 월~일 주 기준)
     const weekBits = [];
-    let prevWeekLabel = "", reportMonday = null, reportSunday = null;
+    let prevWeekLabel = "", reportMonday = null, reportSunday = null, reportWeekLabel = "";
     METRIC_ORDER.forEach(key => {
       const m = METRICS_DATA[key];
       if (!m || !m.series || !m.series.length) return;
       const w = computeCompleteWeekComparison(m.series);
       prevWeekLabel = w.prevWeekLabel;
+      reportWeekLabel = w.weekLabel;
       reportMonday = w.reportMonday; reportSunday = w.reportSunday;
       if (w.current !== null) {
         let pctStr = "";
@@ -1992,16 +1995,17 @@
         weekLines.push(`UV ${dir} 사유 확인중`);
       }
     }
-    if (weekLines.length) parts.push({ heading: `전주 (${prevWeekLabel}) 대비`, lines: weekLines });
+    if (weekLines.length) parts.push({ heading: `지난주 (${reportWeekLabel}) 실적 — 전주 (${prevWeekLabel}) 대비`, lines: weekLines });
 
     // 3. 전월 동기 대비
     const momBits = [];
-    let monthLabel = "", latestDayLabel = "";
+    let monthLabel = "", prevMonthLabel = "", latestDayLabel = "";
     METRIC_ORDER.forEach(key => {
       const m = METRICS_DATA[key];
       if (!m || !m.series || !m.series.length) return;
       const mtd = computeMonthToDateKpi(m.series);
       monthLabel = mtd.monthLabel;
+      prevMonthLabel = mtd.prevMonthLabel;
       if (mtd.latestDate) latestDayLabel = String(parseInt(mtd.latestDate.slice(8, 10), 10));
       if (mtd.current !== null) {
         let pctStr = "";
@@ -2045,7 +2049,7 @@
         }
       }
     }
-    if (momLines.length) parts.push({ heading: "전월 동기 대비", lines: momLines });
+    if (momLines.length) parts.push({ heading: `전월 동기 대비 (${monthLabel} vs ${prevMonthLabel}, 각 1일~${latestDayLabel}일)`, lines: momLines });
 
     return parts;
   }
