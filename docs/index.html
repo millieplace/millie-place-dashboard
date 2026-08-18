@@ -1898,6 +1898,48 @@
     renderWeeklyStoreChangeSection(weekMonday);
   }
 
+  function getLastCompleteWeekRange(latestDate) {
+    const curMonday = getMondayOf(latestDate);
+    const curSundayDate = new Date(curMonday + "T00:00:00");
+    curSundayDate.setDate(curSundayDate.getDate() + 6);
+    const curSunday = toLocalDateStr(curSundayDate);
+
+    if (latestDate >= curSunday) {
+      return { reportMonday: curMonday, reportSunday: curSunday };
+    }
+    const prevMondayDate = new Date(curMonday + "T00:00:00");
+    prevMondayDate.setDate(prevMondayDate.getDate() - 7);
+    const reportMonday = toLocalDateStr(prevMondayDate);
+    const reportSundayDate = new Date(reportMonday + "T00:00:00");
+    reportSundayDate.setDate(reportSundayDate.getDate() + 6);
+    const reportSunday = toLocalDateStr(reportSundayDate);
+    return { reportMonday, reportSunday };
+  }
+
+  function computeCompleteWeekComparison(series) {
+    if (!series || !series.length) return { current: null, prev: null, delta: null, weekLabel: "", prevWeekLabel: "", reportMonday: null, reportSunday: null };
+    const latest = series[series.length - 1].date;
+    const { reportMonday, reportSunday } = getLastCompleteWeekRange(latest);
+    const prevMondayDate = new Date(reportMonday + "T00:00:00");
+    prevMondayDate.setDate(prevMondayDate.getDate() - 7);
+    const prevMonday = toLocalDateStr(prevMondayDate);
+    const prevSundayDate = new Date(reportSunday + "T00:00:00");
+    prevSundayDate.setDate(prevSundayDate.getDate() - 7);
+    const prevSunday = toLocalDateStr(prevSundayDate);
+
+    const curVals = series.filter(p => p.date >= reportMonday && p.date <= reportSunday).map(p => p.value);
+    const prevVals = series.filter(p => p.date >= prevMonday && p.date <= prevSunday).map(p => p.value);
+    const current = curVals.length ? curVals.reduce((a, b) => a + b, 0) : null;
+    const prev = prevVals.length ? prevVals.reduce((a, b) => a + b, 0) : null;
+    const delta = (prev !== null && prev > 0 && current !== null) ? ((current - prev) / prev) * 100 : null;
+    return {
+      current, prev, delta,
+      weekLabel: `${reportMonday.slice(5)}~${reportSunday.slice(5)}`,
+      prevWeekLabel: `${prevMonday.slice(5)}~${prevSunday.slice(5)}`,
+      reportMonday, reportSunday,
+    };
+  }
+
   function buildWeeklyExecReport() {
     const parts = [];
     const curMonthKey = getMonthKeyFromDate(new Date());
@@ -1919,14 +1961,15 @@
       parts.push({ heading: `${monthNum}월 목표 대비 달성률`, lines: [targetBits.join(", ")] });
     }
 
-    // 2. 전주 대비
+    // 2. 전주 대비 (완결된 마지막 월~일 주 기준)
     const weekBits = [];
-    let prevWeekLabel = "";
+    let prevWeekLabel = "", reportMonday = null, reportSunday = null;
     METRIC_ORDER.forEach(key => {
       const m = METRICS_DATA[key];
       if (!m || !m.series || !m.series.length) return;
-      const w = computeWeekToDateKpi(m.series);
+      const w = computeCompleteWeekComparison(m.series);
       prevWeekLabel = w.prevWeekLabel;
+      reportMonday = w.reportMonday; reportSunday = w.reportSunday;
       if (w.current !== null) {
         let pctStr = "";
         if (w.delta !== null) pctStr = ` (${liftSpan(w.delta)})`;
@@ -1937,14 +1980,12 @@
     if (weekBits.length) weekLines.push(weekBits.join(" · "));
 
     const uvSeries = METRICS_DATA.uv && METRICS_DATA.uv.series;
-    const latestDate = uvSeries && uvSeries.length ? uvSeries[uvSeries.length - 1].date : null;
-    const curMonday = latestDate ? getMondayOf(latestDate) : null;
-    const uvW = uvSeries && uvSeries.length ? computeWeekToDateKpi(uvSeries) : null;
-    if (uvW && uvW.delta !== null && Math.abs(uvW.delta) >= 5 && curMonday && latestDate) {
+    const uvW = uvSeries && uvSeries.length ? computeCompleteWeekComparison(uvSeries) : null;
+    if (uvW && uvW.delta !== null && Math.abs(uvW.delta) >= 5 && reportMonday && reportSunday) {
       const dir = uvW.delta >= 0 ? "증가" : "감소";
       const heroMillieGrouped = groupHeroMillieByTitle(HERO_MILLIE_RAW);
       const allCampaigns = [...heroMillieGrouped, ...HERO_MILLIEPLACE];
-      const activeCampaigns = allCampaigns.filter(c => c.start <= latestDate && c.end >= curMonday);
+      const activeCampaigns = allCampaigns.filter(c => c.start <= reportSunday && c.end >= reportMonday);
       if (activeCampaigns.length) {
         weekLines.push(`UV ${dir} 사유 확인중 (높은 확률로 "${activeCampaigns[0].title}" 배너 노출 영향)`);
       } else {
