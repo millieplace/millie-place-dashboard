@@ -3237,14 +3237,208 @@
     if (namesSorted.length) renderPartnerDetail(namesSorted[0]);
   }
 
+  /* ================= 이벤트 Tracking 탭 ================= */
+
+  // 밀리의서재 메인배너 (히어로배너 시트) - 배너 노출 스냅샷 데이터
+  const HERO_MILLIE_RAW = [
+    { title: "내향인의 날 사색하기 좋은 밀플", date: "2026-01-02", order: 1, uv: 7302, pv: 7739, conv: 157, dau: 268151, ctr: 2.72, cvr: 2.15 },
+    { title: "내향인의 날 사색하기 좋은 밀플", date: "2026-01-04", order: 3, uv: 2805, pv: 2929, conv: 45, dau: 262779, ctr: 1.07, cvr: 1.60 },
+    { title: "취향으로 보는 신년 책점", date: "2026-01-07", order: 2, uv: 2896, pv: 3110, conv: 45, dau: 274216, ctr: 1.06, cvr: 1.55 },
+    { title: "취향으로 보는 신년 책점", date: "2026-01-11", order: 2, uv: 2443, pv: 2590, conv: 28, dau: 252333, ctr: 0.97, cvr: 1.15 },
+    { title: "이럴땐이런책 책 추천 이벤트", date: "2026-01-15", order: 1, uv: 3297, pv: 3566, conv: 60, dau: 268561, ctr: 1.23, cvr: 1.82 },
+    { title: "이럴땐이런책 책 추천 이벤트", date: "2026-01-18", order: 3, uv: 1430, pv: 1513, conv: 21, dau: 245757, ctr: 0.58, cvr: 1.47 },
+    { title: "초코에 진심인 밀플", date: "2026-02-09", order: 2, uv: 1243, pv: 1285, conv: 52, dau: 275116, ctr: 0.45, cvr: 4.18 },
+    { title: "초코에 진심인 밀플", date: "2026-02-11", order: 4, uv: 628, pv: 678, conv: null, dau: 269535, ctr: 0.23, cvr: 4.30 },
+    { title: "세계 시의 날 기념 시 읽기 좋은 밀플5", date: "2026-03-21", order: 2, uv: 1542, pv: 1810, conv: null, dau: 234922, ctr: 0.66, cvr: 0.00 },
+    { title: "밀리플레이스 센티멘트 독서모임 모집", date: "2026-05-04", order: 1, uv: 2207, pv: 5593, conv: null, dau: 248935, ctr: 0.89, cvr: 0.00 },
+    { title: "초여름 싱그러움이 가득한 밀리플레이스 큐레이션", date: "2026-06-25", order: 1, uv: 1706, pv: 1824, conv: null, dau: 247254, ctr: 0.69, cvr: 0.00 },
+    { title: "초여름 싱그러움이 가득한 밀리플레이스 큐레이션", date: "2026-06-28", order: 3, uv: 1418, pv: 1502, conv: null, dau: 230523, ctr: 0.62, cvr: 0.00 },
+  ];
+
+  // 밀리플레이스 페이지 메인배너 (밀플히어로 시트)
+  const HERO_MILLIEPLACE = [
+    { title: "크리스마스에 가기 좋은 밀플 10", start: "2025-12-15", end: "2025-12-28", uv: 2377, pv: 2483, conv: 103, dau: 1339, ctr: 12.68, cvr: 4.15 },
+    { title: "고객 설문조사", start: "2025-12-15", end: "2025-12-17", uv: 69, pv: 84, conv: 14, dau: 1077, ctr: 2.14, cvr: 16.67 },
+    { title: "밀리플레이스 홈 개편", start: "2025-12-15", end: "2026-01-11", uv: 1861, pv: 1993, conv: 160, dau: 1859, ctr: 3.57, cvr: 8.03 },
+    { title: "나지트 김나은 대표님 10 books", start: "2025-12-15", end: "2026-01-04", uv: 101, pv: 120, conv: 10, dau: 1812, ctr: 0.27, cvr: 8.33 },
+    { title: "겨울 한정 메뉴가 있는 밀플 12", start: "2025-12-18", end: "2026-01-11", uv: 403, pv: 435, conv: 45, dau: 1953, ctr: 0.83, cvr: 10.34 },
+    { title: "혼자 사색하기 좋은 밀플 6", start: "2025-12-29", end: "2026-01-25", uv: 539, pv: 587, conv: 72, dau: 2000, ctr: 0.96, cvr: 12.27 },
+    { title: "2026년 내 취향 문장으로 보는 신년 책점", start: "2026-01-05", end: "2026-01-18", uv: 516, pv: 543, conv: 34, dau: 2004, ctr: 1.84, cvr: 6.26 },
+    { title: "이럴 땐 이런 책! 추천 이벤트", start: "2026-01-12", end: "2026-01-25", uv: 152, pv: 185, conv: 23, dau: 1620, ctr: 0.67, cvr: 12.43 },
+    { title: "사람과 문장의 온기, 연희동 '애딩웜스'", start: "2026-01-19", end: "2026-02-08", uv: 153, pv: 172, conv: 28, dau: 1202, ctr: 0.61, cvr: 16.28 },
+    { title: "핀터레스트 속 서재의 초대, 양천 '포러리'", start: "2026-01-26", end: "2026-02-21", uv: 110, pv: 122, conv: 27, dau: 1218, ctr: 0.33, cvr: 16.39 },
+    { title: "입춘맞이 햇살맛집 밀플", start: "2026-02-02", end: "2026-02-22", uv: 238, pv: 220, conv: 40, dau: 1215, ctr: 0.93, cvr: 18.18 },
+    { title: "독파피 가득 채워요, 북카페5", start: "2026-01-26", end: "2026-03-01", uv: 226, pv: 227, conv: null, dau: 1190, ctr: 0.54, cvr: 0.00 },
+    { title: "발렌타인 초코에 진심인 밀플", start: "2026-02-09", end: "2026-03-15", uv: 182, pv: 197, conv: 18, dau: 1352, ctr: 1.92, cvr: 9.14 },
+    { title: "종이숲 소개", start: "2026-02-16", end: "2026-03-09", uv: 183, pv: 217, conv: null, dau: 1153, ctr: 0.72, cvr: 0.00 },
+    { title: "세시라기 소개", start: "2026-02-23", end: "2026-03-16", uv: 194, pv: 253, conv: null, dau: 1229, ctr: 0.72, cvr: 0.00 },
+    { title: "새로운 시작, 몰입모드 카페10", start: "2026-03-02", end: "2026-03-22", uv: 296, pv: 380, conv: null, dau: 1396, ctr: 1.01, cvr: 0.00 },
+    { title: "플라세르 과천 소개", start: "2026-03-09", end: "2026-03-29", uv: 175, pv: 228, conv: null, dau: 1409, ctr: 0.59, cvr: 0.00 },
+    { title: "세계 시의 날 읽기 좋은 밀플5", start: "2026-03-16", end: "2026-03-22", uv: 123, pv: 189, conv: null, dau: 1566, ctr: 1.12, cvr: 0.00 },
+    { title: "진소아커피 소개", start: "2026-03-16", end: "2026-04-05", uv: 139, pv: 189, conv: null, dau: 1372, ctr: 0.48, cvr: 0.00 },
+    { title: "나른한 오후를 깨우는 리프레시 카페5", start: "2026-03-23", end: "2026-04-12", uv: 169, pv: 227, conv: null, dau: 1242, ctr: 0.65, cvr: 0.00 },
+    { title: "초록빛 숨구멍, 밀리플레이스5", start: "2026-03-30", end: "2026-04-19", uv: 239, pv: 291, conv: null, dau: 1208, ctr: 0.94, cvr: 0.00 },
+    { title: "일상에서 기분좋게 탈출하기, 도망", start: "2026-04-06", end: "2026-04-26", uv: 159, pv: 191, conv: null, dau: 1156, ctr: 0.66, cvr: 0.00 },
+    { title: "1984 소개", start: "2026-04-13", end: "2026-05-03", uv: 115, pv: 153, conv: null, dau: 1407, ctr: 0.39, cvr: 0.00 },
+    { title: "독서모임하기 좋은 밀플10", start: "2026-04-20", end: "2026-05-10", uv: 169, pv: 217, conv: null, dau: 1616, ctr: 0.50, cvr: 0.00 },
+    { title: "집 앞의 작은 다락방, 애틱인서울하우스", start: "2026-04-27", end: "2026-05-17", uv: 81, pv: 101, conv: null, dau: 1581, ctr: 0.24, cvr: 0.00 },
+    { title: "황금연휴, 근교로 독서 나들이", start: "2026-04-27", end: "2026-05-03", uv: 44, pv: 82, conv: null, dau: 1931, ctr: 0.33, cvr: 0.00 },
+    { title: "테라스의 계절, 야외 독서하기 좋은 밀리플레이스10", start: "2026-05-04", end: "2026-05-10", uv: 112, pv: 133, conv: null, dau: 1778, ctr: 0.90, cvr: 0.00 },
+    { title: "센티멘트 독서모임 모집 홍보", start: "2026-05-03", end: "2026-05-07", uv: 119, pv: 368, conv: null, dau: 1743, ctr: 1.37, cvr: 0.00 },
+    { title: "5월의 다정함을 닮은 곳, 넛지스 북카페", start: "2026-05-11", end: "2026-05-31", uv: 233, pv: 272, conv: null, dau: 934, ctr: 1.19, cvr: 0.00 },
+    { title: "장미 향이 머무는 오후, 로맨틱한 고전 읽기 좋은 밀리플레이스", start: "2026-05-18", end: "2026-06-07", uv: 235, pv: 400, conv: null, dau: 902, ctr: 1.24, cvr: 0.00 },
+    { title: "창 너머로 번지는 불빛, 원베일리 인바이트", start: "2026-05-25", end: "2026-06-14", uv: 197, pv: 243, conv: null, dau: 906, ctr: 1.04, cvr: 0.00 },
+    { title: "달콤한 위로가 필요한 오후, 로흐", start: "2026-06-01", end: "2026-06-21", uv: 142, pv: 200, conv: null, dau: 946, ctr: 0.71, cvr: 0.00 },
+    { title: "한 잔의 커피로 떠나는 여름 여행, 커피리브레 파란점", start: "2026-06-08", end: "2026-06-28", uv: 128, pv: 163, conv: null, dau: 1107, ctr: 0.55, cvr: 0.00 },
+    { title: "가장 긴 낮, 완독을 꿈꾸는 '벽돌책' 명당10", start: "2026-06-15", end: "2026-07-05", uv: 128, pv: 175, conv: null, dau: 1188, ctr: 0.51, cvr: 0.00 },
+    { title: "하이라이트 in 로컬 참여자 모집", start: "2026-06-19", end: "2026-06-30", uv: 207, pv: 651, conv: null, dau: 1298, ctr: 1.33, cvr: 0.00 },
+    { title: "도서전에서 만난 '그 책', 밀리플레이스4", start: "2026-06-22", end: "2026-07-12", uv: 49, pv: 85, conv: null, dau: 1118, ctr: 0.21, cvr: 0.00 },
+    { title: "미술관을 닮은 감각적인 밀리플레이스5", start: "2026-06-29", end: "2026-07-19", uv: 129, pv: 155, conv: null, dau: 883, ctr: 0.70, cvr: 0.00 },
+    { title: "한 잔의 커피로 떠나는 여름 여행 (재게재)", start: "2026-07-08", end: "2026-07-28", uv: 128, pv: 163, conv: null, dau: 1107, ctr: 0.55, cvr: 0.00 },
+    { title: "단조로운 일상의 담백한 위로, 카페 '단위'", start: "2026-07-06", end: "2026-07-12", uv: 76, pv: 96, conv: null, dau: 811, ctr: 1.34, cvr: 0.00 },
+    { title: "꽃과 커피가 있는 카페 '시로'", start: "2026-08-03", end: "2026-08-09", uv: 19, pv: 43, conv: null, dau: 966, ctr: 0.28, cvr: 0.00 },
+    { title: "세 사람이 차린 다정한 집, 수원 '하우스결'", start: "2026-08-10", end: "2026-08-17", uv: 27, pv: 50, conv: null, dau: 227, ctr: 1.49, cvr: 0.00 },
+  ];
+
+  function groupHeroMillieByTitle(rows) {
+    const map = {};
+    rows.forEach(r => {
+      if (!map[r.title]) map[r.title] = { title: r.title, dates: [], uv: 0, pv: 0, conv: 0, hasConv: false };
+      map[r.title].dates.push(r.date);
+      map[r.title].uv += r.uv;
+      map[r.title].pv += r.pv;
+      if (r.conv) { map[r.title].conv += r.conv; map[r.title].hasConv = true; }
+    });
+    return Object.values(map).map(g => {
+      const sorted = g.dates.sort();
+      return { title: g.title, start: sorted[0], end: sorted[sorted.length - 1], uv: g.uv, pv: g.pv, conv: g.hasConv ? g.conv : null };
+    });
+  }
+
+  function computeCampaignLift(series, startDate, endDate) {
+    if (!series || !series.length) return null;
+    const latestDate = series[series.length - 1].date;
+    if (startDate > latestDate) return null;
+    const s = new Date(startDate + "T00:00:00");
+    const baseEndDate = new Date(s);
+    baseEndDate.setDate(baseEndDate.getDate() - 1);
+    const baseStartDate = new Date(s);
+    baseStartDate.setDate(baseStartDate.getDate() - 7);
+    const baseStartStr = toLocalDateStr(baseStartDate);
+    const baseEndStr = toLocalDateStr(baseEndDate);
+    const baseline = avgOfSeries(series.filter(p => p.date >= baseStartStr && p.date <= baseEndStr));
+    const duringEnd = endDate < latestDate ? endDate : latestDate;
+    const during = avgOfSeries(series.filter(p => p.date >= startDate && p.date <= duringEnd));
+    if (baseline === null || baseline === 0 || during === null) return null;
+    return ((during - baseline) / baseline) * 100;
+  }
+
+  function computeCampaignImpact(startDate, endDate) {
+    const uvSeries = METRICS_DATA.uv && METRICS_DATA.uv.series;
+    const benefitSeries = METRICS_DATA.benefit_claims && METRICS_DATA.benefit_claims.series;
+    const staffSeries = METRICS_DATA.staff_verifications && METRICS_DATA.staff_verifications.series;
+    return {
+      uvLift: computeCampaignLift(uvSeries, startDate, endDate),
+      benefitLift: computeCampaignLift(benefitSeries, startDate, endDate),
+      staffLift: computeCampaignLift(staffSeries, startDate, endDate),
+    };
+  }
+
+  function liftSpan(v) {
+    if (v === null || v === undefined) return `<span style="color:var(--ink-faint);">-</span>`;
+    const up = v >= 0;
+    return `<span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:700;">${up ? "▲" : "▼"}${Math.abs(v).toFixed(1)}%</span>`;
+  }
+
   function renderEventTab() {
     const area = document.getElementById("event-area");
+
+    const heroMillieGrouped = groupHeroMillieByTitle(HERO_MILLIE_RAW).map(c => ({ ...c, impact: computeCampaignImpact(c.start, c.end) }));
+    const millieplaceCampaigns = HERO_MILLIEPLACE.map(c => ({ ...c, impact: computeCampaignImpact(c.start, c.end) }));
+
+    const allCampaigns = [
+      ...heroMillieGrouped.map(c => ({ ...c, group: "밀리의서재 메인배너" })),
+      ...millieplaceCampaigns.map(c => ({ ...c, group: "밀리플레이스 메인배너" })),
+    ].filter(c => c.impact.uvLift !== null);
+
+    const topLift = allCampaigns.slice().sort((a, b) => b.impact.uvLift - a.impact.uvLift)[0];
+    const bottomLift = allCampaigns.slice().sort((a, b) => a.impact.uvLift - b.impact.uvLift)[0];
+    const avgUvLiftMillie = avgOfArr(heroMillieGrouped.map(c => c.impact.uvLift).filter(v => v !== null));
+    const avgUvLiftPlace = avgOfArr(millieplaceCampaigns.map(c => c.impact.uvLift).filter(v => v !== null));
+
+    const insights = [];
+    if (topLift) {
+      insights.push(`가장 큰 효과를 낸 배너는 <b>"${topLift.title}"</b>(${topLift.group})로, 노출 기간(${topLift.start}~${topLift.end}) 동안 전체 UV가 직전 7일 평균 대비 <b>${liftSpan(topLift.impact.uvLift)}</b> 변화했어요`);
+    }
+    if (bottomLift && bottomLift !== topLift) {
+      insights.push(`반대로 <b>"${bottomLift.title}"</b>(${bottomLift.group})는 노출 기간 동안 전체 UV가 직전 7일 평균 대비 ${liftSpan(bottomLift.impact.uvLift)} 변화해서, 눈에 띄는 효과는 없었던 것으로 보여요`);
+    }
+    if (avgUvLiftMillie !== null && avgUvLiftPlace !== null) {
+      insights.push(`평균적으로 밀리의서재 메인배너 노출 기간의 UV 변화율은 ${liftSpan(avgUvLiftMillie)}, 밀리플레이스 페이지 메인배너는 ${liftSpan(avgUvLiftPlace)}였어요`);
+    }
+
+    function campaignTableRows(list) {
+      return list.map(c => `
+        <tr>
+          <td>${c.title}</td>
+          <td style="color:var(--ink-faint); font-size:11px; white-space:nowrap;">${c.start}${c.start !== c.end ? `~${c.end}` : ""}</td>
+          <td class="rank-val">${fmt(c.uv)}</td>
+          <td class="rank-val">${fmt(c.pv)}</td>
+          <td class="rank-val">${c.conv !== null && c.conv !== undefined ? fmt(c.conv) : `<span style="color:var(--ink-faint);">-</span>`}</td>
+          <td class="rank-val">${liftSpan(c.impact.uvLift)}</td>
+          <td class="rank-val">${liftSpan(c.impact.benefitLift)}</td>
+          <td class="rank-val">${liftSpan(c.impact.staffLift)}</td>
+        </tr>`).join("");
+    }
+
     area.innerHTML = `
-      <div class="placeholder-panel">
-        <div class="icon">🎯</div>
-        <h3>이벤트 Tracking 준비 중</h3>
-        <p>프로모션·이벤트별 참여 데이터를 연동하면 이 탭에서 확인할 수 있어요.<br>조만간 업데이트될 예정입니다.</p>
-      </div>`;
+      <div class="section-card">
+        <div class="section-head"><h2>🎯 이벤트 Tracking — 메인배너 성과</h2></div>
+        <div style="font-size:12px; color:var(--ink-faint); margin-bottom:10px;">
+          "영향" 컬럼은 각 배너의 노출 기간 동안 밀리플레이스 전체 UV·혜택받기·직원확인의 일평균이, 노출 시작 <b>직전 7일 평균</b> 대비 얼마나 변했는지를 자동 계산한 값이에요.
+        </div>
+        <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
+          ${insights.map(t => `<li>${t}</li>`).join("")}
+        </ul>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h2>📱 밀리의서재 메인배너</h2></div>
+        <div style="font-size:12px; color:var(--ink-faint); margin-bottom:10px;">앱 홈 화면 히어로 배너 · 노출 스냅샷 측정 기준 (측정일 사이 구간을 노출 기간으로 간주)</div>
+        <div style="overflow-x:auto;">
+          <table class="rank-table">
+            <thead>
+              <tr>
+                <th>소재</th><th>노출 기간</th><th style="text-align:right">UV</th><th style="text-align:right">PV</th><th style="text-align:right">혜택전환</th>
+                <th style="text-align:right">UV 영향</th><th style="text-align:right">혜택받기 영향</th><th style="text-align:right">직원확인 영향</th>
+              </tr>
+            </thead>
+            <tbody>${campaignTableRows(heroMillieGrouped)}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h2>🏬 밀리플레이스 페이지 메인배너</h2></div>
+        <div style="font-size:12px; color:var(--ink-faint); margin-bottom:10px;">밀리플레이스 페이지 자체 히어로 배너 · 2025-12 ~ 2026-08 (${millieplaceCampaigns.length}건)</div>
+        <div style="overflow-x:auto; max-height:640px; overflow-y:auto;">
+          <table class="rank-table">
+            <thead>
+              <tr>
+                <th>소재</th><th>노출 기간</th><th style="text-align:right">UV</th><th style="text-align:right">PV</th><th style="text-align:right">혜택전환</th>
+                <th style="text-align:right">UV 영향</th><th style="text-align:right">혜택받기 영향</th><th style="text-align:right">직원확인 영향</th>
+              </tr>
+            </thead>
+            <tbody>${campaignTableRows(millieplaceCampaigns)}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="kpi-sub" style="margin:4px 2px 0;">원본: 확장팀 마케팅 Master Sheet_2026.xlsx (히어로배너 · 밀플히어로 시트) · UV/PV/혜택전환/DAU/클릭율/전환율은 시트에 보고된 자체 지표, 영향 컬럼만 대시보드 데이터로 자동 계산돼요</div>`;
+  }
+
+  function avgOfArr(arr) {
+    return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
   }
 
   const HUB_WEEK_TRACKING = [
