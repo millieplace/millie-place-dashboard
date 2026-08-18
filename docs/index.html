@@ -1898,6 +1898,117 @@
     renderWeeklyStoreChangeSection(weekMonday);
   }
 
+  function buildWeeklyExecReport() {
+    const parts = [];
+    const curMonthKey = getMonthKeyFromDate(new Date());
+    const monthNum = parseInt(curMonthKey.split("-")[1], 10);
+
+    // 1. 월 목표 대비 달성률
+    const targetBits = [];
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (!m || !m.series || !m.series.length) return;
+      const mtd = computeMonthToDateKpi(m.series);
+      const target = KPI_TARGETS[key] && KPI_TARGETS[key][curMonthKey];
+      if (mtd.current !== null && target) {
+        const pct = ((mtd.current / target) * 100).toFixed(0);
+        targetBits.push(`${m.label} ${fmt(mtd.current)}/${fmt(target)} (${pct}%)`);
+      }
+    });
+    if (targetBits.length) {
+      parts.push({ heading: `${monthNum}월 목표 대비 달성률`, lines: [targetBits.join(", ")] });
+    }
+
+    // 2. 전주 대비
+    const weekBits = [];
+    let prevWeekLabel = "";
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (!m || !m.series || !m.series.length) return;
+      const w = computeWeekToDateKpi(m.series);
+      prevWeekLabel = w.prevWeekLabel;
+      if (w.current !== null) {
+        let pctStr = "";
+        if (w.delta !== null) pctStr = ` (${liftSpan(w.delta)})`;
+        weekBits.push(`${m.label} ${fmt(w.current)}건${pctStr}`);
+      }
+    });
+    const weekLines = [];
+    if (weekBits.length) weekLines.push(weekBits.join(" · "));
+
+    const uvSeries = METRICS_DATA.uv && METRICS_DATA.uv.series;
+    const latestDate = uvSeries && uvSeries.length ? uvSeries[uvSeries.length - 1].date : null;
+    const curMonday = latestDate ? getMondayOf(latestDate) : null;
+    const uvW = uvSeries && uvSeries.length ? computeWeekToDateKpi(uvSeries) : null;
+    if (uvW && uvW.delta !== null && Math.abs(uvW.delta) >= 5 && curMonday && latestDate) {
+      const dir = uvW.delta >= 0 ? "증가" : "감소";
+      const heroMillieGrouped = groupHeroMillieByTitle(HERO_MILLIE_RAW);
+      const allCampaigns = [...heroMillieGrouped, ...HERO_MILLIEPLACE];
+      const activeCampaigns = allCampaigns.filter(c => c.start <= latestDate && c.end >= curMonday);
+      if (activeCampaigns.length) {
+        weekLines.push(`UV ${dir} 사유 확인중 (높은 확률로 "${activeCampaigns[0].title}" 배너 노출 영향)`);
+      } else {
+        weekLines.push(`UV ${dir} 사유 확인중`);
+      }
+    }
+    if (weekLines.length) parts.push({ heading: `전주 (${prevWeekLabel}) 대비`, lines: weekLines });
+
+    // 3. 전월 동기 대비
+    const momBits = [];
+    let monthLabel = "", latestDayLabel = "";
+    METRIC_ORDER.forEach(key => {
+      const m = METRICS_DATA[key];
+      if (!m || !m.series || !m.series.length) return;
+      const mtd = computeMonthToDateKpi(m.series);
+      monthLabel = mtd.monthLabel;
+      if (mtd.latestDate) latestDayLabel = String(parseInt(mtd.latestDate.slice(8, 10), 10));
+      if (mtd.current !== null) {
+        let pctStr = "";
+        if (mtd.delta !== null) pctStr = ` (${liftSpan(mtd.delta)})`;
+        momBits.push(`${m.label} ${fmt(mtd.current)}건${pctStr}`);
+      }
+    });
+    const momLines = [];
+    if (momBits.length) momLines.push(`${monthLabel} 1일~${latestDayLabel}일 ${momBits.join(", ")}`);
+
+    const dsMetric = METRICS_DATA["daily_store"];
+    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
+    if (Object.keys(dailyTotals).length) {
+      const firstDate = detectStoreFirstAppearance(dailyTotals);
+      const firstMonthOf = {};
+      Object.entries(firstDate).forEach(([name, d]) => { firstMonthOf[name] = d.slice(0, 7); });
+
+      let py = parseInt(curMonthKey.slice(0, 4), 10), pm = parseInt(curMonthKey.slice(5, 7), 10) - 1;
+      if (pm === 0) { pm = 12; py -= 1; }
+      const prevMonthKey = `${py}-${String(pm).padStart(2, "0")}`;
+
+      const prevMonthTotals = aggregateDailyStoreForMonth(dailyTotals, prevMonthKey);
+      const curMonthTotals = aggregateDailyStoreForMonth(dailyTotals, curMonthKey);
+
+      const newInPrevMonth = Object.keys(firstMonthOf).filter(n => firstMonthOf[n] === prevMonthKey);
+      const newInCurMonth = Object.keys(firstMonthOf).filter(n => firstMonthOf[n] === curMonthKey);
+      const newStoreNames = [...newInPrevMonth, ...newInCurMonth];
+
+      if (newStoreNames.length) {
+        const prevMonthNewSum = newInPrevMonth.reduce((a, n) => a + (prevMonthTotals[n] || 0), 0);
+        const prevMonthTotalSum = Object.values(prevMonthTotals).reduce((a, v) => a + v, 0);
+        const prevMonthPct = prevMonthTotalSum > 0 ? (prevMonthNewSum / prevMonthTotalSum) * 100 : null;
+
+        const curMonthNewSum = newStoreNames.reduce((a, n) => a + (curMonthTotals[n] || 0), 0);
+        const curMonthTotalSum = Object.values(curMonthTotals).reduce((a, v) => a + v, 0);
+        const curMonthPct = curMonthTotalSum > 0 ? (curMonthNewSum / curMonthTotalSum) * 100 : null;
+
+        if (prevMonthPct !== null && curMonthPct !== null) {
+          momLines.push(`${parseInt(prevMonthKey.slice(5), 10)}월 말부터 신규매장 ${newStoreNames.length}개 추가 노출에 따라 혜택받기/직원확인 증가 중`);
+          momLines.push(`&nbsp;&nbsp;신규 매장 혜택클릭 기준 ${prevMonthKey} Total ${fmt(prevMonthNewSum)}회 (전체의 ${prevMonthPct.toFixed(1)}%) → ${curMonthKey} ${latestDayLabel}일까지 ${fmt(curMonthNewSum)}회 (전체의 ${curMonthPct.toFixed(1)}%)`);
+        }
+      }
+    }
+    if (momLines.length) parts.push({ heading: "전월 동기 대비", lines: momLines });
+
+    return parts;
+  }
+
   function renderWeeklyTab() {
     const area = document.getElementById("weekly-area");
     const weeks = getAvailableWeekMondays();
@@ -1913,6 +2024,17 @@
         </select>
       </div>
       <div id="weekly-insights-area"></div>
+      <div class="section-card">
+        <div class="section-head"><h2>📋 주간 실적 요약 (팀 공유용)</h2></div>
+        <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
+          ${buildWeeklyExecReport().map(p => `
+            <li><b>${p.heading}</b>
+              <ul style="margin:4px 0 10px; padding-left:18px;">
+                ${p.lines.map(l => `<li>${l}</li>`).join("")}
+              </ul>
+            </li>`).join("")}
+        </ul>
+      </div>
       <div class="kpi-grid" id="weekly-kpi-area"></div>
       <div class="section-card">
         <div class="section-head">
@@ -3350,104 +3472,38 @@
     return `<span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:700;">${up ? "▲" : "▼"}${Math.abs(v).toFixed(1)}%</span>`;
   }
 
-  function getEventMonthOptions() {
-    const dates = [];
-    HERO_MILLIE_RAW.forEach(c => dates.push(c.date));
-    HERO_MILLIEPLACE.forEach(c => { dates.push(c.start); dates.push(c.end); });
-    if (!dates.length) return [];
-    const minMonth = dates.reduce((a, b) => (a < b ? a : b)).slice(0, 7);
-    const maxMonth = dates.reduce((a, b) => (a > b ? a : b)).slice(0, 7);
-    const realCurMonth = getMonthKeyFromDate(new Date());
-    const endMonth = realCurMonth > maxMonth ? realCurMonth : maxMonth;
-    const months = [];
-    let [y, m] = minMonth.split("-").map(Number);
-    let cur = minMonth;
-    while (cur <= endMonth) {
-      months.push(cur);
-      m += 1;
-      if (m > 12) { m = 1; y += 1; }
-      cur = `${y}-${String(m).padStart(2, "0")}`;
-    }
-    return months.reverse();
-  }
-
-  function monthRange(monthKey) {
-    const [y, m] = monthKey.split("-").map(Number);
-    const lastDay = new Date(y, m, 0).getDate();
-    return { start: `${monthKey}-01`, end: `${monthKey}-${String(lastDay).padStart(2, "0")}` };
-  }
-
-  function campaignOverlapsMonth(c, monthKey) {
-    if (monthKey === "all") return true;
-    const { start: mStart, end: mEnd } = monthRange(monthKey);
-    return c.start <= mEnd && c.end >= mStart;
-  }
-
-  let selectedEventMonth = null;
-
-  function buildEventMonthlyInsight(monthKey, heroMillieGrouped, millieplaceCampaigns) {
-    const filtered = [
-      ...heroMillieGrouped.filter(c => campaignOverlapsMonth(c, monthKey)).map(c => ({ ...c, group: "밀리의서재 메인배너" })),
-      ...millieplaceCampaigns.filter(c => campaignOverlapsMonth(c, monthKey)).map(c => ({ ...c, group: "밀리플레이스 메인배너" })),
-    ].filter(c => c.impact.uvLift !== null);
-
-    const label = monthKey === "all" ? "전체 기간" : monthKey;
-    const parts = [`${label} 기준 진행된 배너 캠페인은 총 <b>${filtered.length}건</b>이에요`];
-    if (filtered.length) {
-      const top = filtered.slice().sort((a, b) => b.impact.uvLift - a.impact.uvLift)[0];
-      parts.push(`이 중 가장 효과적이었던 캠페인은 <b>"${top.title}"</b>(${top.group})로, 노출 기간 UV가 직전 7일 평균 대비 ${liftSpan(top.impact.uvLift)} 변화했어요`);
-      const avgLift = avgOfArr(filtered.map(c => c.impact.uvLift));
-      parts.push(`이 기간 배너들의 평균 UV 영향률은 ${liftSpan(avgLift)}예요`);
-    }
-    return parts;
-  }
-
-  function buildEventWeeklyInsight(heroMillieGrouped, millieplaceCampaigns) {
-    const uvSeries = METRICS_DATA.uv && METRICS_DATA.uv.series;
-    if (!uvSeries || !uvSeries.length) return [];
-    const latest = uvSeries[uvSeries.length - 1].date;
-    const curMonday = getMondayOf(latest);
-    const prevMondayDate = new Date(curMonday + "T00:00:00");
-    prevMondayDate.setDate(prevMondayDate.getDate() - 7);
-    const prevMonday = toLocalDateStr(prevMondayDate);
-    const prevSundayDate = new Date(curMonday + "T00:00:00");
-    prevSundayDate.setDate(prevSundayDate.getDate() - 1);
-    const prevSunday = toLocalDateStr(prevSundayDate);
-
-    const uvW = computeWeekKpiForWeek(uvSeries, curMonday);
-    const allCampaigns = [
-      ...heroMillieGrouped.map(c => ({ ...c, group: "밀리의서재" })),
-      ...millieplaceCampaigns.map(c => ({ ...c, group: "밀리플레이스" })),
-    ];
-    const thisWeekCampaigns = allCampaigns.filter(c => c.start <= latest && c.end >= curMonday);
-    const lastWeekCampaigns = allCampaigns.filter(c => c.start <= prevSunday && c.end >= prevMonday);
-
-    const parts = [];
-    parts.push(`이번 주(${curMonday}~${latest}) UV는 전주 동기간 대비 ${liftSpan(uvW.delta)}이고, 노출 중인 배너는 <b>${thisWeekCampaigns.length}건</b>이에요`);
-    if (thisWeekCampaigns.length) {
-      parts.push(`이번 주 노출 배너: ${thisWeekCampaigns.map(c => `"${c.title}"(${c.group})`).join(", ")}`);
-    }
-    if (lastWeekCampaigns.length) {
-      parts.push(`지난 주 노출 배너: ${lastWeekCampaigns.map(c => `"${c.title}"(${c.group})`).join(", ")}`);
-    }
-    return parts;
-  }
-
   function renderEventTab() {
     const area = document.getElementById("event-area");
 
     const heroMillieGrouped = groupHeroMillieByTitle(HERO_MILLIE_RAW).map(c => ({ ...c, impact: computeCampaignImpact(c.start, c.end) }));
     const millieplaceCampaigns = HERO_MILLIEPLACE.map(c => ({ ...c, impact: computeCampaignImpact(c.start, c.end) }));
 
-    const monthOptions = getEventMonthOptions();
-    const realCurMonth = getMonthKeyFromDate(new Date());
-    selectedEventMonth = monthOptions.includes(realCurMonth) ? realCurMonth : (monthOptions[0] || "all");
+    const allCampaigns = [
+      ...heroMillieGrouped.map(c => ({ ...c, group: "밀리의서재 메인배너" })),
+      ...millieplaceCampaigns.map(c => ({ ...c, group: "밀리플레이스 메인배너" })),
+    ].filter(c => c.impact.uvLift !== null);
+
+    const topLift = allCampaigns.slice().sort((a, b) => b.impact.uvLift - a.impact.uvLift)[0];
+    const bottomLift = allCampaigns.slice().sort((a, b) => a.impact.uvLift - b.impact.uvLift)[0];
+    const avgUvLiftMillie = avgOfArr(heroMillieGrouped.map(c => c.impact.uvLift).filter(v => v !== null));
+    const avgUvLiftPlace = avgOfArr(millieplaceCampaigns.map(c => c.impact.uvLift).filter(v => v !== null));
+
+    const insights = [];
+    if (topLift) {
+      insights.push(`가장 큰 효과를 낸 배너는 <b>"${topLift.title}"</b>(${topLift.group})로, 노출 기간(${topLift.start}~${topLift.end}) 동안 전체 UV가 직전 7일 평균 대비 <b>${liftSpan(topLift.impact.uvLift)}</b> 변화했어요`);
+    }
+    if (bottomLift && bottomLift !== topLift) {
+      insights.push(`반대로 <b>"${bottomLift.title}"</b>(${bottomLift.group})는 노출 기간 동안 전체 UV가 직전 7일 평균 대비 ${liftSpan(bottomLift.impact.uvLift)} 변화해서, 눈에 띄는 효과는 없었던 것으로 보여요`);
+    }
+    if (avgUvLiftMillie !== null && avgUvLiftPlace !== null) {
+      insights.push(`평균적으로 밀리의서재 메인배너 노출 기간의 UV 변화율은 ${liftSpan(avgUvLiftMillie)}, 밀리플레이스 페이지 메인배너는 ${liftSpan(avgUvLiftPlace)}였어요`);
+    }
 
     function campaignTableRows(list) {
       return list.map(c => `
         <tr>
-          <td style="color:var(--ink-faint); font-size:11px; white-space:nowrap;">${c.start}${c.start !== c.end ? `~${c.end}` : ""}</td>
           <td>${c.title}</td>
+          <td style="color:var(--ink-faint); font-size:11px; white-space:nowrap;">${c.start}${c.start !== c.end ? `~${c.end}` : ""}</td>
           <td class="rank-val">${fmt(c.uv)}</td>
           <td class="rank-val">${fmt(c.pv)}</td>
           <td class="rank-val">${c.conv !== null && c.conv !== undefined ? fmt(c.conv) : `<span style="color:var(--ink-faint);">-</span>`}</td>
@@ -3457,74 +3513,50 @@
         </tr>`).join("");
     }
 
-    function tableHead() {
-      return `<tr>
-        <th>노출 기간</th><th>소재</th><th style="text-align:right">UV</th><th style="text-align:right">PV</th><th style="text-align:right">혜택전환</th>
-        <th style="text-align:right">UV 영향</th><th style="text-align:right">혜택받기 영향</th><th style="text-align:right">직원확인 영향</th>
-      </tr>`;
-    }
-
-    function renderFilteredSections(monthKey) {
-      const filteredMillie = heroMillieGrouped.filter(c => campaignOverlapsMonth(c, monthKey));
-      const filteredPlace = millieplaceCampaigns.filter(c => campaignOverlapsMonth(c, monthKey));
-
-      document.getElementById("event-monthly-insight").innerHTML = buildEventMonthlyInsight(monthKey, heroMillieGrouped, millieplaceCampaigns)
-        .map(t => `<li>${t}</li>`).join("");
-
-      document.getElementById("event-hero-millie-table").innerHTML = `
-        <table class="rank-table"><thead>${tableHead()}</thead><tbody>${campaignTableRows(filteredMillie) || `<tr><td colspan="8" class="empty-note">해당 기간 캠페인이 없습니다</td></tr>`}</tbody></table>`;
-      document.getElementById("event-millieplace-table").innerHTML = `
-        <table class="rank-table"><thead>${tableHead()}</thead><tbody>${campaignTableRows(filteredPlace) || `<tr><td colspan="8" class="empty-note">해당 기간 캠페인이 없습니다</td></tr>`}</tbody></table>`;
-      document.getElementById("event-millieplace-count").textContent = `${filteredPlace.length}건`;
-      document.getElementById("event-hero-millie-count").textContent = `${filteredMillie.length}건`;
-    }
-
     area.innerHTML = `
       <div class="section-card">
-        <div class="section-head"><h2>📅 기간 선택</h2></div>
-        <select id="event-month-select" class="store-select" style="max-width:200px; padding:9px 14px;">
-          <option value="all">전체 기간</option>
-          ${monthOptions.map(mk => `<option value="${mk}">${mk}${mk === realCurMonth ? " (이번 달)" : ""}</option>`).join("")}
-        </select>
-      </div>
-
-      <div class="section-card">
-        <div class="section-head"><h2>🗓 월간 인사이트</h2></div>
+        <div class="section-head"><h2>🎯 이벤트 Tracking — 메인배너 성과</h2></div>
         <div style="font-size:12px; color:var(--ink-faint); margin-bottom:10px;">
-          "영향"은 각 배너의 노출 기간 동안 밀리플레이스 전체 UV·혜택받기·직원확인의 일평균이, 노출 시작 <b>직전 7일 평균</b> 대비 얼마나 변했는지를 자동 계산한 값이에요.
+          "영향" 컬럼은 각 배너의 노출 기간 동안 밀리플레이스 전체 UV·혜택받기·직원확인의 일평균이, 노출 시작 <b>직전 7일 평균</b> 대비 얼마나 변했는지를 자동 계산한 값이에요.
         </div>
-        <ul id="event-monthly-insight" style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;"></ul>
-      </div>
-
-      <div class="section-card">
-        <div class="section-head"><h2>📆 주간 인사이트 (이번 주 vs 지난 주)</h2></div>
         <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
-          ${buildEventWeeklyInsight(heroMillieGrouped, millieplaceCampaigns).map(t => `<li>${t}</li>`).join("")}
+          ${insights.map(t => `<li>${t}</li>`).join("")}
         </ul>
       </div>
 
       <div class="section-card">
-        <div class="section-head"><h2>📱 밀리의서재 메인배너 <span id="event-hero-millie-count" style="font-weight:500; color:var(--ink-faint); font-size:12px;"></span></h2></div>
+        <div class="section-head"><h2>📱 밀리의서재 메인배너</h2></div>
         <div style="font-size:12px; color:var(--ink-faint); margin-bottom:10px;">앱 홈 화면 히어로 배너 · 노출 스냅샷 측정 기준 (측정일 사이 구간을 노출 기간으로 간주)</div>
-        <div style="overflow-x:auto;" id="event-hero-millie-table"></div>
+        <div style="overflow-x:auto;">
+          <table class="rank-table">
+            <thead>
+              <tr>
+                <th>소재</th><th>노출 기간</th><th style="text-align:right">UV</th><th style="text-align:right">PV</th><th style="text-align:right">혜택전환</th>
+                <th style="text-align:right">UV 영향</th><th style="text-align:right">혜택받기 영향</th><th style="text-align:right">직원확인 영향</th>
+              </tr>
+            </thead>
+            <tbody>${campaignTableRows(heroMillieGrouped)}</tbody>
+          </table>
+        </div>
       </div>
 
       <div class="section-card">
-        <div class="section-head"><h2>🏬 밀리플레이스 페이지 메인배너 <span id="event-millieplace-count" style="font-weight:500; color:var(--ink-faint); font-size:12px;"></span></h2></div>
-        <div style="font-size:12px; color:var(--ink-faint); margin-bottom:10px;">밀리플레이스 페이지 자체 히어로 배너</div>
-        <div style="overflow-x:auto; max-height:640px; overflow-y:auto;" id="event-millieplace-table"></div>
+        <div class="section-head"><h2>🏬 밀리플레이스 페이지 메인배너</h2></div>
+        <div style="font-size:12px; color:var(--ink-faint); margin-bottom:10px;">밀리플레이스 페이지 자체 히어로 배너 · 2025-12 ~ 2026-08 (${millieplaceCampaigns.length}건)</div>
+        <div style="overflow-x:auto; max-height:640px; overflow-y:auto;">
+          <table class="rank-table">
+            <thead>
+              <tr>
+                <th>소재</th><th>노출 기간</th><th style="text-align:right">UV</th><th style="text-align:right">PV</th><th style="text-align:right">혜택전환</th>
+                <th style="text-align:right">UV 영향</th><th style="text-align:right">혜택받기 영향</th><th style="text-align:right">직원확인 영향</th>
+              </tr>
+            </thead>
+            <tbody>${campaignTableRows(millieplaceCampaigns)}</tbody>
+          </table>
+        </div>
       </div>
 
       <div class="kpi-sub" style="margin:4px 2px 0;">원본: 확장팀 마케팅 Master Sheet_2026.xlsx (히어로배너 · 밀플히어로 시트) · UV/PV/혜택전환/DAU/클릭율/전환율은 시트에 보고된 자체 지표, 영향 컬럼만 대시보드 데이터로 자동 계산돼요</div>`;
-
-    renderFilteredSections(selectedEventMonth);
-
-    const monthSelect = document.getElementById("event-month-select");
-    monthSelect.value = selectedEventMonth;
-    monthSelect.addEventListener("change", () => {
-      selectedEventMonth = monthSelect.value;
-      renderFilteredSections(selectedEventMonth);
-    });
   }
 
   function avgOfArr(arr) {
