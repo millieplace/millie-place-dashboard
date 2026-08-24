@@ -1802,6 +1802,37 @@
     });
   }
 
+  function getActiveStoreCountAsOf(dailyTotals, targetDate, cutoffDays) {
+    const lastActive = {};
+    Object.keys(dailyTotals).forEach(d => {
+      if (d > targetDate) return;
+      const bucket = dailyTotals[d];
+      Object.entries(bucket).forEach(([name, v]) => {
+        if (v > 0 && (!lastActive[name] || d > lastActive[name])) lastActive[name] = d;
+      });
+    });
+    let count = 0;
+    Object.values(lastActive).forEach(la => {
+      const daysSince = Math.round((new Date(targetDate + "T00:00:00") - new Date(la + "T00:00:00")) / 86400000);
+      if (daysSince < cutoffDays) count += 1;
+    });
+    return count;
+  }
+
+  function buildStoreCountInsight(refDate, prevRefDate, refLabel, prevLabel) {
+    const dsMetric = METRICS_DATA["daily_store"];
+    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
+    if (!Object.keys(dailyTotals).length || !refDate) return null;
+    const curCount = getActiveStoreCountAsOf(dailyTotals, refDate, 10);
+    if (!prevRefDate) {
+      return `${refLabel} 기준 활성 제휴처는 <b>${curCount}곳</b>이에요`;
+    }
+    const prevCount = getActiveStoreCountAsOf(dailyTotals, prevRefDate, 10);
+    const diff = curCount - prevCount;
+    const diffText = diff === 0 ? "변동 없어요" : `<span style="color:${diff > 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${diff > 0 ? "▲" : "▼"}${Math.abs(diff)}곳</span> ${diff > 0 ? "늘었어요" : "줄었어요"}`;
+    return `${refLabel} 기준 활성 제휴처는 <b>${curCount}곳</b>으로, ${prevLabel}(${prevCount}곳) 대비 ${diffText}`;
+  }
+
   function renderWeeklyInsights(weekMonday) {
     const parts = [];
     const bits = [];
@@ -1839,6 +1870,24 @@
         }
         parts.push(`혜택받기 전환율(UV 대비)은 선택한 주 누적 기준 <b>${convNow.toFixed(1)}%</b>예요${cmpStr}`);
       }
+    }
+
+    const dsMetric = METRICS_DATA["daily_store"];
+    const dailyTotalsForCount = (dsMetric && dsMetric.daily_totals) || {};
+    const storeDates = Object.keys(dailyTotalsForCount).sort();
+    if (storeDates.length && weekMonday) {
+      const latestStoreDate = storeDates[storeDates.length - 1];
+      const weekSundayDate = new Date(weekMonday + "T00:00:00");
+      weekSundayDate.setDate(weekSundayDate.getDate() + 6);
+      const weekSunday = toLocalDateStr(weekSundayDate);
+      const refDate = weekSunday < latestStoreDate ? weekSunday : latestStoreDate;
+      const prevRefDate = (() => {
+        const d = new Date(refDate + "T00:00:00");
+        d.setDate(d.getDate() - 7);
+        return toLocalDateStr(d);
+      })();
+      const storeInsight = buildStoreCountInsight(refDate, prevRefDate, `선택한 주(${refDate.slice(5)})`, "전주 동일 시점");
+      if (storeInsight) parts.push(storeInsight);
     }
 
     if (!parts.length) return "";
@@ -2299,14 +2348,14 @@
     const parts = [];
     const momBits = [];
     let bestGrowth = null;
-    let monthLabel = "이번 달", prevMonthLabel = "전월", latestDateLabel = "";
+    let monthLabel = "이번 달", prevMonthLabel = "전월", latestDateLabel = "", latestDateFull = "";
     METRIC_ORDER.forEach(key => {
       const m = METRICS_DATA[key];
       if (!m || !m.series || !m.series.length) return;
       const { current, delta, monthLabel: ml, prevMonthLabel: pml, latestDate } = computeMonthToDateKpi(m.series);
       if (current === null) return;
       monthLabel = ml; prevMonthLabel = pml;
-      if (latestDate) latestDateLabel = latestDate.slice(5);
+      if (latestDate) { latestDateLabel = latestDate.slice(5); latestDateFull = latestDate; }
       let pctStr = "";
       if (delta !== null) {
         const up = delta >= 0;
@@ -2336,6 +2385,17 @@
         }
         parts.push(`혜택받기 전환율(UV 대비)은 ${monthLabel} 누적 기준 <b>${convNow.toFixed(1)}%</b>예요${cmpStr}`);
       }
+    }
+
+    if (latestDateFull) {
+      const [ly, lm, ld] = latestDateFull.split("-").map(Number);
+      let py = ly, pm = lm - 1;
+      if (pm === 0) { pm = 12; py -= 1; }
+      const daysInPrevMonth = new Date(py, pm, 0).getDate();
+      const pd = Math.min(ld, daysInPrevMonth);
+      const prevRefDate = `${py}-${String(pm).padStart(2, "0")}-${String(pd).padStart(2, "0")}`;
+      const storeInsight = buildStoreCountInsight(latestDateFull, prevRefDate, `${monthLabel} ${latestDateLabel}`, `${prevMonthLabel} 동일 시점`);
+      if (storeInsight) parts.push(storeInsight);
     }
 
     if (!parts.length) return "";
@@ -2402,6 +2462,20 @@
         }
         parts.push(`혜택받기 전환율(UV 대비)은 ${label} 기준 <b>${convNow.toFixed(1)}%</b>예요${cmpStr}`);
       }
+    }
+
+    if (label) {
+      const [ey, em] = label.split("-").map(Number);
+      const lastDay = new Date(ey, em, 0).getDate();
+      const refDate = `${label}-${String(lastDay).padStart(2, "0")}`;
+      let prevRefDate = null;
+      if (prevLabel) {
+        const [py, pm] = prevLabel.split("-").map(Number);
+        const prevLastDay = new Date(py, pm, 0).getDate();
+        prevRefDate = `${prevLabel}-${String(prevLastDay).padStart(2, "0")}`;
+      }
+      const storeInsight = buildStoreCountInsight(refDate, prevRefDate, `${label} 말`, `${prevLabel || "-"} 말`);
+      if (storeInsight) parts.push(storeInsight);
     }
 
     parts.push(...renderStoreLevelInsights());
