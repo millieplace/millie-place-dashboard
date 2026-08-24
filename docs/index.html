@@ -3516,7 +3516,7 @@
           if (daysSince < cutoffDays) activeCount += 1;
         }
       });
-      points.push({ key: monday, label: monday.slice(5), value: activeCount, checkpoint });
+      points.push({ key: monday, label: checkpoint.slice(5), value: activeCount, checkpoint });
     });
 
     return points;
