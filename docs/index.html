@@ -1802,20 +1802,23 @@
     });
   }
 
-  function getActiveStoreCountAsOf(dailyTotals, targetDate, cutoffDays) {
-    const lastActive = {};
+  const PARTNER_ACTIVE_WINDOW_DAYS = 10;
+  const PARTNER_ACTIVE_MIN_UV = 4;
+
+  function getActiveStoreCountAsOf(dailyTotals, targetDate, windowDays, minTotal) {
+    const windowStartDate = new Date(targetDate + "T00:00:00");
+    windowStartDate.setDate(windowStartDate.getDate() - (windowDays - 1));
+    const windowStart = toLocalDateStr(windowStartDate);
+    const totals = {};
     Object.keys(dailyTotals).forEach(d => {
-      if (d > targetDate) return;
+      if (d < windowStart || d > targetDate) return;
       const bucket = dailyTotals[d];
       Object.entries(bucket).forEach(([name, v]) => {
-        if (v > 0 && (!lastActive[name] || d > lastActive[name])) lastActive[name] = d;
+        totals[name] = (totals[name] || 0) + v;
       });
     });
     let count = 0;
-    Object.values(lastActive).forEach(la => {
-      const daysSince = Math.round((new Date(targetDate + "T00:00:00") - new Date(la + "T00:00:00")) / 86400000);
-      if (daysSince < cutoffDays) count += 1;
-    });
+    Object.values(totals).forEach(t => { if (t >= minTotal) count += 1; });
     return count;
   }
 
@@ -1823,11 +1826,11 @@
     const dsMetric = METRICS_DATA["daily_store_uv"];
     const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
     if (!Object.keys(dailyTotals).length || !refDate) return null;
-    const curCount = getActiveStoreCountAsOf(dailyTotals, refDate, 10);
+    const curCount = getActiveStoreCountAsOf(dailyTotals, refDate, PARTNER_ACTIVE_WINDOW_DAYS, PARTNER_ACTIVE_MIN_UV);
     if (!prevRefDate) {
       return `${refLabel} 기준 활성 제휴처는 <b>${curCount}곳</b>이에요`;
     }
-    const prevCount = getActiveStoreCountAsOf(dailyTotals, prevRefDate, 10);
+    const prevCount = getActiveStoreCountAsOf(dailyTotals, prevRefDate, PARTNER_ACTIVE_WINDOW_DAYS, PARTNER_ACTIVE_MIN_UV);
     const diff = curCount - prevCount;
     const diffText = diff === 0 ? "변동 없어요" : `<span style="color:${diff > 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${diff > 0 ? "▲" : "▼"}${Math.abs(diff)}곳</span> ${diff > 0 ? "늘었어요" : "줄었어요"}`;
     return `${refLabel} 기준 활성 제휴처는 <b>${curCount}곳</b>으로, ${prevLabel}(${prevCount}곳) 대비 ${diffText}`;
@@ -3481,7 +3484,7 @@
     return `${py}-${String(pm).padStart(2, "0")}`;
   }
 
-  function computeWeeklyActiveStoreCounts(dailyTotals, cutoffDays) {
+  function computeWeeklyActiveStoreCounts(dailyTotals, windowDays, minTotal) {
     const dates = getSortedDates(dailyTotals);
     if (!dates.length) return [];
 
@@ -3492,34 +3495,11 @@
     });
     const sortedMondays = Object.keys(weeksMap).sort();
 
-    const lastActive = {};
-    const allStoresEverSeen = new Set();
-    let dateIdx = 0;
-    const points = [];
-
-    sortedMondays.forEach(monday => {
+    return sortedMondays.map(monday => {
       const checkpoint = weeksMap[monday];
-      while (dateIdx < dates.length && dates[dateIdx] <= checkpoint) {
-        const d = dates[dateIdx];
-        const bucket = dailyTotals[d];
-        Object.entries(bucket).forEach(([name, v]) => {
-          allStoresEverSeen.add(name);
-          if (v > 0) lastActive[name] = d;
-        });
-        dateIdx += 1;
-      }
-      let activeCount = 0;
-      allStoresEverSeen.forEach(name => {
-        const la = lastActive[name];
-        if (la) {
-          const daysSince = Math.round((new Date(checkpoint + "T00:00:00") - new Date(la + "T00:00:00")) / 86400000);
-          if (daysSince < cutoffDays) activeCount += 1;
-        }
-      });
-      points.push({ key: monday, label: checkpoint.slice(5), value: activeCount, checkpoint });
+      const activeCount = getActiveStoreCountAsOf(dailyTotals, checkpoint, windowDays, minTotal);
+      return { key: monday, label: checkpoint.slice(5), value: activeCount, checkpoint };
     });
-
-    return points;
   }
 
   let partnerCountChartInstance = null;
@@ -3531,11 +3511,11 @@
     if (!canvas) return;
     if (!Object.keys(dailyTotals).length) return;
 
-    const points = computeWeeklyActiveStoreCounts(dailyTotals, 10);
+    const points = computeWeeklyActiveStoreCounts(dailyTotals, PARTNER_ACTIVE_WINDOW_DAYS, PARTNER_ACTIVE_MIN_UV);
     if (!points.length) return;
 
     const latest = points[points.length - 1];
-    document.getElementById("partner-count-summary").textContent = `현재 활성 제휴처 ${latest.value}곳 (${latest.checkpoint} 기준, 최근 10일 이상 UV(방문) 없는 매장 제외)`;
+    document.getElementById("partner-count-summary").textContent = `현재 활성 제휴처 ${latest.value}곳 (${latest.checkpoint} 기준, 최근 ${PARTNER_ACTIVE_WINDOW_DAYS}일 누적 UV ${PARTNER_ACTIVE_MIN_UV}건 미만인 매장 제외)`;
 
     if (partnerCountChartInstance) { partnerCountChartInstance.destroy(); partnerCountChartInstance = null; }
     const interval = points.length > 20 ? 2 : 1;
@@ -3619,7 +3599,7 @@
         <div class="section-head"><h2>📊 전체 제휴처 수 추이 (주별)</h2></div>
         <div id="partner-count-summary" style="font-size:12.5px; color:var(--ink-faint); margin-bottom:10px;"></div>
         <div class="trend-chart-wrap"><canvas id="partnerCountChart"></canvas></div>
-        <div class="kpi-sub" style="margin-top:8px;">매장 상세페이지 UV(daily_store_uv) 기준 · 별도의 "제휴처 수" 지표가 없어, 매장별 마지막 UV(방문) 발생일로부터 10일 이상 지나면 제휴 종료로 간주하고 집계했어요</div>
+        <div class="kpi-sub" style="margin-top:8px;">매장 상세페이지 UV(daily_store_uv) 기준 · 별도의 "제휴처 수" 지표가 없어, 최근 10일 누적 UV가 4건 미만이면 제휴 종료(또는 사실상 비활성)로 간주하고 집계했어요 (실제 매장 리스트로 검증 예정, 임계값은 조정될 수 있어요)</div>
       </div>
 
       <div class="section-card">
