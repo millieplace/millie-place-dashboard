@@ -1820,7 +1820,7 @@
   }
 
   function buildStoreCountInsight(refDate, prevRefDate, refLabel, prevLabel) {
-    const dsMetric = METRICS_DATA["daily_store"];
+    const dsMetric = METRICS_DATA["daily_store_uv"];
     const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
     if (!Object.keys(dailyTotals).length || !refDate) return null;
     const curCount = getActiveStoreCountAsOf(dailyTotals, refDate, 10);
@@ -1872,7 +1872,7 @@
       }
     }
 
-    const dsMetric = METRICS_DATA["daily_store"];
+    const dsMetric = METRICS_DATA["daily_store_uv"];
     const dailyTotalsForCount = (dsMetric && dsMetric.daily_totals) || {};
     const storeDates = Object.keys(dailyTotalsForCount).sort();
     if (storeDates.length && weekMonday) {
@@ -3525,7 +3525,7 @@
   let partnerCountChartInstance = null;
 
   function renderPartnerCountChart() {
-    const dsMetric = METRICS_DATA["daily_store"];
+    const dsMetric = METRICS_DATA["daily_store_uv"];
     const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
     const canvas = document.getElementById("partnerCountChart");
     if (!canvas) return;
@@ -3535,7 +3535,7 @@
     if (!points.length) return;
 
     const latest = points[points.length - 1];
-    document.getElementById("partner-count-summary").textContent = `현재 활성 제휴처 ${latest.value}곳 (${latest.checkpoint} 기준, 최근 10일 이상 혜택클릭 없는 매장 제외)`;
+    document.getElementById("partner-count-summary").textContent = `현재 활성 제휴처 ${latest.value}곳 (${latest.checkpoint} 기준, 최근 10일 이상 UV(방문) 없는 매장 제외)`;
 
     if (partnerCountChartInstance) { partnerCountChartInstance.destroy(); partnerCountChartInstance = null; }
     const interval = points.length > 20 ? 2 : 1;
@@ -3619,7 +3619,7 @@
         <div class="section-head"><h2>📊 전체 제휴처 수 추이 (주별)</h2></div>
         <div id="partner-count-summary" style="font-size:12.5px; color:var(--ink-faint); margin-bottom:10px;"></div>
         <div class="trend-chart-wrap"><canvas id="partnerCountChart"></canvas></div>
-        <div class="kpi-sub" style="margin-top:8px;">일별 매장 데이터(혜택클릭) 기준 · 별도의 "제휴처 수" 지표가 없어, 매장별 마지막 혜택클릭 발생일로부터 10일 이상 지나면 제휴 종료로 간주하고 집계했어요</div>
+        <div class="kpi-sub" style="margin-top:8px;">매장 상세페이지 UV(daily_store_uv) 기준 · 별도의 "제휴처 수" 지표가 없어, 매장별 마지막 UV(방문) 발생일로부터 10일 이상 지나면 제휴 종료로 간주하고 집계했어요</div>
       </div>
 
       <div class="section-card">
