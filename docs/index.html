@@ -1940,6 +1940,71 @@
     };
   }
 
+  function sumStoreRange(dailyTotals, storeName, start, end) {
+    let sum = 0;
+    Object.keys(dailyTotals).forEach(d => {
+      if (d >= start && d <= end) sum += (dailyTotals[d][storeName] || 0);
+    });
+    return sum;
+  }
+
+  function estimateCampaignRangeContribution(c, rangeStart, rangeEnd) {
+    const totalDays = Math.round((new Date(c.end + "T00:00:00") - new Date(c.start + "T00:00:00")) / 86400000) + 1;
+    if (totalDays <= 0) return 0;
+    const overlapStart = c.start > rangeStart ? c.start : rangeStart;
+    const overlapEnd = c.end < rangeEnd ? c.end : rangeEnd;
+    if (overlapStart > overlapEnd) return 0;
+    const overlapDays = Math.round((new Date(overlapEnd + "T00:00:00") - new Date(overlapStart + "T00:00:00")) / 86400000) + 1;
+    return c.uv * (overlapDays / totalDays);
+  }
+
+  function identifyLikelyUvDrivers(reportMonday, reportSunday, absDelta) {
+    const candidates = [];
+    if (!absDelta || absDelta <= 0) return candidates;
+
+    // 신규 매장(최근 60일 내 진입) 혜택클릭 기여 변화 - 실측치
+    const dsMetric = METRICS_DATA["daily_store"];
+    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
+    if (Object.keys(dailyTotals).length) {
+      const firstDate = detectStoreFirstAppearance(dailyTotals);
+      const recentNewStores = Object.keys(firstDate).filter(n => {
+        const days = (new Date(reportSunday + "T00:00:00") - new Date(firstDate[n] + "T00:00:00")) / 86400000;
+        return days >= 0 && days <= 60;
+      });
+      if (recentNewStores.length) {
+        const prevMondayDate = new Date(reportMonday + "T00:00:00");
+        prevMondayDate.setDate(prevMondayDate.getDate() - 7);
+        const prevMonday = toLocalDateStr(prevMondayDate);
+        const prevSundayDate = new Date(reportSunday + "T00:00:00");
+        prevSundayDate.setDate(prevSundayDate.getDate() - 7);
+        const prevSunday = toLocalDateStr(prevSundayDate);
+        const reportSum = recentNewStores.reduce((a, n) => a + sumStoreRange(dailyTotals, n, reportMonday, reportSunday), 0);
+        const prevSum = recentNewStores.reduce((a, n) => a + sumStoreRange(dailyTotals, n, prevMonday, prevSunday), 0);
+        const contribution = reportSum - prevSum;
+        if (contribution >= absDelta * 0.1) {
+          candidates.push({ text: `신규 매장(최근 60일 내 진입 ${recentNewStores.length}곳) 혜택클릭 합계가 전주 ${fmt(prevSum)}건 → 이번 주 ${fmt(reportSum)}건으로 늘어난 게 기여했을 가능성이 있어요`, weight: contribution });
+        }
+      }
+    }
+
+    // 배너 캠페인 - 노출 기간 비례 배분 추정치가 델타의 10% 이상일 때만 후보로 (규모가 안 맞으면 제외)
+    const heroMillieGrouped = groupHeroMillieByTitle(HERO_MILLIE_RAW);
+    const allCampaigns = [
+      ...heroMillieGrouped.map(c => ({ ...c, group: "밀리의서재" })),
+      ...HERO_MILLIEPLACE.map(c => ({ ...c, group: "밀리플레이스" })),
+    ];
+    allCampaigns.forEach(c => {
+      if (c.start > reportSunday || c.end < reportMonday) return;
+      const contribution = estimateCampaignRangeContribution(c, reportMonday, reportSunday);
+      if (contribution >= absDelta * 0.1) {
+        candidates.push({ text: `"${c.title}"(${c.group}) 배너 노출 — 기간 비례 추정 UV 기여량 약 ${fmt(Math.round(contribution))}건`, weight: contribution });
+      }
+    });
+
+    candidates.sort((a, b) => b.weight - a.weight);
+    return candidates;
+  }
+
   function buildWeeklyExecReport() {
     const parts = [];
     const curMonthKey = getMonthKeyFromDate(new Date());
@@ -1986,13 +2051,13 @@
     const uvW = uvSeries && uvSeries.length ? computeCompleteWeekComparison(uvSeries) : null;
     if (uvW && uvW.delta !== null && Math.abs(uvW.delta) >= 5 && reportMonday && reportSunday) {
       const dir = uvW.delta >= 0 ? "증가" : "감소";
-      const heroMillieGrouped = groupHeroMillieByTitle(HERO_MILLIE_RAW);
-      const allCampaigns = [...heroMillieGrouped, ...HERO_MILLIEPLACE];
-      const activeCampaigns = allCampaigns.filter(c => c.start <= reportSunday && c.end >= reportMonday);
-      if (activeCampaigns.length) {
-        weekLines.push(`UV ${dir} 사유 확인중 (높은 확률로 "${activeCampaigns[0].title}" 배너 노출 영향)`);
+      const absDelta = (uvW.current !== null && uvW.prev !== null) ? Math.abs(uvW.current - uvW.prev) : null;
+      const candidates = identifyLikelyUvDrivers(reportMonday, reportSunday, absDelta);
+      if (candidates.length) {
+        weekLines.push(`UV ${dir} 요인 후보: ${candidates[0].text}`);
+        if (candidates[1]) weekLines.push(`(추가 후보) ${candidates[1].text}`);
       } else {
-        weekLines.push(`UV ${dir} 사유 확인중`);
+        weekLines.push(`UV ${dir} 사유는 뚜렷하게 파악되지 않았어요 — 신규 매장·배너 노출 규모로는 이번 변화폭(${fmt(absDelta)}건)이 설명되지 않아 추가 확인이 필요해요`);
       }
     }
     if (weekLines.length) parts.push({ heading: `지난주 (${reportWeekLabel}) 실적 — 전주 (${prevWeekLabel}) 대비`, lines: weekLines });
@@ -2044,8 +2109,14 @@
         const curMonthPct = curMonthTotalSum > 0 ? (curMonthNewSum / curMonthTotalSum) * 100 : null;
 
         if (prevMonthPct !== null && curMonthPct !== null) {
-          momLines.push(`${parseInt(prevMonthKey.slice(5), 10)}월 말부터 신규매장 ${newStoreNames.length}개 추가 노출에 따라 혜택받기/직원확인 증가 중`);
-          momLines.push(`&nbsp;&nbsp;신규 매장 혜택클릭 기준 ${prevMonthKey} Total ${fmt(prevMonthNewSum)}회 (전체의 ${prevMonthPct.toFixed(1)}%) → ${curMonthKey} ${latestDayLabel}일까지 ${fmt(curMonthNewSum)}회 (전체의 ${curMonthPct.toFixed(1)}%)`);
+          const detail = `신규 매장 혜택클릭 기준 ${prevMonthKey} Total ${fmt(prevMonthNewSum)}회 (전체의 ${prevMonthPct.toFixed(1)}%) → ${curMonthKey} ${latestDayLabel}일까지 ${fmt(curMonthNewSum)}회 (전체의 ${curMonthPct.toFixed(1)}%)`;
+          const shareGrowth = curMonthPct - prevMonthPct;
+          if (shareGrowth >= 2) {
+            momLines.push(`${parseInt(prevMonthKey.slice(5), 10)}월 말부터 신규매장 ${newStoreNames.length}개가 추가되면서, 전체에서 차지하는 혜택클릭 비중이 ${prevMonthPct.toFixed(1)}%→${curMonthPct.toFixed(1)}%로 뚜렷하게 늘었어요 — 혜택받기/직원확인 증가에 일부 기여했을 가능성이 있어요`);
+          } else {
+            momLines.push(`${parseInt(prevMonthKey.slice(5), 10)}월 말부터 신규매장 ${newStoreNames.length}개가 추가됐지만, 전체 혜택클릭에서 차지하는 비중 변화는 크지 않아요 (${prevMonthPct.toFixed(1)}%→${curMonthPct.toFixed(1)}%) — 다른 요인을 더 확인해볼 필요가 있어요`);
+          }
+          momLines.push(`&nbsp;&nbsp;${detail}`);
         }
       }
     }
