@@ -3407,6 +3407,106 @@
     return `${py}-${String(pm).padStart(2, "0")}`;
   }
 
+  function computeWeeklyActiveStoreCounts(dailyTotals, cutoffDays) {
+    const dates = getSortedDates(dailyTotals);
+    if (!dates.length) return [];
+
+    const weeksMap = {};
+    dates.forEach(d => {
+      const monday = getMondayOf(d);
+      if (!weeksMap[monday] || d > weeksMap[monday]) weeksMap[monday] = d;
+    });
+    const sortedMondays = Object.keys(weeksMap).sort();
+
+    const lastActive = {};
+    const allStoresEverSeen = new Set();
+    let dateIdx = 0;
+    const points = [];
+
+    sortedMondays.forEach(monday => {
+      const checkpoint = weeksMap[monday];
+      while (dateIdx < dates.length && dates[dateIdx] <= checkpoint) {
+        const d = dates[dateIdx];
+        const bucket = dailyTotals[d];
+        Object.entries(bucket).forEach(([name, v]) => {
+          allStoresEverSeen.add(name);
+          if (v > 0) lastActive[name] = d;
+        });
+        dateIdx += 1;
+      }
+      let activeCount = 0;
+      allStoresEverSeen.forEach(name => {
+        const la = lastActive[name];
+        if (la) {
+          const daysSince = Math.round((new Date(checkpoint + "T00:00:00") - new Date(la + "T00:00:00")) / 86400000);
+          if (daysSince < cutoffDays) activeCount += 1;
+        }
+      });
+      points.push({ key: monday, label: monday.slice(5), value: activeCount, checkpoint });
+    });
+
+    return points;
+  }
+
+  let partnerCountChartInstance = null;
+
+  function renderPartnerCountChart() {
+    const dsMetric = METRICS_DATA["daily_store"];
+    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
+    const canvas = document.getElementById("partnerCountChart");
+    if (!canvas) return;
+    if (!Object.keys(dailyTotals).length) return;
+
+    const points = computeWeeklyActiveStoreCounts(dailyTotals, 10);
+    if (!points.length) return;
+
+    const latest = points[points.length - 1];
+    document.getElementById("partner-count-summary").textContent = `현재 활성 제휴처 ${latest.value}곳 (${latest.checkpoint} 기준, 최근 10일 이상 혜택클릭 없는 매장 제외)`;
+
+    if (partnerCountChartInstance) { partnerCountChartInstance.destroy(); partnerCountChartInstance = null; }
+    const interval = points.length > 20 ? 2 : 1;
+    partnerCountChartInstance = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: points.map(p => p.label),
+        datasets: [{
+          data: points.map(p => p.value),
+          borderColor: "#6366f1",
+          backgroundColor: "#6366f1",
+          tension: 0.3,
+          pointRadius: (ctx) => {
+            const i = ctx.dataIndex, len = ctx.dataset.data.length;
+            return (i % interval === 0 || i === len - 1) ? 3 : 0;
+          },
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            align: "top", offset: 4,
+            font: { size: 10, family: "'IBM Plex Mono', monospace", weight: 600 },
+            color: "#6366f1",
+            backgroundColor: "rgba(255,255,255,0.85)",
+            borderRadius: 3,
+            padding: { top: 1, bottom: 1, left: 3, right: 3 },
+            formatter: (v, ctx) => {
+              const i = ctx.dataIndex, len = ctx.dataset.data.length;
+              return (i % interval === 0 || i === len - 1) ? v.toLocaleString("ko-KR") : "";
+            },
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 10.5 }, maxTicksLimit: 20 } },
+          y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+        },
+      },
+    });
+  }
+
   function renderPartnerTab() {
     const area = document.getElementById("partner-area");
     const storeMetric = METRICS_DATA[STORE_KEY];
@@ -3442,6 +3542,13 @@
 
     area.innerHTML = `
       <div class="section-card">
+        <div class="section-head"><h2>📊 전체 제휴처 수 추이 (주별)</h2></div>
+        <div id="partner-count-summary" style="font-size:12.5px; color:var(--ink-faint); margin-bottom:10px;"></div>
+        <div class="trend-chart-wrap"><canvas id="partnerCountChart"></canvas></div>
+        <div class="kpi-sub" style="margin-top:8px;">일별 매장 데이터(혜택클릭) 기준 · 별도의 "제휴처 수" 지표가 없어, 매장별 마지막 혜택클릭 발생일로부터 10일 이상 지나면 제휴 종료로 간주하고 집계했어요</div>
+      </div>
+
+      <div class="section-card">
         <div class="section-head"><h2>제휴처 검색</h2></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <input type="text" id="partner-search" class="store-select"
@@ -3453,6 +3560,8 @@
         </div>
       </div>
       <div id="partner-detail-area"></div>`;
+
+    renderPartnerCountChart();
 
     const searchInput = document.getElementById("partner-search");
     const selectEl = document.getElementById("partner-select");
