@@ -1802,35 +1802,193 @@
     });
   }
 
-  const PARTNER_ACTIVE_WINDOW_DAYS = 10;
-  const PARTNER_ACTIVE_MIN_UV = 4;
+  // 제휴 매장 마스터 리스트 (밀리플레이스_월간_데이터_250902_제휴_매장 시트 기준 스냅샷)
+  // status: 제휴 중 / 해지, expose: 앱 노출 날짜, term: 해지일자
+  const PARTNER_STORE_MASTER = [
+    { name: "커피사촌로스터스", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "칩멍크", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "인크커피 가산점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "인크커피 다산점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "인크커피 하남미사 1호점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "마하 한남", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "커브힐 (유월커피 이태원점)", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "유월커피 회현점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "유월커피 역삼점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "프로토콜 연희점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "프로토콜 상수점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "fyi 역삼", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "연남장", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "연남방앗간 DDP점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "연남방앗간 서울역점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "캐비넷클럽라운지 역삼점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "쎈느 성수점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "쎈느 건국점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "노우즈 종로 풍경점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "노우즈 창덕점", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "리제로 서울", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "센티멘트", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "다용도실", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "센토브", status: "제휴 중", expose: "2025-04-15", term: null },
+    { name: "부암동 스코프", status: "제휴 중", expose: "2025-05-15", term: null },
+    { name: "카페허블&남산책방", status: "제휴 중", expose: "2025-05-30", term: null },
+    { name: "필리그랑", status: "제휴 중", expose: "2025-05-30", term: null },
+    { name: "멀멀 판교", status: "제휴 중", expose: "2025-05-30", term: null },
+    { name: "모을", status: "제휴 중", expose: "2025-05-30", term: null },
+    { name: "밤부 베이커리&브루잉 합정점", status: "제휴 중", expose: "2025-06-09", term: null },
+    { name: "밤부 베이커리&브루잉 서래점", status: "제휴 중", expose: "2025-06-09", term: null },
+    { name: "누아", status: "제휴 중", expose: "2025-06-09", term: null },
+    { name: "커피맨션문장", status: "제휴 중", expose: "2025-06-09", term: null },
+    { name: "문지살롱", status: "제휴 중", expose: "2025-06-16", term: null },
+    { name: "런 커피 RUN COFFEE", status: "제휴 중", expose: "2025-06-16", term: null },
+    { name: "EMME", status: "제휴 중", expose: "2025-06-16", term: null },
+    { name: "쓰리어클락 연희", status: "제휴 중", expose: "2025-06-16", term: null },
+    { name: "쓰리어클락 김포", status: "제휴 중", expose: "2025-06-16", term: null },
+    { name: "캣냅", status: "제휴 중", expose: "2025-06-16", term: null },
+    { name: "단위", status: "제휴 중", expose: "2025-06-16", term: null },
+    { name: "에테르", status: "제휴 중", expose: "2025-06-16", term: null },
+    { name: "코이", status: "제휴 중", expose: "2025-06-23", term: null },
+    { name: "포러리", status: "제휴 중", expose: "2025-06-23", term: null },
+    { name: "카페온휴", status: "제휴 중", expose: "2025-06-23", term: null },
+    { name: "트램서울", status: "제휴 중", expose: "2025-06-23", term: null },
+    { name: "무화과나무 아래", status: "제휴 중", expose: "2025-06-23", term: null },
+    { name: "김성종추리문학관", status: "제휴 중", expose: "2025-07-07", term: null },
+    { name: "앤드아워", status: "제휴 중", expose: "2025-07-07", term: null },
+    { name: "커피문화사 수유", status: "제휴 중", expose: "2025-07-14", term: null },
+    { name: "비단베이커리&카페", status: "제휴 중", expose: "2025-07-14", term: null },
+    { name: "카페다옴", status: "제휴 중", expose: "2025-07-14", term: null },
+    { name: "어노렌지", status: "제휴 중", expose: "2025-07-21", term: null },
+    { name: "올드북촌", status: "제휴 중", expose: "2025-07-21", term: null },
+    { name: "세시라기", status: "제휴 중", expose: "2025-07-21", term: null },
+    { name: "소피 soffee", status: "제휴 중", expose: "2025-07-21", term: null },
+    { name: "스틸히어", status: "제휴 중", expose: "2025-07-21", term: null },
+    { name: "진소아 커피", status: "제휴 중", expose: "2025-07-21", term: null },
+    { name: "녹음집", status: "제휴 중", expose: "2025-07-21", term: null },
+    { name: "애틱인서울하우스", status: "제휴 중", expose: "2025-07-28", term: null },
+    { name: "식구", status: "제휴 중", expose: "2025-07-28", term: null },
+    { name: "홍제맨션 에스프레소 바", status: "제휴 중", expose: "2025-07-28", term: null },
+    { name: "엔드 투 앤드", status: "제휴 중", expose: "2025-07-28", term: null },
+    { name: "밋업커피하우스", status: "제휴 중", expose: "2025-08-04", term: null },
+    { name: "디센시커피스튜디오", status: "제휴 중", expose: "2025-08-04", term: null },
+    { name: "휴앤안커피", status: "제휴 중", expose: "2025-08-13", term: null },
+    { name: "현해탄", status: "제휴 중", expose: "2025-08-13", term: null },
+    { name: "피삼사", status: "제휴 중", expose: "2025-08-13", term: null },
+    { name: "종이숲", status: "제휴 중", expose: "2025-08-19", term: null },
+    { name: "시로", status: "제휴 중", expose: "2025-08-19", term: null },
+    { name: "소소밀밀 북카페", status: "제휴 중", expose: "2025-08-28", term: null },
+    { name: "무우수 커피 로스터스", status: "제휴 중", expose: "2025-08-28", term: null },
+    { name: "홀리몰리", status: "제휴 중", expose: "2025-08-28", term: null },
+    { name: "가배초당", status: "제휴 중", expose: "2025-08-28", term: null },
+    { name: "평정", status: "제휴 중", expose: "2025-09-01", term: null },
+    { name: "애딩웜스", status: "제휴 중", expose: "2025-09-01", term: null },
+    { name: "커피리브레 파란점", status: "제휴 중", expose: "2025-09-10", term: null },
+    { name: "커피 리브레 연남점", status: "제휴 중", expose: "2025-09-09", term: null },
+    { name: "에피소드", status: "제휴 중", expose: "2025-09-12", term: null },
+    { name: "트레바리 안국아지트 슈퍼마켙", status: "제휴 중", expose: "2025-09-22", term: null },
+    { name: "원베일리 인바이트 스카이 11", status: "제휴 중", expose: "2025-09-23", term: null },
+    { name: "1984", status: "제휴 중", expose: "2025-09-26", term: null },
+    { name: "아우어스마켓 커피&굿즈", status: "제휴 중", expose: "2025-10-20", term: null },
+    { name: "인텐스 491", status: "제휴 중", expose: "2025-10-21", term: null },
+    { name: "cafe N&D", status: "제휴 중", expose: "2025-10-27", term: null },
+    { name: "나지트", status: "제휴 중", expose: "2025-10-28", term: null },
+    { name: "콥프키노", status: "제휴 중", expose: "2025-10-30", term: null },
+    { name: "에르네스토", status: "제휴 중", expose: "2025-11-24", term: null },
+    { name: "한쪽가게", status: "제휴 중", expose: "2025-12-01", term: null },
+    { name: "플라세르 과천", status: "제휴 중", expose: "2026-02-02", term: null },
+    { name: "플라세르 신당", status: "제휴 중", expose: "2026-02-02", term: null },
+    { name: "언리튼잉크", status: "제휴 중", expose: "2026-02-13", term: null },
+    { name: "도망", status: "제휴 중", expose: "2026-03-01", term: null },
+    { name: "넛지스 북카페", status: "제휴 중", expose: "2026-03-09", term: null },
+    { name: "로흐", status: "제휴 중", expose: "2026-04-09", term: null },
+    { name: "숲터 그로브 허브 망원", status: "제휴 중", expose: "2026-06-08", term: null },
+    { name: "서울북카페 센버스", status: "제휴 중", expose: "2026-07-22", term: null },
+    { name: "엔게디에스프레소", status: "제휴 중", expose: "2026-07-22", term: null },
+    { name: "Boyo", status: "제휴 중", expose: "2026-07-22", term: null },
+    { name: "하우스 결", status: "제휴 중", expose: "2026-07-27", term: null },
+    { name: "북카페 별빛서재", status: "제휴 중", expose: "2026-07-21", term: null },
+    { name: "무주", status: "제휴 중", expose: "2026-07-22", term: null },
+    { name: "컨트롤러스 커피웍스", status: "제휴 중", expose: "2026-07-23", term: null },
+    { name: "무제", status: "제휴 중", expose: "2026-07-22", term: null },
+    { name: "호소인", status: "제휴 중", expose: "2026-07-27", term: null },
+    { name: "소설과 농담", status: "제휴 중", expose: "2026-07-22", term: null },
+    { name: "라우더댄밤즈", status: "제휴 중", expose: "2026-07-23", term: null },
+    { name: "공상온도", status: "제휴 중", expose: "2026-07-23", term: null },
+    { name: "온뒤", status: "제휴 중", expose: "2026-07-22", term: null },
+    { name: "감동", status: "제휴 중", expose: "2026-07-21", term: null },
+    { name: "모우", status: "제휴 중", expose: "2026-07-21", term: null },
+    { name: "카페미우", status: "제휴 중", expose: "2026-07-21", term: null },
+    { name: "커피집 이공", status: "제휴 중", expose: "2026-07-21", term: null },
+    { name: "콤파일", status: "제휴 중", expose: "2026-07-21", term: null },
+    { name: "9.81파크 제주", status: "제휴 중", expose: "2026-07-26", term: null },
+    { name: "스페이스컵", status: "제휴 중", expose: "2026-07-26", term: null },
+    { name: "유월커피 부산점", status: "해지", expose: "2025-04-15", term: "2026-01-01" },
+    { name: "하버브라운 용산해방촌점", status: "해지", expose: "2025-04-10", term: "2026-04-01" },
+    { name: "노우즈 종로점", status: "해지", expose: "2025-04-10", term: "2025-11-28" },
+    { name: "카페꼼마 홍대점", status: "해지", expose: "2025-04-15", term: "2026-06-30" },
+    { name: "카페꼼마 여의도신영증권점", status: "해지", expose: "2025-04-15", term: "2026-06-30" },
+    { name: "카페꼼마 송도점", status: "해지", expose: "2025-04-15", term: "2026-06-30" },
+    { name: "카페꼼마 합정점", status: "해지", expose: "2025-04-15", term: "2026-06-30" },
+    { name: "카페꼼마 역삼마크로젠점", status: "해지", expose: "2025-04-15", term: "2026-06-30" },
+    { name: "카페꼼마 파랑새안과점", status: "해지", expose: "2025-04-15", term: "2026-06-30" },
+    { name: "책다방 with 카페꼼마", status: "해지", expose: "2025-04-15", term: "2026-06-30" },
+    { name: "마모에", status: "해지", expose: "2025-04-15", term: "2025-08-24" },
+    { name: "나무사이로 내자점", status: "해지", expose: "2025-04-15", term: "2026-06-30" },
+    { name: "나무사이로 석운점", status: "해지", expose: "2025-04-15", term: "2026-06-30" },
+    { name: "나무사이로 제주점", status: "해지", expose: "2025-04-10", term: "2025-11-24" },
+    { name: "더 체임버", status: "해지", expose: "2025-04-10", term: "2025-06-16" },
+    { name: "트와엣모아 창원점", status: "해지", expose: "2025-06-09", term: "2025-12-31" },
+    { name: "알키미스타 증산", status: "해지", expose: "2025-06-16", term: "2025-12-31" },
+    { name: "알키미스타 응암", status: "해지", expose: "2025-06-16", term: "2025-12-31" },
+    { name: "아우토그라프커피 행궁본점", status: "해지", expose: "2025-06-16", term: "2026-06-30" },
+    { name: "아우토그라프커피 행궁점", status: "해지", expose: "2025-06-16", term: "2026-06-30" },
+    { name: "우노도노", status: "해지", expose: "-", term: "2025-10-16" },
+    { name: "당인리책발전소", status: "해지", expose: "2025-07-07", term: "2025-12-31" },
+    { name: "오프레스트 로스터리", status: "해지", expose: "2025-07-07", term: "2026-01-15" },
+    { name: "빌리브인러브", status: "해지", expose: "2025-07-07", term: "2026-03-14" },
+    { name: "북티크", status: "해지", expose: "2025-07-07", term: "2025-12-31" },
+    { name: "카페올피", status: "해지", expose: "2025-07-14", term: "2026-07-24" },
+    { name: "RATHER GOO:D (래더굿)", status: "해지", expose: "2025-07-21", term: "2026-02-21" },
+    { name: "노르디스케", status: "해지", expose: "-", term: "2025-10-16" },
+    { name: "기복", status: "해지", expose: "2025-08-11", term: "2026-02-28" },
+    { name: "무이카", status: "해지", expose: "2025-09-02", term: "2025-12-31" },
+    { name: "애독의 흔적", status: "해지", expose: "-", term: "2026-03-31" },
+    { name: "결핍의결핍", status: "제휴 중", expose: null, term: null },
+    { name: "북살롱 텍스트북", status: "제휴 중", expose: null, term: null },
+    { name: "을커피브루어스", status: "제휴 중", expose: null, term: null },
+    { name: "내면의 발견", status: "제휴 중", expose: null, term: null },
+    { name: "라이피", status: "제휴 중", expose: null, term: null },
+    { name: "송커피X책공간", status: "제휴 중", expose: null, term: null },
+    { name: "cafe heulg 카페 흙", status: "제휴 중", expose: null, term: null },
+    { name: "우리커피클럽", status: "제휴 중", expose: null, term: null },
+    { name: "무가공", status: "제휴 중", expose: null, term: null },
+    { name: "비온디앤", status: "제휴 중", expose: null, term: null },
+    { name: "온숨", status: "제휴 중", expose: null, term: null },
+    { name: "탐석과 사랑", status: "제휴 중", expose: null, term: null },
+    { name: "인덱스숍", status: "제휴 중", expose: null, term: null },
+    { name: "예스커피", status: "제휴 중", expose: null, term: null },
+    { name: "어코트 A CUP OF TEXT", status: "제휴 중", expose: null, term: null },
+    { name: "하츠하우스", status: "제휴 중", expose: null, term: null },
+  ];
 
-  function getActiveStoreCountAsOf(dailyTotals, targetDate, windowDays, minTotal) {
-    const windowStartDate = new Date(targetDate + "T00:00:00");
-    windowStartDate.setDate(windowStartDate.getDate() - (windowDays - 1));
-    const windowStart = toLocalDateStr(windowStartDate);
-    const totals = {};
-    Object.keys(dailyTotals).forEach(d => {
-      if (d < windowStart || d > targetDate) return;
-      const bucket = dailyTotals[d];
-      Object.entries(bucket).forEach(([name, v]) => {
-        totals[name] = (totals[name] || 0) + v;
-      });
-    });
+  const PARTNER_DEFAULT_EXPOSE_DATE = "2025-04-15"; // 앱 노출 날짜 미기재 매장의 기본 추정 시작일
+
+  function getPartnerCountAtDate(targetDate) {
     let count = 0;
-    Object.values(totals).forEach(t => { if (t >= minTotal) count += 1; });
+    PARTNER_STORE_MASTER.forEach(s => {
+      const expose = s.expose || PARTNER_DEFAULT_EXPOSE_DATE;
+      if (expose > targetDate) return;
+      if (s.term && s.term <= targetDate) return;
+      count += 1;
+    });
     return count;
   }
 
   function buildStoreCountInsight(refDate, prevRefDate, refLabel, prevLabel) {
-    const dsMetric = METRICS_DATA["daily_store_uv"];
-    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
-    if (!Object.keys(dailyTotals).length || !refDate) return null;
-    const curCount = getActiveStoreCountAsOf(dailyTotals, refDate, PARTNER_ACTIVE_WINDOW_DAYS, PARTNER_ACTIVE_MIN_UV);
+    if (!refDate) return null;
+    const curCount = getPartnerCountAtDate(refDate);
     if (!prevRefDate) {
       return `${refLabel} 기준 활성 제휴처는 <b>${curCount}곳</b>이에요`;
     }
-    const prevCount = getActiveStoreCountAsOf(dailyTotals, prevRefDate, PARTNER_ACTIVE_WINDOW_DAYS, PARTNER_ACTIVE_MIN_UV);
+    const prevCount = getPartnerCountAtDate(prevRefDate);
     const diff = curCount - prevCount;
     const diffText = diff === 0 ? "변동 없어요" : `<span style="color:${diff > 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${diff > 0 ? "▲" : "▼"}${Math.abs(diff)}곳</span> ${diff > 0 ? "늘었어요" : "줄었어요"}`;
     return `${refLabel} 기준 활성 제휴처는 <b>${curCount}곳</b>으로, ${prevLabel}(${prevCount}곳) 대비 ${diffText}`;
@@ -3484,38 +3642,45 @@
     return `${py}-${String(pm).padStart(2, "0")}`;
   }
 
-  function computeWeeklyActiveStoreCounts(dailyTotals, windowDays, minTotal) {
-    const dates = getSortedDates(dailyTotals);
-    if (!dates.length) return [];
+  function computeWeeklyPartnerCounts() {
+    const dsMetric = METRICS_DATA["daily_store_uv"] || METRICS_DATA["daily_store"];
+    const dates = getSortedDates((dsMetric && dsMetric.daily_totals) || {});
+    const today = toLocalDateStr(new Date());
+    const latestDate = dates.length ? dates[dates.length - 1] : today;
+
+    const allDates = PARTNER_STORE_MASTER.map(s => s.expose || PARTNER_DEFAULT_EXPOSE_DATE);
+    const earliest = allDates.reduce((a, b) => (a < b ? a : b), PARTNER_DEFAULT_EXPOSE_DATE);
 
     const weeksMap = {};
-    dates.forEach(d => {
-      const monday = getMondayOf(d);
-      if (!weeksMap[monday] || d > weeksMap[monday]) weeksMap[monday] = d;
-    });
+    let cur = getMondayOf(earliest);
+    while (cur <= latestDate) {
+      weeksMap[cur] = true;
+      const d = new Date(cur + "T00:00:00");
+      d.setDate(d.getDate() + 7);
+      cur = toLocalDateStr(d);
+    }
     const sortedMondays = Object.keys(weeksMap).sort();
 
     return sortedMondays.map(monday => {
-      const checkpoint = weeksMap[monday];
-      const activeCount = getActiveStoreCountAsOf(dailyTotals, checkpoint, windowDays, minTotal);
-      return { key: monday, label: checkpoint.slice(5), value: activeCount, checkpoint };
+      const sundayDate = new Date(monday + "T00:00:00");
+      sundayDate.setDate(sundayDate.getDate() + 6);
+      const sunday = toLocalDateStr(sundayDate);
+      const checkpoint = sunday < latestDate ? sunday : latestDate;
+      return { key: monday, label: checkpoint.slice(5), value: getPartnerCountAtDate(checkpoint), checkpoint };
     });
   }
 
   let partnerCountChartInstance = null;
 
   function renderPartnerCountChart() {
-    const dsMetric = METRICS_DATA["daily_store_uv"];
-    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
     const canvas = document.getElementById("partnerCountChart");
     if (!canvas) return;
-    if (!Object.keys(dailyTotals).length) return;
 
-    const points = computeWeeklyActiveStoreCounts(dailyTotals, PARTNER_ACTIVE_WINDOW_DAYS, PARTNER_ACTIVE_MIN_UV);
+    const points = computeWeeklyPartnerCounts();
     if (!points.length) return;
 
     const latest = points[points.length - 1];
-    document.getElementById("partner-count-summary").textContent = `현재 활성 제휴처 ${latest.value}곳 (${latest.checkpoint} 기준, 최근 ${PARTNER_ACTIVE_WINDOW_DAYS}일 누적 UV ${PARTNER_ACTIVE_MIN_UV}건 미만인 매장 제외)`;
+    document.getElementById("partner-count-summary").textContent = `현재 활성 제휴처 ${latest.value}곳 (${latest.checkpoint} 기준, 제휴 매장 마스터 리스트의 앱 노출일·해지일 기준)`;
 
     if (partnerCountChartInstance) { partnerCountChartInstance.destroy(); partnerCountChartInstance = null; }
     const interval = points.length > 20 ? 2 : 1;
@@ -3599,7 +3764,7 @@
         <div class="section-head"><h2>📊 전체 제휴처 수 추이 (주별)</h2></div>
         <div id="partner-count-summary" style="font-size:12.5px; color:var(--ink-faint); margin-bottom:10px;"></div>
         <div class="trend-chart-wrap"><canvas id="partnerCountChart"></canvas></div>
-        <div class="kpi-sub" style="margin-top:8px;">매장 상세페이지 UV(daily_store_uv) 기준 · 별도의 "제휴처 수" 지표가 없어, 최근 10일 누적 UV가 4건 미만이면 제휴 종료(또는 사실상 비활성)로 간주하고 집계했어요 (실제 매장 리스트로 검증 예정, 임계값은 조정될 수 있어요)</div>
+        <div class="kpi-sub" style="margin-top:8px;">제휴 매장 마스터 리스트(밀리플레이스_월간_데이터_제휴_매장 시트) 기준 · 매장별 "앱 노출 날짜"~"해지일자" 구간으로 해당 시점의 활성 매장 수를 정확히 계산했어요 (앱 노출 날짜 미기재 매장은 2025-04-15부터 노출된 것으로 간주)</div>
       </div>
 
       <div class="section-card">
