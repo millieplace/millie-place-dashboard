@@ -367,8 +367,9 @@ def fetch_millieplace_banner_snapshot() -> dict:
                         const active = document.querySelector('.hero-banner .swiper-slide-active');
                         if (!active) return null;
                         const img = active.querySelector('img');
+                        const link = active.querySelector('a');
                         const lines = (active.innerText || '').split('\\n').map(s => s.trim()).filter(Boolean);
-                        return { image: img ? img.src : null, lines };
+                        return { image: img ? img.src : null, href: link ? link.href : null, lines };
                     }
                     """
                 )
@@ -379,11 +380,42 @@ def fetch_millieplace_banner_snapshot() -> dict:
                         "image": data["image"],
                         "title": " · ".join(lines[:-1]) if len(lines) > 1 else (lines[0] if lines else ""),
                         "subtitle": lines[-1] if lines else "",
+                        "href": data.get("href"),
                     })
                 if len(slides) >= total:
                     break
                 page.click(".next-button")
                 page.wait_for_timeout(800)
+
+            # 각 슬라이드가 연결된 포스트를 열어 매장 상세 링크(/millieplace/detail/{place_seq})를 찾는다
+            for s in slides:
+                href = s.pop("href", None)
+                s["place_seq"] = None
+                if not href:
+                    continue
+                try:
+                    detail_page = browser.new_page(ignore_https_errors=True)
+                    detail_page.goto(href, wait_until="domcontentloaded", timeout=20000)
+                    try:
+                        detail_page.wait_for_selector('a[href*="/millieplace/detail/"]', timeout=10000)
+                    except Exception:
+                        pass
+                    detail_href = detail_page.evaluate(
+                        """
+                        () => {
+                            const a = Array.from(document.querySelectorAll('a'))
+                                .find(a => a.href.includes('/millieplace/detail/'));
+                            return a ? a.href : null;
+                        }
+                        """
+                    )
+                    detail_page.close()
+                    if detail_href:
+                        m = re.search(r"/detail/(\d+)", detail_href)
+                        if m:
+                            s["place_seq"] = m.group(1)
+                except Exception:
+                    pass
 
             browser.close()
             return {"captured_at": now_kst, "source_url": source_url, "slides": slides, "error": None}
@@ -419,6 +451,8 @@ def main():
     staff_store_history = load_history(staff_store_history_path)
     daily_store_history_path = os.path.join(docs_dir, "daily_store_history.json")
     daily_store_history = load_history(daily_store_history_path)
+    place_seq_map_path = os.path.join(docs_dir, "place_seq_map.json")
+    place_seq_map = load_history(place_seq_map_path)
     store_demo_history_path = os.path.join(docs_dir, "store_demo_history.json")
     store_demo_history = load_history(store_demo_history_path)
     daily_store_uv_history_path = os.path.join(docs_dir, "daily_store_uv_history.json")
@@ -466,6 +500,11 @@ def main():
                 merge_daily_store_history(
                     daily_store_history, summary["rows"], summary["metric_key"], summary["label_key"], summary["time_key"]
                 )
+                for r in summary["rows"]:
+                    seq = r.get("place_seq")
+                    name = r.get(summary["label_key"])
+                    if seq is not None and name:
+                        place_seq_map[str(int(seq))] = name
 
             if key == "daily_store_uv" and summary["metric_key"] and summary["label_key"] and summary["time_key"]:
                 merge_daily_store_history(
@@ -532,6 +571,9 @@ def main():
     with open(daily_store_history_path, "w", encoding="utf-8") as f:
         json.dump(daily_store_history, f, ensure_ascii=False, indent=2)
 
+    with open(place_seq_map_path, "w", encoding="utf-8") as f:
+        json.dump(place_seq_map, f, ensure_ascii=False, indent=2)
+
     with open(daily_store_uv_history_path, "w", encoding="utf-8") as f:
         json.dump(daily_store_uv_history, f, ensure_ascii=False, indent=2)
 
@@ -588,7 +630,7 @@ def main():
         }
         # 이미지별 제목/부제목 메타데이터도 누적 (한 번 본 이미지는 텍스트를 계속 보관)
         for s in banner_snapshot["slides"]:
-            banner_history["meta"][s["image"]] = {"title": s["title"], "subtitle": s["subtitle"]}
+            banner_history["meta"][s["image"]] = {"title": s["title"], "subtitle": s["subtitle"], "place_seq": s.get("place_seq")}
 
         with open(banner_history_path, "w", encoding="utf-8") as f:
             json.dump(banner_history, f, ensure_ascii=False, indent=2)
