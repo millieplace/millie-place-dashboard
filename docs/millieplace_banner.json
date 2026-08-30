@@ -1,7 +1,12 @@
 {
-  "captured_at": "2026-08-28 12:00:00 KST",
+  "captured_at": "2026-08-30 17:37:43 KST",
   "source_url": "https://www.millie.co.kr/v4/millieplace",
   "slides": [
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6a87fca690704.jpg",
+      "title": "동네한바퀴 인터뷰 · 손님들과 공동육아 중",
+      "subtitle": "사모예드 겨울이가 있는 카페미우"
+    },
     {
       "image": "https://image.millie.co.kr/service/hero_banner/6a8bd64668a33.jpg",
       "title": "동네한바퀴 인터뷰 · 밤늦게 머무는 사람 편",
@@ -11,11 +16,6 @@
       "image": "https://image.millie.co.kr/service/hero_banner/6a7eaa4786cdc.jpg",
       "title": "동네한바퀴 인터뷰 · 곧 승진할 영업사원",
       "subtitle": "간판견 아지가 있는 연남동 카페 온뒤"
-    },
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6a87fca690704.jpg",
-      "title": "동네한바퀴 인터뷰 · 손님들과 공동육아 중",
-      "subtitle": "사모예드 겨울이가 있는 카페미우"
     }
   ],
   "error": null
