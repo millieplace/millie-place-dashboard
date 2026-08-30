@@ -4012,7 +4012,7 @@
     let cur = null;
     dates.forEach(date => {
       const images = history.days[date].images || [];
-      const signature = images.join("|");
+      const signature = images.slice().sort().join("|");
       if (cur && cur.signature === signature) {
         cur.end = date;
       } else {
