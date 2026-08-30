@@ -29,6 +29,10 @@ jobs:
       - name: 패키지 설치
         run: pip install -r requirements.txt
 
+      - name: Playwright 브라우저 설치 (밀리플레이스 메인 배너 스크래핑용)
+        run: python -m playwright install chromium
+        continue-on-error: true
+
       - name: Superset 데이터 가져오기
         env:
           SUPERSET_USERNAME: ${{ secrets.SUPERSET_USERNAME }}
@@ -41,7 +45,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/data.json docs/history.json docs/store_history.json docs/benefit_store_history.json docs/staff_store_history.json docs/daily_store_history.json docs/daily_store_uv_history.json docs/qr_daily_store_uv_history.json docs/daily_store_staff_history.json docs/store_demo_history.json
+          git add docs/data.json docs/history.json docs/store_history.json docs/benefit_store_history.json docs/staff_store_history.json docs/daily_store_history.json docs/daily_store_uv_history.json docs/qr_daily_store_uv_history.json docs/daily_store_staff_history.json docs/store_demo_history.json docs/millieplace_banner.json
           git diff --staged --quiet
           if ($LASTEXITCODE -ne 0) {
             git commit -m "chore: update dashboard data $(Get-Date -Format 'yyyy-MM-dd')"
