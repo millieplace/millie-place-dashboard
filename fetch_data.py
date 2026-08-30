@@ -571,11 +571,28 @@ def main():
     # 밀리플레이스 메인 배너 콘텐츠 스냅샷 (Superset과 무관, 실패해도 위 데이터 수집 결과에는 영향 없음)
     print("밀리플레이스 메인 배너 콘텐츠 확인 중...")
     banner_path = os.path.join(docs_dir, "millieplace_banner.json")
+    banner_history_path = os.path.join(docs_dir, "millieplace_banner_history.json")
     banner_snapshot = fetch_millieplace_banner_snapshot()
     if banner_snapshot.get("slides"):
         with open(banner_path, "w", encoding="utf-8") as f:
             json.dump(banner_snapshot, f, ensure_ascii=False, indent=2)
         print(f"배너 스냅샷 갱신: 슬라이드 {len(banner_snapshot['slides'])}개")
+
+        # 날짜별 히스토리에 오늘자 스냅샷 upsert (이미지 URL만 저장해 파일 크기 절약, 제목/부제목은 최초 등장일 기준 별도 보관)
+        banner_history = load_history(banner_history_path)
+        banner_history.setdefault("days", {})
+        banner_history.setdefault("meta", {})
+        today_key = banner_snapshot["captured_at"][:10]  # YYYY-MM-DD
+        banner_history["days"][today_key] = {
+            "images": [s["image"] for s in banner_snapshot["slides"]],
+        }
+        # 이미지별 제목/부제목 메타데이터도 누적 (한 번 본 이미지는 텍스트를 계속 보관)
+        for s in banner_snapshot["slides"]:
+            banner_history["meta"][s["image"]] = {"title": s["title"], "subtitle": s["subtitle"]}
+
+        with open(banner_history_path, "w", encoding="utf-8") as f:
+            json.dump(banner_history, f, ensure_ascii=False, indent=2)
+        print(f"배너 히스토리 갱신: {today_key}")
     else:
         print(f"배너 스냅샷 갱신 실패 (이전 파일 유지): {banner_snapshot.get('error')}", file=sys.stderr)
 
