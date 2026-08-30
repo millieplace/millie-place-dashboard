@@ -652,6 +652,7 @@
 
   let METRICS_DATA = {};
   let MILLIEPLACE_BANNER_DATA = null;
+  let MILLIEPLACE_BANNER_HISTORY = null;
 
   function buildTruncatedMetricsData(cutoffDate) {
     const truncated = {};
@@ -4001,6 +4002,37 @@
     return parts;
   }
 
+  function buildBannerPeriods(history) {
+    if (!history || !history.days) return [];
+    const dates = Object.keys(history.days).sort();
+    if (!dates.length) return [];
+    const meta = history.meta || {};
+
+    const periods = [];
+    let cur = null;
+    dates.forEach(date => {
+      const images = history.days[date].images || [];
+      const signature = images.join("|");
+      if (cur && cur.signature === signature) {
+        cur.end = date;
+      } else {
+        if (cur) periods.push(cur);
+        cur = { start: date, end: date, signature, images };
+      }
+    });
+    if (cur) periods.push(cur);
+
+    return periods.reverse().map(p => ({
+      start: p.start,
+      end: p.end,
+      slides: p.images.map(img => ({
+        image: img,
+        title: (meta[img] && meta[img].title) || "",
+        subtitle: (meta[img] && meta[img].subtitle) || "",
+      })),
+    }));
+  }
+
   function renderEventTab() {
     const area = document.getElementById("event-area");
 
@@ -4082,6 +4114,30 @@
             </div>`).join("")}
         </div>
       </div>
+
+      ${(() => {
+        const periods = buildBannerPeriods(MILLIEPLACE_BANNER_HISTORY);
+        if (!periods.length) return "";
+        const shown = periods.slice(0, 10);
+        return `<div class="section-card">
+          <div class="section-head"><h2>🗂 밀리플레이스 메인 배너 — 노출 히스토리 (기간별)</h2></div>
+          <div style="font-size:12px; color:var(--ink-faint); margin-bottom:12px;">같은 배너 구성이 유지된 기간끼리 묶어서 최신순으로 보여줘요 · 매일 자동 스크래핑 결과가 쌓여요${periods.length > shown.length ? ` (최근 ${shown.length}개 기간만 표시, 전체 ${periods.length}개)` : ""}</div>
+          ${shown.map(p => `
+            <div style="padding:12px 0; border-top:1px solid var(--border);">
+              <div style="font-size:12.5px; font-weight:700; margin-bottom:8px;">${p.start}${p.start !== p.end ? ` ~ ${p.end}` : ""}</div>
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                ${p.slides.map(s => `
+                  <div style="width:140px;">
+                    <div style="aspect-ratio:16/10; border-radius:8px; overflow:hidden; background:#f1f2f5;">
+                      <img src="${s.image}" alt="${s.title}" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">
+                    </div>
+                    <div style="font-size:11px; font-weight:600; margin-top:4px; line-height:1.3;">${s.title}</div>
+                    <div style="font-size:10.5px; color:var(--ink-faint); margin-top:1px; line-height:1.3;">${s.subtitle}</div>
+                  </div>`).join("")}
+              </div>
+            </div>`).join("")}
+        </div>`;
+      })()}
 
       <div class="section-card">
         <div class="section-head"><h2>📅 기간 선택</h2></div>
@@ -4391,6 +4447,12 @@
         if (bannerRes.ok) MILLIEPLACE_BANNER_DATA = await bannerRes.json();
       } catch (e) {
         MILLIEPLACE_BANNER_DATA = null;
+      }
+      try {
+        const bannerHistRes = await fetch("./millieplace_banner_history.json", { cache: "no-store" });
+        if (bannerHistRes.ok) MILLIEPLACE_BANNER_HISTORY = await bannerHistRes.json();
+      } catch (e) {
+        MILLIEPLACE_BANNER_HISTORY = null;
       }
       renderEventTab();
 
