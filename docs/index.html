@@ -653,6 +653,7 @@
   let METRICS_DATA = {};
   let MILLIEPLACE_BANNER_DATA = null;
   let MILLIEPLACE_BANNER_HISTORY = null;
+  let PLACE_SEQ_MAP = {};
 
   function buildTruncatedMetricsData(cutoffDate) {
     const truncated = {};
@@ -4029,8 +4030,53 @@
         image: img,
         title: (meta[img] && meta[img].title) || "",
         subtitle: (meta[img] && meta[img].subtitle) || "",
+        placeSeq: (meta[img] && meta[img].place_seq) || null,
       })),
     }));
+  }
+
+  function computeStoreMetricLift(dailyTotals, storeName, startDate, endDate) {
+    if (!dailyTotals || !storeName) return null;
+    const dates = Object.keys(dailyTotals).sort();
+    if (!dates.length) return null;
+    const latestDate = dates[dates.length - 1];
+    if (startDate > latestDate) return null;
+    const s = new Date(startDate + "T00:00:00");
+    const baseEndDate = new Date(s);
+    baseEndDate.setDate(baseEndDate.getDate() - 1);
+    const baseStartDate = new Date(s);
+    baseStartDate.setDate(baseStartDate.getDate() - 7);
+    const baseStart = toLocalDateStr(baseStartDate);
+    const baseEnd = toLocalDateStr(baseEndDate);
+    const duringEnd = endDate < latestDate ? endDate : latestDate;
+
+    function avgInRange(rangeStart, rangeEnd) {
+      const vals = [];
+      Object.keys(dailyTotals).forEach(d => {
+        if (d >= rangeStart && d <= rangeEnd) vals.push(dailyTotals[d][storeName] || 0);
+      });
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    }
+
+    const during = avgInRange(startDate, duringEnd);
+    const baseline = avgInRange(baseStart, baseEnd);
+    if (baseline === null || baseline === 0 || during === null) return null;
+    return ((during - baseline) / baseline) * 100;
+  }
+
+  function getBannerSlideStoreImpact(slide, startDate, endDate) {
+    if (!slide.placeSeq) return null;
+    const storeName = PLACE_SEQ_MAP[slide.placeSeq];
+    if (!storeName) return null;
+    const uvMetric = METRICS_DATA["daily_store_uv"];
+    const clickMetric = METRICS_DATA["daily_store"];
+    const staffMetric = METRICS_DATA["daily_store_staff"];
+    return {
+      storeName,
+      uvLift: computeStoreMetricLift((uvMetric && uvMetric.daily_totals) || {}, storeName, startDate, endDate),
+      clickLift: computeStoreMetricLift((clickMetric && clickMetric.daily_totals) || {}, storeName, startDate, endDate),
+      staffLift: computeStoreMetricLift((staffMetric && staffMetric.daily_totals) || {}, storeName, startDate, endDate),
+    };
   }
 
   function renderEventTab() {
@@ -4126,14 +4172,24 @@
             <div style="padding:12px 0; border-top:1px solid var(--border);">
               <div style="font-size:12.5px; font-weight:700; margin-bottom:8px;">${p.start}${p.start !== p.end ? ` ~ ${p.end}` : ""}</div>
               <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                ${p.slides.map(s => `
-                  <div style="width:140px;">
+                ${p.slides.map(s => {
+                  const impact = getBannerSlideStoreImpact(s, p.start, p.end);
+                  return `
+                  <div style="width:160px;">
                     <div style="aspect-ratio:16/10; border-radius:8px; overflow:hidden; background:#f1f2f5;">
                       <img src="${s.image}" alt="${s.title}" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">
                     </div>
                     <div style="font-size:11px; font-weight:600; margin-top:4px; line-height:1.3;">${s.title}</div>
                     <div style="font-size:10.5px; color:var(--ink-faint); margin-top:1px; line-height:1.3;">${s.subtitle}</div>
-                  </div>`).join("")}
+                    ${impact ? `
+                      <div style="font-size:10px; font-weight:700; margin-top:5px; color:var(--ink-soft);">🏬 ${impact.storeName}</div>
+                      <div style="font-size:10px; margin-top:2px; line-height:1.6;">
+                        UV ${liftSpan(impact.uvLift)}<br>
+                        혜택클릭 ${liftSpan(impact.clickLift)}<br>
+                        직원확인 ${liftSpan(impact.staffLift)}
+                      </div>` : `<div style="font-size:10px; color:var(--ink-faint); margin-top:5px;">연결된 매장 확인 안 됨</div>`}
+                  </div>`;
+                }).join("")}
               </div>
             </div>`).join("")}
         </div>`;
@@ -4453,6 +4509,12 @@
         if (bannerHistRes.ok) MILLIEPLACE_BANNER_HISTORY = await bannerHistRes.json();
       } catch (e) {
         MILLIEPLACE_BANNER_HISTORY = null;
+      }
+      try {
+        const seqMapRes = await fetch("./place_seq_map.json", { cache: "no-store" });
+        if (seqMapRes.ok) PLACE_SEQ_MAP = await seqMapRes.json();
+      } catch (e) {
+        PLACE_SEQ_MAP = {};
       }
       renderEventTab();
 
