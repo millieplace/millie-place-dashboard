@@ -4046,7 +4046,39 @@
       document.getElementById("event-hero-millie-count").textContent = `${filteredMillie.length}건`;
     }
 
+    // 밀리플레이스 메인 페이지 히어로 배너 - 현재 노출 중인 콘텐츠 스냅샷
+    // 출처: https://short.millie.co.kr/nv2kdu (수동 캡처, 배너가 바뀌면 다시 요청해서 갱신)
+    const MILLIEPLACE_LIVE_BANNER = {
+      capturedAt: "2026-08-28",
+      sourceUrl: "https://short.millie.co.kr/nv2kdu",
+      slides: [
+        { image: "https://image.millie.co.kr/service/hero_banner/6a87fca690704.jpg", title: "동네한바퀴 인터뷰 · 손님들과 공동육아 중", subtitle: "사모예드 겨울이가 있는 카페미우" },
+        { image: "https://image.millie.co.kr/service/hero_banner/6a8bd64668a33.jpg", title: "동네한바퀴 인터뷰 · 밤늦게 머무는 사람 편", subtitle: "밤 11시까지 여는 오목교 다락방" },
+        { image: "https://image.millie.co.kr/service/hero_banner/6a7eaa4786cdc.jpg", title: "동네한바퀴 인터뷰 · 곧 승진할 영업사원", subtitle: "간판견 아지가 있는 연남동 카페 온뒤" },
+      ],
+    };
+
     area.innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><h2>🖼 밀리플레이스 메인 배너 — 현재 노출 콘텐츠</h2></div>
+        <div style="font-size:12px; color:var(--ink-faint); margin-bottom:12px;">
+          ${MILLIEPLACE_LIVE_BANNER.capturedAt} 캡처 · <a href="${MILLIEPLACE_LIVE_BANNER.sourceUrl}" target="_blank" style="color:var(--accent);">원본 페이지 바로가기 ↗</a> · 실시간 자동 동기화는 아니고, 배너가 바뀌면 다시 요청 시 갱신돼요
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:14px;">
+          ${MILLIEPLACE_LIVE_BANNER.slides.map((s, i) => `
+            <div style="border-radius:12px; overflow:hidden; border:1px solid var(--border);">
+              <div style="aspect-ratio:16/10; background:#f1f2f5;">
+                <img src="${s.image}" alt="${s.title}" style="width:100%; height:100%; object-fit:cover; display:block;" loading="lazy">
+              </div>
+              <div style="padding:10px 12px;">
+                <div style="font-size:11px; color:var(--ink-faint); margin-bottom:2px;">슬라이드 ${i + 1}/${MILLIEPLACE_LIVE_BANNER.slides.length}</div>
+                <div style="font-size:13px; font-weight:700; line-height:1.4;">${s.title}</div>
+                <div style="font-size:12px; color:var(--ink-soft); margin-top:2px;">${s.subtitle}</div>
+              </div>
+            </div>`).join("")}
+        </div>
+      </div>
+
       <div class="section-card">
         <div class="section-head"><h2>📅 기간 선택</h2></div>
         <select id="event-month-select" class="store-select" style="max-width:200px; padding:9px 14px;">
