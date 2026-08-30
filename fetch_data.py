@@ -332,6 +332,65 @@ def merge_daily_store_history(history: dict, rows: list, metric_key: str, label_
         history[date] = bucket
 
 
+def fetch_millieplace_banner_snapshot() -> dict:
+    """밀리플레이스 메인 페이지 히어로 배너의 현재 노출 콘텐츠(이미지+문구)를 스크래핑한다.
+    Superset과 무관한 별도 소스이므로, 실패해도 메인 데이터 수집에 영향 주지 않도록 항상 dict를 반환한다."""
+    now_kst = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M:%S KST")
+    source_url = "https://www.millie.co.kr/v4/millieplace"
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return {"captured_at": now_kst, "source_url": source_url, "slides": [], "error": "playwright 미설치"}
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900}, ignore_https_errors=True)
+            page.goto(source_url, wait_until="networkidle", timeout=30000)
+            page.wait_for_selector(".hero-banner .swiper-slide", timeout=20000)
+            try:
+                page.click(".play-button-wrapper", timeout=3000)  # 자동재생 정지 (안정적 캡처용)
+            except Exception:
+                pass
+            page.wait_for_timeout(1000)
+
+            total = page.evaluate(
+                "document.querySelectorAll('.hero-banner .swiper-slide:not(.swiper-slide-duplicate)').length"
+            )
+
+            slides = []
+            seen_images = set()
+            for _ in range(total + 1):  # 한 바퀴 여유
+                data = page.evaluate(
+                    """
+                    () => {
+                        const active = document.querySelector('.hero-banner .swiper-slide-active');
+                        if (!active) return null;
+                        const img = active.querySelector('img');
+                        const lines = (active.innerText || '').split('\\n').map(s => s.trim()).filter(Boolean);
+                        return { image: img ? img.src : null, lines };
+                    }
+                    """
+                )
+                if data and data.get("image") and data["image"] not in seen_images:
+                    seen_images.add(data["image"])
+                    lines = data.get("lines") or []
+                    slides.append({
+                        "image": data["image"],
+                        "title": " · ".join(lines[:-1]) if len(lines) > 1 else (lines[0] if lines else ""),
+                        "subtitle": lines[-1] if lines else "",
+                    })
+                if len(slides) >= total:
+                    break
+                page.click(".next-button")
+                page.wait_for_timeout(800)
+
+            browser.close()
+            return {"captured_at": now_kst, "source_url": source_url, "slides": slides, "error": None}
+    except Exception as e:
+        return {"captured_at": now_kst, "source_url": source_url, "slides": [], "error": str(e)}
+
+
 def main():
     username = os.environ.get("SUPERSET_USERNAME")
     password = os.environ.get("SUPERSET_PASSWORD")
@@ -508,6 +567,17 @@ def main():
         json.dump(output, f, ensure_ascii=False, indent=2)
 
     print(f"완료! {out_path} 에 저장했습니다. (히스토리: {history_path})")
+
+    # 밀리플레이스 메인 배너 콘텐츠 스냅샷 (Superset과 무관, 실패해도 위 데이터 수집 결과에는 영향 없음)
+    print("밀리플레이스 메인 배너 콘텐츠 확인 중...")
+    banner_path = os.path.join(docs_dir, "millieplace_banner.json")
+    banner_snapshot = fetch_millieplace_banner_snapshot()
+    if banner_snapshot.get("slides"):
+        with open(banner_path, "w", encoding="utf-8") as f:
+            json.dump(banner_snapshot, f, ensure_ascii=False, indent=2)
+        print(f"배너 스냅샷 갱신: 슬라이드 {len(banner_snapshot['slides'])}개")
+    else:
+        print(f"배너 스냅샷 갱신 실패 (이전 파일 유지): {banner_snapshot.get('error')}", file=sys.stderr)
 
 
 if __name__ == "__main__":
