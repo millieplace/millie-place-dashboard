@@ -1998,19 +1998,33 @@
         terminatedNames.add(s.name);
         return;
       }
-      if (!s.hasContract) return; // 계약일자 미기재 매장은 마스터 기준 카운트 대신 아래 직원확인 보정으로 처리
+      if (!s.hasContract) return; // 계약일자 미기재 매장은 마스터 기준 카운트 대신 아래 신규매장 보정으로 처리
       const expose = s.expose || PARTNER_DEFAULT_EXPOSE_DATE;
       if (expose > targetDate) return;
       active.add(s.name);
     });
+
+    // 이번 달 신규 매장(혜택클릭 기준 최초 등장) 중, 직원확인 기록이 하나라도 있는 매장은 제휴 완료로 간주
+    const curMonthKey = getMonthKeyFromDate(new Date());
+    const dsMetric = METRICS_DATA["daily_store"];
+    const dailyTotals = (dsMetric && dsMetric.daily_totals) || {};
+    const firstDate = detectStoreFirstAppearance(dailyTotals);
+    const thisMonthNewStores = Object.keys(firstDate).filter(n => firstDate[n].startsWith(curMonthKey) && firstDate[n] <= targetDate);
+
     const staffMetric = METRICS_DATA["daily_store_staff"];
     const staffDaily = (staffMetric && staffMetric.daily_totals) || {};
+    const staffCheckedStores = new Set();
     Object.keys(staffDaily).forEach(d => {
       if (d > targetDate) return;
       Object.entries(staffDaily[d]).forEach(([name, v]) => {
-        if (v > 0 && name && name !== "null" && !terminatedNames.has(name)) active.add(name);
+        if (v > 0 && name && name !== "null") staffCheckedStores.add(name);
       });
     });
+
+    thisMonthNewStores.forEach(name => {
+      if (staffCheckedStores.has(name) && !terminatedNames.has(name)) active.add(name);
+    });
+
     return active.size;
   }
 
@@ -2307,7 +2321,7 @@
       const correctedCount = getPartnerCountAtDateWithStaffFallback(reportSunday);
       const extraCount = correctedCount - excelCount;
       if (extraCount > 0) {
-        weekLines.push(`활성 제휴처는 제휴 매장 리스트(엑셀) 기준 <b>${excelCount}곳</b>이지만, 직원확인 기록까지 포함하면 <b>${correctedCount}곳</b>으로 <span style="color:var(--good); font-weight:600;">+${extraCount}곳</span> 더 있는 것으로 보여요 <span style="color:var(--ink-faint); font-size:11px;">(엑셀 최신화 전까지 임시 반영, 다음 업데이트 시 정정 예정)</span>`);
+        weekLines.push(`활성 제휴처는 제휴 매장 리스트(엑셀) 기준 <b>${excelCount}곳</b>이지만, 이번 달 신규 매장 중 직원확인 기록이 있는 곳까지 포함하면 <b>${correctedCount}곳</b>으로 <span style="color:var(--good); font-weight:600;">+${extraCount}곳</span> 더 있는 것으로 보여요 <span style="color:var(--ink-faint); font-size:11px;">(엑셀 최신화 전까지 임시 반영, 다음 업데이트 시 정정 예정)</span>`);
       } else {
         weekLines.push(`활성 제휴처는 제휴 매장 리스트(엑셀) 기준 <b>${excelCount}곳</b>이에요`);
       }
@@ -2378,7 +2392,7 @@
       const correctedCount2 = getPartnerCountAtDateWithStaffFallback(latestDateFull);
       const extraCount2 = correctedCount2 - excelCount2;
       if (extraCount2 > 0) {
-        momLines.push(`활성 제휴처는 제휴 매장 리스트(엑셀) 기준 <b>${excelCount2}곳</b>이지만, 직원확인 기록까지 포함하면 <b>${correctedCount2}곳</b>으로 <span style="color:var(--good); font-weight:600;">+${extraCount2}곳</span> 더 있는 것으로 보여요 <span style="color:var(--ink-faint); font-size:11px;">(엑셀 최신화 전까지 임시 반영, 다음 업데이트 시 정정 예정)</span>`);
+        momLines.push(`활성 제휴처는 제휴 매장 리스트(엑셀) 기준 <b>${excelCount2}곳</b>이지만, 이번 달 신규 매장 중 직원확인 기록이 있는 곳까지 포함하면 <b>${correctedCount2}곳</b>으로 <span style="color:var(--good); font-weight:600;">+${extraCount2}곳</span> 더 있는 것으로 보여요 <span style="color:var(--ink-faint); font-size:11px;">(엑셀 최신화 전까지 임시 반영, 다음 업데이트 시 정정 예정)</span>`);
       } else {
         momLines.push(`활성 제휴처는 제휴 매장 리스트(엑셀) 기준 <b>${excelCount2}곳</b>이에요`);
       }
