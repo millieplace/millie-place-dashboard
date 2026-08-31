@@ -6,6 +6,14 @@
         "https://image.millie.co.kr/service/hero_banner/6a8bd64668a33.jpg",
         "https://image.millie.co.kr/service/hero_banner/6a7eaa4786cdc.jpg"
       ]
+    },
+    "2026-08-31": {
+      "images": [
+        "https://image.millie.co.kr/service/hero_banner/6a9126baea853.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6a9128dfb4abb.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6a87fca690704.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6a8bd64668a33.jpg"
+      ]
     }
   },
   "meta": {
@@ -23,6 +31,16 @@
       "title": "동네한바퀴 인터뷰 · 곧 승진할 영업사원",
       "subtitle": "간판견 아지가 있는 연남동 카페 온뒤",
       "place_seq": "1166"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6a9126baea853.jpg": {
+      "title": "동네한바퀴 인터뷰 · 시간을 선물하는 곳",
+      "subtitle": "기분 좋은 브런치 시간, 멀멀 판교",
+      "place_seq": "1056"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6a9128dfb4abb.jpg": {
+      "title": "동네한바퀴 인터뷰 · 굳이 안부를 묻는 곳",
+      "subtitle": "애교쟁이 뽀니가 있는 중랑구 예스커피",
+      "place_seq": "1189"
     }
   }
 }
