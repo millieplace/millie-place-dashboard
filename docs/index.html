@@ -2303,14 +2303,14 @@
       }
     }
     if (reportSunday) {
-      const prevWeekSundayDate = new Date(reportSunday + "T00:00:00");
-      prevWeekSundayDate.setDate(prevWeekSundayDate.getDate() - 7);
-      const prevWeekSunday = toLocalDateStr(prevWeekSundayDate);
-      const curPartnerCount = getPartnerCountAtDateWithStaffFallback(reportSunday);
-      const prevPartnerCount = getPartnerCountAtDateWithStaffFallback(prevWeekSunday);
-      const pDiff = curPartnerCount - prevPartnerCount;
-      const pDiffText = pDiff === 0 ? "변동 없어요" : `<span style="color:${pDiff > 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${pDiff > 0 ? "▲" : "▼"}${Math.abs(pDiff)}곳</span>`;
-      weekLines.push(`활성 제휴처는 ${reportSunday} 기준 <b>${curPartnerCount}곳</b>으로, 전주 동시점(${prevPartnerCount}곳) 대비 ${pDiffText} <span style="color:var(--ink-faint); font-size:11px;">(제휴 매장 리스트 최신화 전까지, 직원확인 기록이 있는 매장은 임시로 제휴 완료 처리)</span>`);
+      const excelCount = getPartnerCountAtDate(reportSunday);
+      const correctedCount = getPartnerCountAtDateWithStaffFallback(reportSunday);
+      const extraCount = correctedCount - excelCount;
+      if (extraCount > 0) {
+        weekLines.push(`활성 제휴처는 제휴 매장 리스트(엑셀) 기준 <b>${excelCount}곳</b>이지만, 직원확인 기록까지 포함하면 <b>${correctedCount}곳</b>으로 <span style="color:var(--good); font-weight:600;">+${extraCount}곳</span> 더 있는 것으로 보여요 <span style="color:var(--ink-faint); font-size:11px;">(엑셀 최신화 전까지 임시 반영, 다음 업데이트 시 정정 예정)</span>`);
+      } else {
+        weekLines.push(`활성 제휴처는 제휴 매장 리스트(엑셀) 기준 <b>${excelCount}곳</b>이에요`);
+      }
     }
     if (weekLines.length) parts.push({ heading: `지난주 (${reportWeekLabel}) 실적 — 전주 (${prevWeekLabel}) 대비`, lines: weekLines });
 
@@ -2374,17 +2374,14 @@
     }
     if (uvSeries && uvSeries.length) {
       const latestDateFull = uvSeries[uvSeries.length - 1].date;
-      const [ly2, lm2, ld2] = latestDateFull.split("-").map(Number);
-      let py2 = ly2, pm2 = lm2 - 1;
-      if (pm2 === 0) { pm2 = 12; py2 -= 1; }
-      const daysInPrevMonth2 = new Date(py2, pm2, 0).getDate();
-      const pd2 = Math.min(ld2, daysInPrevMonth2);
-      const prevRefDate2 = `${py2}-${String(pm2).padStart(2, "0")}-${String(pd2).padStart(2, "0")}`;
-      const curPartnerCount2 = getPartnerCountAtDateWithStaffFallback(latestDateFull);
-      const prevPartnerCount2 = getPartnerCountAtDateWithStaffFallback(prevRefDate2);
-      const pDiff2 = curPartnerCount2 - prevPartnerCount2;
-      const pDiffText2 = pDiff2 === 0 ? "변동 없어요" : `<span style="color:${pDiff2 > 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${pDiff2 > 0 ? "▲" : "▼"}${Math.abs(pDiff2)}곳</span>`;
-      momLines.push(`활성 제휴처는 ${latestDateFull} 기준 <b>${curPartnerCount2}곳</b>으로, 전월 동일 시점(${prevPartnerCount2}곳) 대비 ${pDiffText2} <span style="color:var(--ink-faint); font-size:11px;">(제휴 매장 리스트 최신화 전까지, 직원확인 기록이 있는 매장은 임시로 제휴 완료 처리)</span>`);
+      const excelCount2 = getPartnerCountAtDate(latestDateFull);
+      const correctedCount2 = getPartnerCountAtDateWithStaffFallback(latestDateFull);
+      const extraCount2 = correctedCount2 - excelCount2;
+      if (extraCount2 > 0) {
+        momLines.push(`활성 제휴처는 제휴 매장 리스트(엑셀) 기준 <b>${excelCount2}곳</b>이지만, 직원확인 기록까지 포함하면 <b>${correctedCount2}곳</b>으로 <span style="color:var(--good); font-weight:600;">+${extraCount2}곳</span> 더 있는 것으로 보여요 <span style="color:var(--ink-faint); font-size:11px;">(엑셀 최신화 전까지 임시 반영, 다음 업데이트 시 정정 예정)</span>`);
+      } else {
+        momLines.push(`활성 제휴처는 제휴 매장 리스트(엑셀) 기준 <b>${excelCount2}곳</b>이에요`);
+      }
     }
     if (momLines.length) parts.push({ heading: `전월 동기 대비 (${monthLabel} vs ${prevMonthLabel}, 각 1일~${latestDayLabel}일)`, lines: momLines });
 
