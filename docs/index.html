@@ -1986,6 +1986,34 @@
     return count;
   }
 
+  // 임시 보정: 마스터 리스트에 계약일자가 아직 안 채워졌어도, 직원확인 기록이 실제로 찍힌 매장은
+  // 제휴가 된 것으로 간주해서 카운트에 포함 (엑셀이 최신화되면 다시 getPartnerCountAtDate만 쓰면 됨)
+  function getPartnerCountAtDateWithStaffFallback(targetDate) {
+    const active = new Set();
+    const terminatedNames = new Set();
+    PARTNER_STORE_MASTER.forEach(s => {
+      const isTerminatedByDate = s.term && s.term <= targetDate;
+      const isTerminatedByStatus = s.status === "해지" && !s.term;
+      if (isTerminatedByDate || isTerminatedByStatus) {
+        terminatedNames.add(s.name);
+        return;
+      }
+      if (!s.hasContract) return; // 계약일자 미기재 매장은 마스터 기준 카운트 대신 아래 직원확인 보정으로 처리
+      const expose = s.expose || PARTNER_DEFAULT_EXPOSE_DATE;
+      if (expose > targetDate) return;
+      active.add(s.name);
+    });
+    const staffMetric = METRICS_DATA["daily_store_staff"];
+    const staffDaily = (staffMetric && staffMetric.daily_totals) || {};
+    Object.keys(staffDaily).forEach(d => {
+      if (d > targetDate) return;
+      Object.entries(staffDaily[d]).forEach(([name, v]) => {
+        if (v > 0 && name && name !== "null" && !terminatedNames.has(name)) active.add(name);
+      });
+    });
+    return active.size;
+  }
+
   function buildStoreCountInsight(refDate, prevRefDate, refLabel, prevLabel) {
     if (!refDate) return null;
     const curCount = getPartnerCountAtDate(refDate);
@@ -2278,11 +2306,11 @@
       const prevWeekSundayDate = new Date(reportSunday + "T00:00:00");
       prevWeekSundayDate.setDate(prevWeekSundayDate.getDate() - 7);
       const prevWeekSunday = toLocalDateStr(prevWeekSundayDate);
-      const curPartnerCount = getPartnerCountAtDate(reportSunday);
-      const prevPartnerCount = getPartnerCountAtDate(prevWeekSunday);
+      const curPartnerCount = getPartnerCountAtDateWithStaffFallback(reportSunday);
+      const prevPartnerCount = getPartnerCountAtDateWithStaffFallback(prevWeekSunday);
       const pDiff = curPartnerCount - prevPartnerCount;
       const pDiffText = pDiff === 0 ? "변동 없어요" : `<span style="color:${pDiff > 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${pDiff > 0 ? "▲" : "▼"}${Math.abs(pDiff)}곳</span>`;
-      weekLines.push(`활성 제휴처는 ${reportSunday} 기준 <b>${curPartnerCount}곳</b>으로, 전주 동시점(${prevPartnerCount}곳) 대비 ${pDiffText}`);
+      weekLines.push(`활성 제휴처는 ${reportSunday} 기준 <b>${curPartnerCount}곳</b>으로, 전주 동시점(${prevPartnerCount}곳) 대비 ${pDiffText} <span style="color:var(--ink-faint); font-size:11px;">(제휴 매장 리스트 최신화 전까지, 직원확인 기록이 있는 매장은 임시로 제휴 완료 처리)</span>`);
     }
     if (weekLines.length) parts.push({ heading: `지난주 (${reportWeekLabel}) 실적 — 전주 (${prevWeekLabel}) 대비`, lines: weekLines });
 
@@ -2352,11 +2380,11 @@
       const daysInPrevMonth2 = new Date(py2, pm2, 0).getDate();
       const pd2 = Math.min(ld2, daysInPrevMonth2);
       const prevRefDate2 = `${py2}-${String(pm2).padStart(2, "0")}-${String(pd2).padStart(2, "0")}`;
-      const curPartnerCount2 = getPartnerCountAtDate(latestDateFull);
-      const prevPartnerCount2 = getPartnerCountAtDate(prevRefDate2);
+      const curPartnerCount2 = getPartnerCountAtDateWithStaffFallback(latestDateFull);
+      const prevPartnerCount2 = getPartnerCountAtDateWithStaffFallback(prevRefDate2);
       const pDiff2 = curPartnerCount2 - prevPartnerCount2;
       const pDiffText2 = pDiff2 === 0 ? "변동 없어요" : `<span style="color:${pDiff2 > 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${pDiff2 > 0 ? "▲" : "▼"}${Math.abs(pDiff2)}곳</span>`;
-      momLines.push(`활성 제휴처는 ${latestDateFull} 기준 <b>${curPartnerCount2}곳</b>으로, 전월 동일 시점(${prevPartnerCount2}곳) 대비 ${pDiffText2}`);
+      momLines.push(`활성 제휴처는 ${latestDateFull} 기준 <b>${curPartnerCount2}곳</b>으로, 전월 동일 시점(${prevPartnerCount2}곳) 대비 ${pDiffText2} <span style="color:var(--ink-faint); font-size:11px;">(제휴 매장 리스트 최신화 전까지, 직원확인 기록이 있는 매장은 임시로 제휴 완료 처리)</span>`);
     }
     if (momLines.length) parts.push({ heading: `전월 동기 대비 (${monthLabel} vs ${prevMonthLabel}, 각 1일~${latestDayLabel}일)`, lines: momLines });
 
