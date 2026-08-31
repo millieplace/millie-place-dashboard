@@ -2322,6 +2322,14 @@
       const extraCount = correctedCount - excelCount;
       if (extraCount > 0) {
         weekLines.push(`활성 제휴처는 제휴 매장 리스트(엑셀) 기준 <b>${excelCount}곳</b>이지만, 이번 달 신규 매장 중 직원확인 기록이 있는 곳까지 포함하면 <b>${correctedCount}곳</b>으로 <span style="color:var(--good); font-weight:600;">+${extraCount}곳</span> 더 있는 것으로 보여요 <span style="color:var(--ink-faint); font-size:11px;">(엑셀 최신화 전까지 임시 반영, 다음 업데이트 시 정정 예정)</span>`);
+
+        const prevWeekSundayDate2 = new Date(reportSunday + "T00:00:00");
+        prevWeekSundayDate2.setDate(prevWeekSundayDate2.getDate() - 7);
+        const prevWeekSunday2 = toLocalDateStr(prevWeekSundayDate2);
+        const prevCorrectedCount = getPartnerCountAtDateWithStaffFallback(prevWeekSunday2);
+        const wDiff = correctedCount - prevCorrectedCount;
+        const wDiffText = wDiff === 0 ? "변동 없어요" : `<span style="color:${wDiff > 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${wDiff > 0 ? "▲" : "▼"}${Math.abs(wDiff)}곳</span>`;
+        weekLines.push(`(보정 기준) 지난주(${prevWeekSunday2}) ${prevCorrectedCount}곳 → 이번 주(${reportSunday}) ${correctedCount}곳으로 ${wDiffText}`);
       } else {
         weekLines.push(`활성 제휴처는 제휴 매장 리스트(엑셀) 기준 <b>${excelCount}곳</b>이에요`);
       }
