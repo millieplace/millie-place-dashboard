@@ -2274,6 +2274,16 @@
         weekLines.push(`UV ${dir} 사유는 뚜렷하게 파악되지 않았어요 — 신규 매장·배너 노출 규모로는 이번 변화폭(${fmt(absDelta)}건)이 설명되지 않아 추가 확인이 필요해요`);
       }
     }
+    if (reportSunday) {
+      const prevWeekSundayDate = new Date(reportSunday + "T00:00:00");
+      prevWeekSundayDate.setDate(prevWeekSundayDate.getDate() - 7);
+      const prevWeekSunday = toLocalDateStr(prevWeekSundayDate);
+      const curPartnerCount = getPartnerCountAtDate(reportSunday);
+      const prevPartnerCount = getPartnerCountAtDate(prevWeekSunday);
+      const pDiff = curPartnerCount - prevPartnerCount;
+      const pDiffText = pDiff === 0 ? "변동 없어요" : `<span style="color:${pDiff > 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${pDiff > 0 ? "▲" : "▼"}${Math.abs(pDiff)}곳</span>`;
+      weekLines.push(`활성 제휴처는 ${reportSunday} 기준 <b>${curPartnerCount}곳</b>으로, 전주 동시점(${prevPartnerCount}곳) 대비 ${pDiffText}`);
+    }
     if (weekLines.length) parts.push({ heading: `지난주 (${reportWeekLabel}) 실적 — 전주 (${prevWeekLabel}) 대비`, lines: weekLines });
 
     // 3. 전월 동기 대비
@@ -2333,6 +2343,20 @@
           momLines.push(`&nbsp;&nbsp;${detail}`);
         }
       }
+    }
+    if (uvSeries && uvSeries.length) {
+      const latestDateFull = uvSeries[uvSeries.length - 1].date;
+      const [ly2, lm2, ld2] = latestDateFull.split("-").map(Number);
+      let py2 = ly2, pm2 = lm2 - 1;
+      if (pm2 === 0) { pm2 = 12; py2 -= 1; }
+      const daysInPrevMonth2 = new Date(py2, pm2, 0).getDate();
+      const pd2 = Math.min(ld2, daysInPrevMonth2);
+      const prevRefDate2 = `${py2}-${String(pm2).padStart(2, "0")}-${String(pd2).padStart(2, "0")}`;
+      const curPartnerCount2 = getPartnerCountAtDate(latestDateFull);
+      const prevPartnerCount2 = getPartnerCountAtDate(prevRefDate2);
+      const pDiff2 = curPartnerCount2 - prevPartnerCount2;
+      const pDiffText2 = pDiff2 === 0 ? "변동 없어요" : `<span style="color:${pDiff2 > 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">${pDiff2 > 0 ? "▲" : "▼"}${Math.abs(pDiff2)}곳</span>`;
+      momLines.push(`활성 제휴처는 ${latestDateFull} 기준 <b>${curPartnerCount2}곳</b>으로, 전월 동일 시점(${prevPartnerCount2}곳) 대비 ${pDiffText2}`);
     }
     if (momLines.length) parts.push({ heading: `전월 동기 대비 (${monthLabel} vs ${prevMonthLabel}, 각 1일~${latestDayLabel}일)`, lines: momLines });
 
