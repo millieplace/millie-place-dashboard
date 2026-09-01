@@ -14,6 +14,14 @@
         "https://image.millie.co.kr/service/hero_banner/6a8bd64668a33.jpg",
         "https://image.millie.co.kr/service/hero_banner/6a9126baea853.jpg"
       ]
+    },
+    "2026-09-01": {
+      "images": [
+        "https://image.millie.co.kr/service/hero_banner/6a9126baea853.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6a94e8ec4a675.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6a87fca690704.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6a8bd64668a33.jpg"
+      ]
     }
   },
   "meta": {
@@ -38,6 +46,11 @@
       "place_seq": "1056"
     },
     "https://image.millie.co.kr/service/hero_banner/6a9128dfb4abb.jpg": {
+      "title": "동네한바퀴 인터뷰 · 굳이 안부를 묻는 곳",
+      "subtitle": "애교쟁이 뽀니가 있는 중랑구 예스커피",
+      "place_seq": "1189"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6a94e8ec4a675.jpg": {
       "title": "동네한바퀴 인터뷰 · 굳이 안부를 묻는 곳",
       "subtitle": "애교쟁이 뽀니가 있는 중랑구 예스커피",
       "place_seq": "1189"
