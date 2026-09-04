@@ -2744,6 +2744,9 @@
         if (churnBrands.length) {
           const totalChurnDecline = churnBrands.reduce((a, b) => a + (b.prev - b.cur), 0);
           const brandNames = churnBrands.map(b => b.brand).join("·");
+          const allStillActive = churnBrands.every(b => isBrandStillActive(b.brand));
+          const churnVerb = allStillActive ? "방문 급감" : "제휴 종료로 인한 방문 감소";
+          const churnNote = allStillActive ? ` <span style="color:var(--ink-faint); font-size:11px;">(제휴 매장 리스트상으로는 아직 제휴 중 — 다른 원인 확인 필요)</span>` : "";
           if (uvCmp.delta < 0) {
             const ratioBits = [
               ratioText("UV", uvCmp, totalChurnDecline),
@@ -2751,9 +2754,9 @@
               ratioText("직원확인", staffCmp, totalChurnDecline),
             ].filter(Boolean);
             const ratioStr = ratioBits.length ? ratioBits.join(", ") : "일부";
-            parts.unshift(`<b>${brandNames}</b> 매장군의 제휴 종료로 인한 방문 감소분(약 ${fmt(totalChurnDecline)}건)이, ${label} ${ratioStr}를 차지해요 — 이번 감소는 이 매장군 이탈 영향이 큰 것으로 보여요`);
+            parts.unshift(`<b>${brandNames}</b> 매장군의 ${churnVerb} 분(약 ${fmt(totalChurnDecline)}건)이, ${label} ${ratioStr}를 차지해요 — 이번 감소는 이 매장군 영향이 큰 것으로 보여요${churnNote}`);
           } else {
-            parts.unshift(`<b>${brandNames}</b> 매장군이 제휴 종료로 이탈했지만, 다른 매장들의 성장 덕분에 ${label} 전체 UV는 오히려 <span style="color:var(--good); font-weight:600;">▲${uvCmp.delta.toFixed(1)}%</span> 증가했어요 — 이탈 영향이 상쇄된 것으로 보여요`);
+            parts.unshift(`<b>${brandNames}</b> 매장군이 ${allStillActive ? "방문이 급감했지만" : "제휴 종료로 이탈했지만"}, 다른 매장들의 성장 덕분에 ${label} 전체 UV는 오히려 <span style="color:var(--good); font-weight:600;">▲${uvCmp.delta.toFixed(1)}%</span> 증가했어요 — 영향이 상쇄된 것으로 보여요${churnNote}`);
           }
         } else if (growthBrands.length && uvCmp.delta > 0) {
           const top = growthBrands[0];
@@ -2793,6 +2796,10 @@
     });
   }
 
+  function isBrandStillActive(brand) {
+    return PARTNER_STORE_MASTER.some(s => s.status === "제휴 중" && (s.name === brand || s.name.startsWith(brand + " ")));
+  }
+
   function renderStoreLevelInsights() {
     const storeMetric = METRICS_DATA[STORE_KEY];
     if (!storeMetric) return [];
@@ -2806,12 +2813,25 @@
     // 이탈 의심: 전월에 유의미한 규모(20건 이상)였다가 70% 이상 급감한 브랜드
     const churnBrands = brandChanges
       .filter(b => b.prev >= 20 && b.pct !== null && b.pct <= -70)
-      .sort((a, b) => a.pct - b.pct);
+      .sort((a, b) => a.pct - b.pct)
+      .slice(0, 5);
     if (churnBrands.length) {
-      const names = churnBrands.slice(0, 3).map(b =>
-        `<b>${b.brand}</b>(${fmt(b.prev)}→${fmt(b.cur)}건, <span style="color:var(--bad); font-weight:600;">${b.pct.toFixed(0)}%</span>)`
-      ).join(", ");
-      bits.push(`${names} 매장군은 방문자가 급격히 줄었어요 — 제휴 종료 등 운영 변경 가능성이 있어요`);
+      const genuinelyEnded = [];
+      const stillActive = [];
+      churnBrands.forEach(b => {
+        const label = `<b>${b.brand}</b>(${fmt(b.prev)}→${fmt(b.cur)}건, <span style="color:var(--bad); font-weight:600;">${b.pct.toFixed(0)}%</span>)`;
+        if (isBrandStillActive(b.brand)) {
+          stillActive.push(label);
+        } else {
+          genuinelyEnded.push(label);
+        }
+      });
+      if (genuinelyEnded.length) {
+        bits.push(`${genuinelyEnded.join(", ")} 매장군은 방문자가 급격히 줄었고, 제휴 매장 리스트에서도 해지로 확인돼요`);
+      }
+      if (stillActive.length) {
+        bits.push(`${stillActive.join(", ")} 매장군은 방문자가 급격히 줄었지만, 제휴 매장 리스트상으로는 아직 <b>제휴 중</b>이에요 — 해지가 아니라 계절성·일시적 감소·데이터 지연 등 다른 이유일 수 있어 확인이 필요해요`);
+      }
     }
 
     // 급성장 브랜드
