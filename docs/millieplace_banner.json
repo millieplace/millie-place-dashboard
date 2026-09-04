@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-09-01 10:44:14 KST",
+  "captured_at": "2026-09-04 09:42:17 KST",
   "source_url": "https://www.millie.co.kr/v4/millieplace",
   "slides": [
     {
@@ -25,6 +25,12 @@
       "title": "동네한바퀴 인터뷰 · 밤늦게 머무는 사람 편",
       "subtitle": "밤 11시까지 여는 오목교 다락방",
       "place_seq": "1101"
+    },
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6a7eaa4786cdc.jpg",
+      "title": "동네한바퀴 인터뷰 · 곧 승진할 영업사원",
+      "subtitle": "간판견 아지가 있는 연남동 카페 온뒤",
+      "place_seq": "1166"
     }
   ],
   "error": null
