@@ -1,7 +1,19 @@
 {
-  "captured_at": "2026-09-04 09:51:51 KST",
+  "captured_at": "2026-09-07 09:29:21 KST",
   "source_url": "https://www.millie.co.kr/v4/millieplace",
   "slides": [
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6a9a2dc6da8cb.jpg",
+      "title": "동네한바퀴 인터뷰 · 커피도 맥주도 음악도",
+      "subtitle": "多-있는 은평, 다-용도실",
+      "place_seq": "1044"
+    },
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6a9a2ed47449c.jpg",
+      "title": "동네한바퀴 인터뷰 · 일상 한쪽을 내어줘요",
+      "subtitle": "읽는 사람들의 작은 책방, 한쪽가게",
+      "place_seq": "1143"
+    },
     {
       "image": "https://image.millie.co.kr/service/hero_banner/6a9126baea853.jpg",
       "title": "동네한바퀴 인터뷰 · 시간을 선물하는 곳",
@@ -13,24 +25,6 @@
       "title": "동네한바퀴 인터뷰 · 굳이 안부를 묻는 곳",
       "subtitle": "애교쟁이 뽀니가 있는 중랑구 예스커피",
       "place_seq": "1189"
-    },
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6a87fca690704.jpg",
-      "title": "동네한바퀴 인터뷰 · 손님들과 공동육아 중",
-      "subtitle": "사모예드 겨울이가 있는 카페미우",
-      "place_seq": "1169"
-    },
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6a8bd64668a33.jpg",
-      "title": "동네한바퀴 인터뷰 · 밤늦게 머무는 사람 편",
-      "subtitle": "밤 11시까지 여는 오목교 다락방",
-      "place_seq": "1101"
-    },
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6a7eaa4786cdc.jpg",
-      "title": "동네한바퀴 인터뷰 · 곧 승진할 영업사원",
-      "subtitle": "간판견 아지가 있는 연남동 카페 온뒤",
-      "place_seq": "1166"
     }
   ],
   "error": null
