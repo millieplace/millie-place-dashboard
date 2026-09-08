@@ -3789,7 +3789,7 @@
   function renderPartnerRankAlert() {
     const area = document.getElementById("partner-rank-alert-area");
     const storeMetric = METRICS_DATA[STORE_KEY];
-    const monthlyTotals = (storeMetric && storeMetric.monthly_totals) || {};
+    const monthlyTotals = (storeMetric && storeMetric.benefit_monthly_totals) || {};
     const months = Object.keys(monthlyTotals).sort();
     if (months.length < 2) { area.innerHTML = ""; return; }
 
@@ -3835,7 +3835,7 @@
     area.innerHTML = `
       <div class="section-card">
         <div class="section-head"><h2>⚠️ 제휴처 순위 급변동 · 관리 필요 매장</h2></div>
-        <div style="font-size:12px; color:var(--ink-faint); margin-bottom:6px;">현재 "제휴 중"인 매장만 대상 · 매장별 혜택사용+직원사용 합산(월별) 기준 · 순위는 전체 매장 대비</div>
+        <div style="font-size:12px; color:var(--ink-faint); margin-bottom:6px;">현재 "제휴 중"인 매장만 대상 · 매장별 혜택사용(월별) 기준 · 순위는 전체 매장 대비</div>
         <div style="display:flex; align-items:center; gap:8px; margin:10px 0 6px;">
           <span style="font-size:12.5px; font-weight:700;">월별 순위 급락 TOP7</span>
           <select id="partner-rank-month-select" class="store-select" style="padding:6px 10px; font-size:12.5px;">
