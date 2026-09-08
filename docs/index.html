@@ -403,6 +403,7 @@
       <button data-tab="partner">제휴처별 데이터</button>
       <button data-tab="event">이벤트 Tracking</button>
       <button data-tab="hub">밀플 허브 페이지</button>
+      <button data-tab="jeju981">제주 981</button>
     </div>
 
     <div class="tab-panel active" id="tab-kpi">
@@ -615,6 +616,10 @@
 
     <div class="tab-panel" id="tab-newstores">
       <div id="newstores-area"></div>
+    </div>
+
+    <div class="tab-panel" id="tab-jeju981">
+      <div id="jeju981-area"></div>
     </div>
 
     <div class="footer">밀리의서재 · Millie Place</div>
@@ -4516,6 +4521,161 @@
     return firstDate;
   }
 
+  /* ================= 제주 981 (9.81파크 제주 · 스페이스컵) 분석 탭 ================= */
+
+  const JEJU981_STORES = ["9.81파크 제주", "스페이스컵"];
+
+  function sumStoreAllTime(dailyTotals, storeName) {
+    let sum = 0;
+    Object.values(dailyTotals || {}).forEach(bucket => { sum += bucket[storeName] || 0; });
+    return sum;
+  }
+
+  function computeStoreDailyAvgRecent(dailyTotals, storeName, windowDays) {
+    const dates = getSortedDates(dailyTotals);
+    if (!dates.length) return null;
+    const latest = dates[dates.length - 1];
+    const startDate = new Date(latest + "T00:00:00");
+    startDate.setDate(startDate.getDate() - (windowDays - 1));
+    const start = toLocalDateStr(startDate);
+    let sum = 0, days = 0;
+    dates.forEach(d => {
+      if (d < start || d > latest) return;
+      days += 1;
+      sum += (dailyTotals[d] || {})[storeName] || 0;
+    });
+    return days ? sum / days : null;
+  }
+
+  function computeOtherStoresAvgDailyRate(dailyTotals, excludeNames, windowDays) {
+    const dates = getSortedDates(dailyTotals);
+    if (!dates.length) return null;
+    const latest = dates[dates.length - 1];
+    const startDate = new Date(latest + "T00:00:00");
+    startDate.setDate(startDate.getDate() - (windowDays - 1));
+    const start = toLocalDateStr(startDate);
+
+    const perStoreSum = {};
+    dates.forEach(d => {
+      if (d < start || d > latest) return;
+      const bucket = dailyTotals[d] || {};
+      Object.entries(bucket).forEach(([name, v]) => {
+        if (excludeNames.includes(name)) return;
+        const info = PARTNER_STORE_MASTER.find(s => s.name === name);
+        if (!info || info.status !== "제휴 중") return;
+        perStoreSum[name] = (perStoreSum[name] || 0) + v;
+      });
+    });
+    const rates = Object.values(perStoreSum).map(v => v / windowDays);
+    return rates.length ? avgOfArr(rates) : null;
+  }
+
+  function renderJeju981Tab() {
+    const area = document.getElementById("jeju981-area");
+    const uvMetric = METRICS_DATA["daily_store_uv"];
+    const clickMetric = METRICS_DATA["daily_store"];
+    const staffMetric = METRICS_DATA["daily_store_staff"];
+    const uvDaily = (uvMetric && uvMetric.daily_totals) || {};
+    const qrDaily = (uvMetric && uvMetric.qr_daily_totals) || {};
+    const clickDaily = (clickMetric && clickMetric.daily_totals) || {};
+    const staffDaily = (staffMetric && staffMetric.daily_totals) || {};
+
+    if (!Object.keys(uvDaily).length) {
+      area.innerHTML = `<div class="placeholder-panel"><div class="icon">🏝️</div><h3>데이터 없음</h3><p>매장 상세페이지 UV 데이터가 아직 없습니다.</p></div>`;
+      return;
+    }
+
+    const WINDOW_DAYS = 30;
+    const otherUvAvg = computeOtherStoresAvgDailyRate(uvDaily, JEJU981_STORES, WINDOW_DAYS);
+    const otherClickAvg = computeOtherStoresAvgDailyRate(clickDaily, JEJU981_STORES, WINDOW_DAYS);
+    const otherStaffAvg = computeOtherStoresAvgDailyRate(staffDaily, JEJU981_STORES, WINDOW_DAYS);
+
+    function compareBadge(storeAvg, otherAvg) {
+      if (storeAvg === null || otherAvg === null || otherAvg === 0) return `<span style="color:var(--ink-faint);">비교 불가</span>`;
+        const pct = ((storeAvg - otherAvg) / otherAvg) * 100;
+      const up = pct >= 0;
+      return `<span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:700;">${up ? "▲" : "▼"}${Math.abs(pct).toFixed(0)}%</span> (평균 ${otherAvg.toFixed(1)}건/일)`;
+    }
+
+    const storeCards = JEJU981_STORES.map(name => {
+      const uvTotal = sumStoreAllTime(uvDaily, name);
+      const qrTotal = sumStoreAllTime(qrDaily, name);
+      const clickTotal = sumStoreAllTime(clickDaily, name);
+      const staffTotal = sumStoreAllTime(staffDaily, name);
+      const uvAvg = computeStoreDailyAvgRecent(uvDaily, name, WINDOW_DAYS);
+      const clickAvg = computeStoreDailyAvgRecent(clickDaily, name, WINDOW_DAYS);
+      const staffAvg = computeStoreDailyAvgRecent(staffDaily, name, WINDOW_DAYS);
+      const qrRate = uvTotal > 0 ? (qrTotal / uvTotal) * 100 : null;
+
+      return `
+        <div class="section-card">
+          <div class="section-head"><h2>🏬 ${name}</h2></div>
+          <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="kpi-card">
+              <div class="kpi-top"><div class="kpi-label">UV (상세페이지 유입, 누적)</div></div>
+              <div class="kpi-value-row"><div class="kpi-value">${fmt(uvTotal)}<span class="unit">건</span></div></div>
+              <div class="kpi-sub">최근 ${WINDOW_DAYS}일 평균 대비 타 매장: ${compareBadge(uvAvg, otherUvAvg)}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-top"><div class="kpi-label">QR 스캔 수 (누적)</div></div>
+              <div class="kpi-value-row"><div class="kpi-value">${fmt(qrTotal)}<span class="unit">건</span></div></div>
+              <div class="kpi-sub">${qrTotal > 0 ? `전체 UV 중 QR 비중 ${qrRate.toFixed(1)}%` : "QR 스캔 기록이 아직 없어요"}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-top"><div class="kpi-label">혜택클릭 (누적)</div></div>
+              <div class="kpi-value-row"><div class="kpi-value">${fmt(clickTotal)}<span class="unit">건</span></div></div>
+              <div class="kpi-sub">최근 ${WINDOW_DAYS}일 평균 대비 타 매장: ${compareBadge(clickAvg, otherClickAvg)}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-top"><div class="kpi-label">직원확인 (누적)</div></div>
+              <div class="kpi-value-row"><div class="kpi-value">${fmt(staffTotal)}<span class="unit">건</span></div></div>
+              <div class="kpi-sub">최근 ${WINDOW_DAYS}일 평균 대비 타 매장: ${compareBadge(staffAvg, otherStaffAvg)}</div>
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+
+    // 인구통계 (최신월, 두 매장 통합)
+    const demoMetric = METRICS_DATA.store_demo;
+    let demoHtml = "";
+    if (demoMetric && demoMetric.monthly_rows) {
+      const metricKey = demoMetric.metric_key || "SUM(회원수(유니크))";
+      const months = Object.keys(demoMetric.monthly_rows).sort();
+      const latestMonth = months[months.length - 1];
+      const rows = (demoMetric.monthly_rows[latestMonth] || []).filter(r => JEJU981_STORES.includes(r.place_name));
+      if (rows.length) {
+        const groups = aggregateDemoByGroup(rows, metricKey);
+        const total = Object.values(groups).reduce((a, v) => a + v, 0);
+        const sorted = Object.entries(groups).sort((a, b) => b[1] - a[1]);
+        const fShare = demoSexShare(groups);
+        demoHtml = `
+          <div class="section-card">
+            <div class="section-head"><h2>👥 방문객 인구통계 (${latestMonth}, 두 매장 통합)</h2></div>
+            <ul style="margin:0 0 12px; padding-left:18px; font-size:13.5px; line-height:1.9;">
+              <li>가장 큰 그룹은 <b>${demoGroupLabel(sorted[0][0])}</b>로, 전체의 <b>${demoShareOf(groups, total, sorted[0][0]).toFixed(1)}%</b>를 차지해요</li>
+              ${fShare !== null ? `<li>여성 비중은 <b>${fShare.toFixed(1)}%</b>예요</li>` : ""}
+            </ul>
+            <table class="rank-table">
+              <thead><tr><th>연령대·성별</th><th style="text-align:right">비중</th></tr></thead>
+              <tbody>
+                ${sorted.slice(0, 8).map(([key]) => `
+                  <tr><td>${demoGroupLabel(key)}</td><td class="rank-val">${demoShareOf(groups, total, key).toFixed(1)}%</td></tr>`).join("")}
+              </tbody>
+            </table>
+          </div>`;
+      }
+    }
+
+    area.innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><h2>🏝️ 제주 981 — 9.81파크 제주 · 스페이스컵</h2></div>
+        <div style="font-size:12.5px; color:var(--ink-faint);">제주 2차 붐업 PR 자료용 · UV/QR/혜택클릭/직원확인은 매장 상세페이지 데이터 기준, 최근 ${WINDOW_DAYS}일 일평균을 다른 활성 제휴처("제휴 중") 평균과 비교했어요</div>
+      </div>
+      ${storeCards}
+      ${demoHtml}
+      <div class="kpi-sub" style="margin:4px 2px 0;">QR 스캔 수는 daily_store_uv의 QR회원수(유니크) 기준 · 두 매장 다 현재까지 QR 스캔 기록이 0건으로 확인돼요</div>`;
+  }
+
   function renderNewStoresTab() {
     const area = document.getElementById("newstores-area");
     const dsMetric = METRICS_DATA["daily_store"];
@@ -4703,6 +4863,7 @@
 
       renderHubTab();
       renderNewStoresTab();
+      renderJeju981Tab();
 
       document.getElementById("updated-at").textContent = data.updated_at || "-";
     } catch (e) {
