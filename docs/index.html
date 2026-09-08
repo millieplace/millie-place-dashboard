@@ -3793,30 +3793,10 @@
     const months = Object.keys(monthlyTotals).sort();
     if (months.length < 2) { area.innerHTML = ""; return; }
 
-    const recentMonths = months.slice(-6); // 최근 6개월(=순위 비교 5개월치)
-    const monthlyDrops = computeMonthlyRankDrops(monthlyTotals, recentMonths, 5);
-    const yoyDeclines = computeYoyDeclines(monthlyTotals, 5);
+    const selectableMonths = months.slice(1); // 첫 달은 "전월"이 없어 비교 불가
+    const defaultMonth = selectableMonths[selectableMonths.length - 1];
 
-    const monthlyHtml = monthlyDrops.slice().reverse().map(r => {
-      if (!r.drops.length) return "";
-      return `
-        <div style="padding:10px 0; border-top:1px solid var(--border);">
-          <div style="font-size:12.5px; font-weight:700; margin-bottom:6px;">${r.month}</div>
-          <table class="rank-table">
-            <thead><tr><th>매장명</th><th style="text-align:right">전월 순위</th><th style="text-align:right">이번달 순위</th><th style="text-align:right">변동</th></tr></thead>
-            <tbody>
-              ${r.drops.map(d => `
-                <tr>
-                  <td>${d.name}</td>
-                  <td class="rank-val" style="color:var(--ink-faint);">${d.prevRank}위</td>
-                  <td class="rank-val">${d.curRank}위</td>
-                  <td class="rank-val"><span style="color:var(--bad); font-weight:700;">▼${d.rankDrop}</span></td>
-                </tr>`).join("")}
-            </tbody>
-          </table>
-        </div>`;
-    }).join("");
-
+    const yoyDeclines = computeYoyDeclines(monthlyTotals, 7);
     const yoyHtml = yoyDeclines.length ? `
       <div style="padding:10px 0; border-top:1px solid var(--border);">
         <div style="font-size:12.5px; font-weight:700; margin-bottom:6px;">📊 작년 대비 올해 평균 급감 매장 TOP${yoyDeclines.length}</div>
@@ -3834,15 +3814,42 @@
         </table>
       </div>` : "";
 
-    if (!monthlyHtml && !yoyHtml) { area.innerHTML = ""; return; }
+    function renderMonthTable(monthKey) {
+      const idx = months.indexOf(monthKey);
+      const drops = computeMonthlyRankDrops(monthlyTotals, [months[idx - 1], monthKey], 7)[0].drops;
+      document.getElementById("partner-rank-month-table").innerHTML = drops.length ? `
+        <table class="rank-table">
+          <thead><tr><th>매장명</th><th style="text-align:right">전월 순위</th><th style="text-align:right">이번달 순위</th><th style="text-align:right">변동</th></tr></thead>
+          <tbody>
+            ${drops.map(d => `
+              <tr>
+                <td>${d.name}</td>
+                <td class="rank-val" style="color:var(--ink-faint);">${d.prevRank}위</td>
+                <td class="rank-val">${d.curRank}위</td>
+                <td class="rank-val"><span style="color:var(--bad); font-weight:700;">▼${d.rankDrop}</span></td>
+              </tr>`).join("")}
+          </tbody>
+        </table>` : `<div class="empty-note">해당 달에는 순위가 급락한 매장이 없습니다</div>`;
+    }
 
     area.innerHTML = `
       <div class="section-card">
         <div class="section-head"><h2>⚠️ 제휴처 순위 급변동 · 관리 필요 매장</h2></div>
         <div style="font-size:12px; color:var(--ink-faint); margin-bottom:6px;">현재 "제휴 중"인 매장만 대상 · 매장별 혜택사용+직원사용 합산(월별) 기준 · 순위는 전체 매장 대비</div>
-        ${monthlyHtml}
+        <div style="display:flex; align-items:center; gap:8px; margin:10px 0 6px;">
+          <span style="font-size:12.5px; font-weight:700;">월별 순위 급락 TOP7</span>
+          <select id="partner-rank-month-select" class="store-select" style="padding:6px 10px; font-size:12.5px;">
+            ${selectableMonths.slice().reverse().map(m => `<option value="${m}" ${m === defaultMonth ? "selected" : ""}>${m}</option>`).join("")}
+          </select>
+        </div>
+        <div id="partner-rank-month-table"></div>
         ${yoyHtml}
       </div>`;
+
+    renderMonthTable(defaultMonth);
+    document.getElementById("partner-rank-month-select").addEventListener("change", (e) => {
+      renderMonthTable(e.target.value);
+    });
   }
 
   function renderPartnerCountChart() {
