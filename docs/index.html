@@ -3734,6 +3734,117 @@
 
   let partnerCountChartInstance = null;
 
+  function computeMonthlyRankDrops(monthlyTotals, months, topN) {
+    const results = [];
+    for (let i = 1; i < months.length; i++) {
+      const month = months[i];
+      const prevMonth = months[i - 1];
+      const curData = monthlyTotals[month] || {};
+      const prevData = monthlyTotals[prevMonth] || {};
+      const curSorted = Object.entries(curData).sort((a, b) => b[1] - a[1]);
+      const prevSorted = Object.entries(prevData).sort((a, b) => b[1] - a[1]);
+      const curRank = {}; curSorted.forEach(([n], idx) => { curRank[n] = idx + 1; });
+      const prevRank = {}; prevSorted.forEach(([n], idx) => { prevRank[n] = idx + 1; });
+
+      const changes = [];
+      Object.keys(curRank).forEach(name => {
+        if (prevRank[name] === undefined) return;
+        const info = PARTNER_STORE_MASTER.find(s => s.name === name);
+        if (!info || info.status !== "제휴 중") return; // 이미 해지되었거나 마스터에 없는 매장은 제외
+        const rankDrop = curRank[name] - prevRank[name];
+        if (rankDrop <= 0) return; // 순위가 나빠진(숫자가 커진) 경우만
+        changes.push({ name, prevRank: prevRank[name], curRank: curRank[name], rankDrop, curVal: curData[name], prevVal: prevData[name] });
+      });
+      changes.sort((a, b) => b.rankDrop - a.rankDrop);
+      results.push({ month, drops: changes.slice(0, topN) });
+    }
+    return results;
+  }
+
+  function computeYoyDeclines(monthlyTotals, topN) {
+    const store25 = {}, cnt25 = {}, store26 = {}, cnt26 = {};
+    Object.keys(monthlyTotals).forEach(m => {
+      const year = m.slice(0, 4);
+      Object.entries(monthlyTotals[m]).forEach(([name, v]) => {
+        if (year === "2025") { store25[name] = (store25[name] || 0) + v; cnt25[name] = (cnt25[name] || 0) + 1; }
+        else if (year === "2026") { store26[name] = (store26[name] || 0) + v; cnt26[name] = (cnt26[name] || 0) + 1; }
+      });
+    });
+    const results = [];
+    Object.keys(store25).forEach(name => {
+      if (!cnt26[name]) return;
+      const info = PARTNER_STORE_MASTER.find(s => s.name === name);
+      if (!info || info.status !== "제휴 중") return; // 이미 해지되었거나 마스터에 없는 매장은 제외
+      const avg25 = store25[name] / cnt25[name];
+      const avg26 = store26[name] / cnt26[name];
+      if (avg25 < 10) return; // 너무 작은 규모는 노이즈로 제외
+      const pct = ((avg26 - avg25) / avg25) * 100;
+      if (pct >= -30) return; // 30% 이상 감소한 경우만
+      results.push({ name, avg25, avg26, pct });
+    });
+    results.sort((a, b) => a.pct - b.pct);
+    return results.slice(0, topN);
+  }
+
+  function renderPartnerRankAlert() {
+    const area = document.getElementById("partner-rank-alert-area");
+    const storeMetric = METRICS_DATA[STORE_KEY];
+    const monthlyTotals = (storeMetric && storeMetric.monthly_totals) || {};
+    const months = Object.keys(monthlyTotals).sort();
+    if (months.length < 2) { area.innerHTML = ""; return; }
+
+    const recentMonths = months.slice(-6); // 최근 6개월(=순위 비교 5개월치)
+    const monthlyDrops = computeMonthlyRankDrops(monthlyTotals, recentMonths, 5);
+    const yoyDeclines = computeYoyDeclines(monthlyTotals, 5);
+
+    const monthlyHtml = monthlyDrops.slice().reverse().map(r => {
+      if (!r.drops.length) return "";
+      return `
+        <div style="padding:10px 0; border-top:1px solid var(--border);">
+          <div style="font-size:12.5px; font-weight:700; margin-bottom:6px;">${r.month}</div>
+          <table class="rank-table">
+            <thead><tr><th>매장명</th><th style="text-align:right">전월 순위</th><th style="text-align:right">이번달 순위</th><th style="text-align:right">변동</th></tr></thead>
+            <tbody>
+              ${r.drops.map(d => `
+                <tr>
+                  <td>${d.name}</td>
+                  <td class="rank-val" style="color:var(--ink-faint);">${d.prevRank}위</td>
+                  <td class="rank-val">${d.curRank}위</td>
+                  <td class="rank-val"><span style="color:var(--bad); font-weight:700;">▼${d.rankDrop}</span></td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>`;
+    }).join("");
+
+    const yoyHtml = yoyDeclines.length ? `
+      <div style="padding:10px 0; border-top:1px solid var(--border);">
+        <div style="font-size:12.5px; font-weight:700; margin-bottom:6px;">📊 작년 대비 올해 평균 급감 매장 TOP${yoyDeclines.length}</div>
+        <table class="rank-table">
+          <thead><tr><th>매장명</th><th style="text-align:right">작년 월평균</th><th style="text-align:right">올해 월평균</th><th style="text-align:right">변화율</th></tr></thead>
+          <tbody>
+            ${yoyDeclines.map(d => `
+              <tr>
+                <td>${d.name}</td>
+                <td class="rank-val" style="color:var(--ink-faint);">${d.avg25.toFixed(1)}건</td>
+                <td class="rank-val">${d.avg26.toFixed(1)}건</td>
+                <td class="rank-val"><span style="color:var(--bad); font-weight:700;">${d.pct.toFixed(0)}%</span></td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>` : "";
+
+    if (!monthlyHtml && !yoyHtml) { area.innerHTML = ""; return; }
+
+    area.innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><h2>⚠️ 제휴처 순위 급변동 · 관리 필요 매장</h2></div>
+        <div style="font-size:12px; color:var(--ink-faint); margin-bottom:6px;">현재 "제휴 중"인 매장만 대상 · 매장별 혜택사용+직원사용 합산(월별) 기준 · 순위는 전체 매장 대비</div>
+        ${monthlyHtml}
+        ${yoyHtml}
+      </div>`;
+  }
+
   function renderPartnerCountChart() {
     const canvas = document.getElementById("partnerCountChart");
     if (!canvas) return;
@@ -3826,8 +3937,10 @@
         <div class="section-head"><h2>📊 전체 제휴처 수 추이 (주별)</h2></div>
         <div id="partner-count-summary" style="font-size:12.5px; color:var(--ink-faint); margin-bottom:10px;"></div>
         <div class="trend-chart-wrap"><canvas id="partnerCountChart"></canvas></div>
-        <div class="kpi-sub" style="margin-top:8px;">제휴 매장 마스터 리스트(밀리플레이스_월간_데이터_제휴_매장 시트) 기준 · 매장별 "앱 노출 날짜"~"해지일자" 구간으로 해당 시점의 활성 매장 수를 정확히 계산했어요 (앱 노출 날짜 미기재 매장은 2025-04-15부터 노출된 것으로 간주 · 계약일자가 없는 매장은 아직 제휴 진행중으로 보고 집계에서 제외)</div>
+        <div class="kpi-sub" style="margin-top:8px;">제휴 매장 마스터 리스트(밀리플레이스_월간_데이터_제휴_매장 시트) 기준 · 매장별 "앱 노출 날짜"~"해지일자" 구간으로 해당 시점의 활성 매장 수를 정확히 계산했어요 (앱 노출 날짜 미기재 매장은 2025-04-15부터 노출된 것으로 간주)</div>
       </div>
+
+      <div id="partner-rank-alert-area"></div>
 
       <div class="section-card">
         <div class="section-head"><h2>제휴처 검색</h2></div>
@@ -3847,6 +3960,7 @@
       <div id="partner-detail-area"></div>`;
 
     renderPartnerCountChart();
+    renderPartnerRankAlert();
 
     const searchInput = document.getElementById("partner-search");
     const selectEl = document.getElementById("partner-select");
