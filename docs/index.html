@@ -1849,8 +1849,8 @@
     { name: "문지살롱", status: "제휴 중", expose: "2025-06-16", term: null, termReason: null },
     { name: "런 커피 RUN COFFEE", status: "제휴 중", expose: "2025-06-16", term: null, termReason: null },
     { name: "EMME", status: "제휴 중", expose: "2025-06-16", term: null, termReason: null },
-    { name: "쓰리어클락 연희", status: "제휴 중", expose: "2025-06-16", term: "2026-12-31", termReason: null },
-    { name: "쓰리어클락 김포", status: "제휴 중", expose: "2025-06-16", term: "2026-12-31", termReason: null },
+    { name: "쓰리어클락 연희", status: "해지 예정", expose: "2025-06-16", term: "2026-12-31", termReason: null },
+    { name: "쓰리어클락 김포", status: "해지 예정", expose: "2025-06-16", term: "2026-12-31", termReason: null },
     { name: "캣냅", status: "제휴 중", expose: "2025-06-16", term: null, termReason: null },
     { name: "단위", status: "제휴 중", expose: "2025-06-16", term: null, termReason: null },
     { name: "에테르", status: "제휴 중", expose: "2025-06-16", term: null, termReason: null },
@@ -1975,6 +1975,11 @@
     { name: "예스커피", status: "제휴 중", expose: "2026-08-27", term: null, termReason: null },
     { name: "어코트 A CUP OF TEXT", status: "제휴 중", expose: "2026-08-31", term: null, termReason: null },
     { name: "하츠하우스", status: "제휴 중", expose: "2026-08-26", term: null, termReason: null },
+    { name: "책방 바라타리아", status: "제휴예정", expose: null, term: null, termReason: null },
+    { name: "종이의 서재 by grape lab", status: "제휴예정", expose: null, term: null, termReason: null },
+    { name: "렉터스라운지 홍대", status: "제휴예정", expose: null, term: null, termReason: null },
+    { name: "텅앤빈 청파", status: "제휴예정", expose: null, term: null, termReason: null },
+    { name: "스페인 미술 500년: 빛과 어둠의 연대기", status: "", expose: "2026-10-01", term: null, termReason: "10월 단기 제휴 진행" },
   ];
 
   const PARTNER_DEFAULT_EXPOSE_DATE = "2025-04-15"; // 앱 노출 날짜 미기재 매장의 기본 추정 시작일
@@ -1982,8 +1987,8 @@
   function getPartnerCountAtDate(targetDate) {
     let count = 0;
     PARTNER_STORE_MASTER.forEach(s => {
-      const expose = s.expose || PARTNER_DEFAULT_EXPOSE_DATE;
-      if (expose > targetDate) return;
+      if (!s.expose) return; // 앱 노출 날짜가 없으면 아직 시작 전(제휴예정 등)으로 간주해 제외
+      if (s.expose > targetDate) return;
       if (s.term && s.term <= targetDate) return;
       count += 1;
     });
@@ -3525,18 +3530,27 @@
       : "";
 
     const partnerInfo = PARTNER_STORE_MASTER.find(s => s.name === storeName);
-    const terminationHtml = (partnerInfo && partnerInfo.status === "해지")
-      ? (() => {
-          const isClosed = partnerInfo.termReason === "폐업";
-          const title = isClosed ? "⚠️ 폐업으로 계약이 해지된 매장이에요" : "⚠️ 계약이 해지된 매장이에요";
-          return `<div class="section-card" style="border-left:3px solid var(--bad); background:#fff5f5;">
-            <div style="font-size:13.5px; font-weight:700; color:var(--bad);">${title}</div>
-            <div style="font-size:12.5px; color:var(--ink-soft); margin-top:4px;">
-              해지일: <b>${partnerInfo.term || "-"}</b> · 사유: <b>${partnerInfo.termReason || "미기재"}</b>
-            </div>
-          </div>`;
-        })()
-      : "";
+    let terminationHtml = "";
+    if (partnerInfo && partnerInfo.status === "해지") {
+      const isClosed = partnerInfo.termReason === "폐업";
+      const title = isClosed ? "⚠️ 폐업으로 계약이 해지된 매장이에요" : "⚠️ 계약이 해지된 매장이에요";
+      terminationHtml = `<div class="section-card" style="border-left:3px solid var(--bad); background:#fff5f5;">
+        <div style="font-size:13.5px; font-weight:700; color:var(--bad);">${title}</div>
+        <div style="font-size:12.5px; color:var(--ink-soft); margin-top:4px;">
+          해지일: <b>${partnerInfo.term || "-"}</b> · 사유: <b>${partnerInfo.termReason || "미기재"}</b>
+        </div>
+      </div>`;
+    } else if (partnerInfo && partnerInfo.status === "해지 예정") {
+      terminationHtml = `<div class="section-card" style="border-left:3px solid #f59e0b; background:#fffaf0;">
+        <div style="font-size:13.5px; font-weight:700; color:#b45309;">⏳ 해지 예정인 매장이에요</div>
+        <div style="font-size:12.5px; color:var(--ink-soft); margin-top:4px;">해지 예정일: <b>${partnerInfo.term || "-"}</b></div>
+      </div>`;
+    } else if (partnerInfo && partnerInfo.status === "제휴예정") {
+      terminationHtml = `<div class="section-card" style="border-left:3px solid var(--accent); background:#f5f3ff;">
+        <div style="font-size:13.5px; font-weight:700; color:var(--accent);">🔜 아직 앱에 노출되지 않은 제휴예정 매장이에요</div>
+        <div style="font-size:12.5px; color:var(--ink-soft); margin-top:4px;">앱 노출 날짜가 정해지면 데이터가 쌓이기 시작해요</div>
+      </div>`;
+    }
 
     detailArea.innerHTML = `
       ${terminationHtml}
@@ -3963,7 +3977,10 @@
           <select id="partner-select" class="store-select" style="flex:2; min-width:220px; max-width:360px; padding:9px 14px;">
             ${namesSorted.map(n => {
               const info = PARTNER_STORE_MASTER.find(s => s.name === n);
-              const suffix = (info && info.status === "해지") ? " (해지)" : "";
+              let suffix = "";
+              if (info && info.status === "해지") suffix = " (해지)";
+              else if (info && info.status === "해지 예정") suffix = " (해지예정)";
+              else if (info && info.status === "제휴예정") suffix = " (제휴예정)";
               return `<option value="${n}">${n}${suffix}</option>`;
             }).join("")}
           </select>
