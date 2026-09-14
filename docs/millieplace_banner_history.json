@@ -71,6 +71,14 @@
         "https://image.millie.co.kr/service/hero_banner/6a94e8ec4a675.jpg",
         "https://image.millie.co.kr/service/hero_banner/6a9a2dc6da8cb.jpg"
       ]
+    },
+    "2026-09-14": {
+      "images": [
+        "https://image.millie.co.kr/service/hero_banner/6aa136f043bf0.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6aa13703c2b21.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6aa69d5e51380.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6aa69e92e07b1.jpg"
+      ]
     }
   },
   "meta": {
@@ -113,6 +121,26 @@
       "title": "동네한바퀴 인터뷰 · 일상 한쪽을 내어줘요",
       "subtitle": "읽는 사람들의 작은 책방, 한쪽가게",
       "place_seq": "1143"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6aa136f043bf0.jpg": {
+      "title": "즐겼음 청년들 방문기 · 천천히 가도 괜찮아요",
+      "subtitle": "EP.1 신월동 포러리에 다녀왔어요",
+      "place_seq": null
+    },
+    "https://image.millie.co.kr/service/hero_banner/6aa13703c2b21.jpg": {
+      "title": "즐겼음 청년들 방문기 · 어두울수록 선명해져요",
+      "subtitle": "EP.2 오목교 애틱인서울하우스",
+      "place_seq": null
+    },
+    "https://image.millie.co.kr/service/hero_banner/6aa69d5e51380.jpg": {
+      "title": "동네한바퀴 인터뷰 · 마음대로 기억해주세요",
+      "subtitle": "이름 없는 카페, 불광천 무제",
+      "place_seq": "1161"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6aa69e92e07b1.jpg": {
+      "title": "동네한바퀴 인터뷰 · 커피에서 시작된 만남",
+      "subtitle": "사람이 모이는 경주 밋업커피하우스",
+      "place_seq": "1161"
     }
   }
 }
