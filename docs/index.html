@@ -1983,12 +1983,34 @@
   ];
 
   const PARTNER_DEFAULT_EXPOSE_DATE = "2025-04-15"; // 앱 노출 날짜 미기재 매장의 기본 추정 시작일
+  let PARTNER_EFFECTIVE_EXPOSE_CACHE = null;
+
+  function getEffectiveExposeDate(s) {
+    if (s.expose) return s.expose;
+    if (s.status !== "제휴예정") return null; // 노출일 없고 제휴예정도 아니면 활성으로 안 봄
+    // 엑셀에는 아직 "제휴예정"이지만 실제 트래픽이 이미 잡히는 경우, 최초 트래픽일을 노출일로 간주
+    if (!PARTNER_EFFECTIVE_EXPOSE_CACHE) {
+      PARTNER_EFFECTIVE_EXPOSE_CACHE = {};
+      const uvMetric = METRICS_DATA["daily_store_uv"];
+      const uvDaily = (uvMetric && uvMetric.daily_totals) || {};
+      Object.keys(uvDaily).sort().forEach(d => {
+        const bucket = uvDaily[d] || {};
+        Object.keys(bucket).forEach(name => {
+          if (bucket[name] > 0 && PARTNER_EFFECTIVE_EXPOSE_CACHE[name] === undefined) {
+            PARTNER_EFFECTIVE_EXPOSE_CACHE[name] = d;
+          }
+        });
+      });
+    }
+    return PARTNER_EFFECTIVE_EXPOSE_CACHE[s.name] || null;
+  }
 
   function getPartnerCountAtDate(targetDate) {
     let count = 0;
     PARTNER_STORE_MASTER.forEach(s => {
-      if (!s.expose) return; // 앱 노출 날짜가 없으면 아직 시작 전(제휴예정 등)으로 간주해 제외
-      if (s.expose > targetDate) return;
+      const expose = getEffectiveExposeDate(s);
+      if (!expose) return; // 앱 노출 날짜(또는 실제 트래픽)가 없으면 아직 시작 전으로 간주해 제외
+      if (expose > targetDate) return;
       if (s.term && s.term <= targetDate) return;
       count += 1;
     });
@@ -3546,10 +3568,16 @@
         <div style="font-size:12.5px; color:var(--ink-soft); margin-top:4px;">해지 예정일: <b>${partnerInfo.term || "-"}</b></div>
       </div>`;
     } else if (partnerInfo && partnerInfo.status === "제휴예정") {
-      terminationHtml = `<div class="section-card" style="border-left:3px solid var(--accent); background:#f5f3ff;">
-        <div style="font-size:13.5px; font-weight:700; color:var(--accent);">🔜 아직 앱에 노출되지 않은 제휴예정 매장이에요</div>
-        <div style="font-size:12.5px; color:var(--ink-soft); margin-top:4px;">앱 노출 날짜가 정해지면 데이터가 쌓이기 시작해요</div>
-      </div>`;
+      const effectiveExpose = getEffectiveExposeDate(partnerInfo);
+      terminationHtml = effectiveExpose
+        ? `<div class="section-card" style="border-left:3px solid var(--accent); background:#f5f3ff;">
+            <div style="font-size:13.5px; font-weight:700; color:var(--accent);">🔜 제휴 매장 리스트상 "제휴예정"이지만, 실제로는 이미 노출 중이에요</div>
+            <div style="font-size:12.5px; color:var(--ink-soft); margin-top:4px;">실제 트래픽 최초 발생일: <b>${effectiveExpose}</b> · 리스트 업데이트가 필요할 수 있어요</div>
+          </div>`
+        : `<div class="section-card" style="border-left:3px solid var(--accent); background:#f5f3ff;">
+            <div style="font-size:13.5px; font-weight:700; color:var(--accent);">🔜 아직 앱에 노출되지 않은 제휴예정 매장이에요</div>
+            <div style="font-size:12.5px; color:var(--ink-soft); margin-top:4px;">앱 노출 날짜가 정해지면 데이터가 쌓이기 시작해요</div>
+          </div>`;
     }
 
     detailArea.innerHTML = `
