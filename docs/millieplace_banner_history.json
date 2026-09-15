@@ -79,6 +79,14 @@
         "https://image.millie.co.kr/service/hero_banner/6aa69d5e51380.jpg",
         "https://image.millie.co.kr/service/hero_banner/6aa69e92e07b1.jpg"
       ]
+    },
+    "2026-09-15": {
+      "images": [
+        "https://image.millie.co.kr/service/hero_banner/6aa136f043bf0.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6aa13703c2b21.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6aa69d5e51380.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6aa69e92e07b1.jpg"
+      ]
     }
   },
   "meta": {
@@ -140,7 +148,7 @@
     "https://image.millie.co.kr/service/hero_banner/6aa69e92e07b1.jpg": {
       "title": "동네한바퀴 인터뷰 · 커피에서 시작된 만남",
       "subtitle": "사람이 모이는 경주 밋업커피하우스",
-      "place_seq": "1161"
+      "place_seq": "1106"
     }
   }
 }
