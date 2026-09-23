@@ -4662,6 +4662,18 @@
       return { name, cur, prev, pct, avg25, avg26, avgPct };
     });
 
+    // 매장별 상세 표 전용 (혜택확인 기준)
+    const latestBenefitMonth = benefitMonths[benefitMonths.length - 1];
+    const storeBenefitRows = URBANPLAY_STORES.map(name => {
+      const cur = storeBenefitVal(latestBenefitMonth, name);
+      const vals25 = benefitMonths.filter(m => m.startsWith("2025")).map(m => storeBenefitVal(m, name));
+      const vals26 = benefitMonths.filter(m => m.startsWith("2026")).map(m => storeBenefitVal(m, name));
+      const avg25 = vals25.length ? avgOfArr(vals25) : null;
+      const avg26 = vals26.length ? avgOfArr(vals26) : null;
+      const avgPct = (avg25 && avg25 > 0) ? ((avg26 - avg25) / avg25) * 100 : null;
+      return { name, cur, avg25, avg26, avgPct };
+    });
+
     // 합계 (5개 매장 통합)
     const totalCur = storeRows.reduce((a, r) => a + r.cur, 0);
     const totalPrev = storeRows.reduce((a, r) => a + r.prev, 0);
@@ -4734,26 +4746,22 @@
       </div>
 
       <div class="section-card">
-        <div class="section-head"><h2>매장별 상세</h2></div>
+        <div class="section-head"><h2>매장별 상세 (혜택확인)</h2></div>
         <table class="rank-table">
           <thead>
             <tr>
               <th>매장명</th>
-              <th style="text-align:right">${latestMonth}</th>
-              <th style="text-align:right">${prevYearMonth}</th>
-              <th style="text-align:right">전년동월비</th>
+              <th style="text-align:right">${latestBenefitMonth}</th>
               <th style="text-align:right">25년 월평균</th>
               <th style="text-align:right">26년 월평균</th>
               <th style="text-align:right">연평균비</th>
             </tr>
           </thead>
           <tbody>
-            ${storeRows.map(r => `
+            ${storeBenefitRows.map(r => `
               <tr>
                 <td>${r.name}</td>
                 <td class="rank-val">${fmt(r.cur)}</td>
-                <td class="rank-val" style="color:var(--ink-faint);">${fmt(r.prev)}</td>
-                <td class="rank-val">${liftSpan(r.pct)}</td>
                 <td class="rank-val" style="color:var(--ink-faint);">${r.avg25 !== null ? r.avg25.toFixed(1) : "-"}</td>
                 <td class="rank-val">${r.avg26 !== null ? r.avg26.toFixed(1) : "-"}</td>
                 <td class="rank-val">${liftSpan(r.avgPct)}</td>
@@ -4762,7 +4770,7 @@
         </table>
       </div>
 
-      <div class="kpi-sub" style="margin:4px 2px 0;">추이 그래프는 store_breakdown 혜택확인(월별) 기준, 매장별 상세 표는 혜택+직원 합산 기준이에요 · 이 5개 매장이 어반플레이 제휴 매장으로 확인됐어요, 다른 매장이 더 있다면 알려주시면 추가할게요</div>`;
+      <div class="kpi-sub" style="margin:4px 2px 0;">추이 그래프와 매장별 상세 표는 store_breakdown 혜택확인(월별) 기준이에요 · 이 5개 매장이 어반플레이 제휴 매장으로 확인됐어요, 다른 매장이 더 있다면 알려주시면 추가할게요</div>`;
 
     if (urbanplayTrendChart) { urbanplayTrendChart.destroy(); urbanplayTrendChart = null; }
     const canvas = document.getElementById("urbanplayTrendChart");
