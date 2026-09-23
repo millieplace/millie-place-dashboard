@@ -4649,19 +4649,6 @@
     function storeVal(month, name) { return (monthlyTotals[month] || {})[name] || 0; }
     function storeBenefitVal(month, name) { return (benefitMonthlyTotals[month] || {})[name] || 0; }
 
-    // 매장별 이번달 vs 작년 동월, 연평균 비교
-    const storeRows = URBANPLAY_STORES.map(name => {
-      const cur = storeVal(latestMonth, name);
-      const prev = storeVal(prevYearMonth, name);
-      const pct = prev > 0 ? ((cur - prev) / prev) * 100 : null;
-      const vals25 = months.filter(m => m.startsWith("2025")).map(m => storeVal(m, name));
-      const vals26 = months.filter(m => m.startsWith("2026")).map(m => storeVal(m, name));
-      const avg25 = vals25.length ? avgOfArr(vals25) : null;
-      const avg26 = vals26.length ? avgOfArr(vals26) : null;
-      const avgPct = (avg25 && avg25 > 0) ? ((avg26 - avg25) / avg25) * 100 : null;
-      return { name, cur, prev, pct, avg25, avg26, avgPct };
-    });
-
     // 매장별 상세 표 전용 (혜택확인 기준)
     const latestBenefitMonth = benefitMonths[benefitMonths.length - 1];
     const storeBenefitRows = URBANPLAY_STORES.map(name => {
@@ -4674,25 +4661,29 @@
       return { name, cur, avg25, avg26, avgPct };
     });
 
-    // 합계 (5개 매장 통합)
-    const totalCur = storeRows.reduce((a, r) => a + r.cur, 0);
-    const totalPrev = storeRows.reduce((a, r) => a + r.prev, 0);
-    const totalPct = totalPrev > 0 ? ((totalCur - totalPrev) / totalPrev) * 100 : null;
-    const totalAvg25 = storeRows.reduce((a, r) => a + (r.avg25 || 0), 0);
-    const totalAvg26 = storeRows.reduce((a, r) => a + (r.avg26 || 0), 0);
-    const totalAvgPct = totalAvg25 > 0 ? ((totalAvg26 - totalAvg25) / totalAvg25) * 100 : null;
+    // 합계 (5개 매장 통합, 혜택확인 기준)
+    const totalBenefitCur = storeBenefitRows.reduce((a, r) => a + r.cur, 0);
+    const totalBenefitAvg25 = storeBenefitRows.reduce((a, r) => a + (r.avg25 || 0), 0);
+    const totalBenefitAvg26 = storeBenefitRows.reduce((a, r) => a + (r.avg26 || 0), 0);
+    const totalBenefitAvgPct = totalBenefitAvg25 > 0 ? ((totalBenefitAvg26 - totalBenefitAvg25) / totalBenefitAvg25) * 100 : null;
 
     // UV 합계 (누적)
     const uvTotalAllTime = URBANPLAY_STORES.reduce((a, name) => a + sumStoreAllTime(uvDaily, name), 0);
 
-    const worst = storeRows.slice().filter(r => r.avgPct !== null).sort((a, b) => a.avgPct - b.avgPct)[0];
+    const worst = storeBenefitRows.slice().filter(r => r.avgPct !== null).sort((a, b) => a.avgPct - b.avgPct)[0];
+    const best = storeBenefitRows.slice().filter(r => r.avgPct !== null).sort((a, b) => b.avgPct - a.avgPct)[0];
+    const decliningCount = storeBenefitRows.filter(r => r.avgPct !== null && r.avgPct < 0).length;
 
     const insights = [];
-    insights.push(`5개 매장 합산 혜택사용+직원사용은 ${latestMonth} ${fmt(totalCur)}건으로, 작년 동월(${prevYearMonth}, ${fmt(totalPrev)}건) 대비 ${liftSpan(totalPct)}이에요`);
-    insights.push(`연 평균으로 봐도 2025년 월평균 ${fmt(Math.round(totalAvg25))}건 → 2026년 월평균 ${fmt(Math.round(totalAvg26))}건으로 ${liftSpan(totalAvgPct)} 수준이에요`);
+    insights.push(`5개 매장 합산 혜택사용은 2025년 월평균 ${fmt(Math.round(totalBenefitAvg25))}건 → 2026년 월평균 ${fmt(Math.round(totalBenefitAvg26))}건으로 ${liftSpan(totalBenefitAvgPct)} 수준이에요`);
+    insights.push(`5개 매장 중 <b>${decliningCount}곳</b>이 작년보다 줄어들었어요`);
     if (worst) {
       insights.push(`가장 크게 줄어든 곳은 <b>${worst.name}</b>로, 연 평균 기준 ${liftSpan(worst.avgPct)} 감소했어요`);
     }
+    if (best && best.avgPct !== null && best.avgPct > 0) {
+      insights.push(`반면 <b>${best.name}</b>는 ${liftSpan(best.avgPct)}로 유일하게(또는 가장 크게) 증가했어요`);
+    }
+    insights.push(`${latestBenefitMonth} 기준 5개 매장 합산 혜택사용은 ${fmt(totalBenefitCur)}건이에요`);
 
     // 월별 추이 차트 데이터 (5개 매장 합산, 혜택확인만)
     const trendLabels = benefitMonths.map(m => m.slice(2));
@@ -4705,7 +4696,7 @@
       </div>
 
       <div class="section-card">
-        <div class="section-head"><h2>📌 종합 인사이트</h2></div>
+        <div class="section-head"><h2>📌 종합 인사이트 (혜택사용 기준)</h2></div>
         <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
           ${insights.map(t => `<li>${t}</li>`).join("")}
         </ul>
@@ -4713,14 +4704,14 @@
 
       <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
         <div class="kpi-card">
-          <div class="kpi-top"><div class="kpi-label">${latestMonth} 혜택+직원 합계</div></div>
-          <div class="kpi-value-row"><div class="kpi-value">${fmt(totalCur)}<span class="unit">건</span></div></div>
-          <div class="kpi-sub">작년 동월(${prevYearMonth}) ${fmt(totalPrev)}건 대비 ${liftSpan(totalPct)}</div>
+          <div class="kpi-top"><div class="kpi-label">${latestBenefitMonth} 혜택사용 합계</div></div>
+          <div class="kpi-value-row"><div class="kpi-value">${fmt(totalBenefitCur)}<span class="unit">건</span></div></div>
+          <div class="kpi-sub">2026년 월평균 ${fmt(Math.round(totalBenefitAvg26))}건</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-top"><div class="kpi-label">2025년 vs 2026년 월평균</div></div>
-          <div class="kpi-value-row"><div class="kpi-value">${fmt(Math.round(totalAvg26))}<span class="unit">건/월</span></div></div>
-          <div class="kpi-sub">2025년 평균 ${fmt(Math.round(totalAvg25))}건 대비 ${liftSpan(totalAvgPct)}</div>
+          <div class="kpi-value-row"><div class="kpi-value">${fmt(Math.round(totalBenefitAvg26))}<span class="unit">건/월</span></div></div>
+          <div class="kpi-sub">2025년 평균 ${fmt(Math.round(totalBenefitAvg25))}건 대비 ${liftSpan(totalBenefitAvgPct)}</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-top"><div class="kpi-label">UV(상세페이지 유입) 누적</div></div>
