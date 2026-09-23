@@ -404,6 +404,7 @@
       <button data-tab="event">이벤트 Tracking</button>
       <button data-tab="hub">밀플 허브 페이지</button>
       <button data-tab="jeju981">제주 981</button>
+      <button data-tab="urbanplay">어반플레이</button>
     </div>
 
     <div class="tab-panel active" id="tab-kpi">
@@ -620,6 +621,10 @@
 
     <div class="tab-panel" id="tab-jeju981">
       <div id="jeju981-area"></div>
+    </div>
+
+    <div class="tab-panel" id="tab-urbanplay">
+      <div id="urbanplay-area"></div>
     </div>
 
     <div class="footer">밀리의서재 · Millie Place</div>
@@ -4615,6 +4620,170 @@
     return rates.length ? avgOfArr(rates) : null;
   }
 
+  /* ================= 어반플레이 (fyi 역삼 · 연남장 · 연남방앗간) 분석 탭 ================= */
+
+  const URBANPLAY_STORES = ["fyi 역삼", "연남장", "연남방앗간 DDP점", "연남방앗간 서울역점"];
+
+  let urbanplayTrendChart = null;
+
+  function renderUrbanplayTab() {
+    const area = document.getElementById("urbanplay-area");
+    const storeMetric = METRICS_DATA[STORE_KEY];
+    const monthlyTotals = (storeMetric && storeMetric.monthly_totals) || {};
+    const uvMetric = METRICS_DATA["daily_store_uv"];
+    const uvDaily = (uvMetric && uvMetric.daily_totals) || {};
+    const months = Object.keys(monthlyTotals).sort();
+
+    if (!months.length) {
+      area.innerHTML = `<div class="placeholder-panel"><div class="icon">🏙️</div><h3>데이터 없음</h3><p>매장별 데이터가 아직 없습니다.</p></div>`;
+      return;
+    }
+
+    const latestMonth = months[months.length - 1];
+    const [ly, lm] = latestMonth.split("-").map(Number);
+    const prevYearMonth = `${ly - 1}-${String(lm).padStart(2, "0")}`;
+
+    function storeVal(month, name) { return (monthlyTotals[month] || {})[name] || 0; }
+
+    // 매장별 이번달 vs 작년 동월, 연평균 비교
+    const storeRows = URBANPLAY_STORES.map(name => {
+      const cur = storeVal(latestMonth, name);
+      const prev = storeVal(prevYearMonth, name);
+      const pct = prev > 0 ? ((cur - prev) / prev) * 100 : null;
+      const vals25 = months.filter(m => m.startsWith("2025")).map(m => storeVal(m, name));
+      const vals26 = months.filter(m => m.startsWith("2026")).map(m => storeVal(m, name));
+      const avg25 = vals25.length ? avgOfArr(vals25) : null;
+      const avg26 = vals26.length ? avgOfArr(vals26) : null;
+      const avgPct = (avg25 && avg25 > 0) ? ((avg26 - avg25) / avg25) * 100 : null;
+      return { name, cur, prev, pct, avg25, avg26, avgPct };
+    });
+
+    // 합계 (4개 매장 통합)
+    const totalCur = storeRows.reduce((a, r) => a + r.cur, 0);
+    const totalPrev = storeRows.reduce((a, r) => a + r.prev, 0);
+    const totalPct = totalPrev > 0 ? ((totalCur - totalPrev) / totalPrev) * 100 : null;
+    const totalAvg25 = storeRows.reduce((a, r) => a + (r.avg25 || 0), 0);
+    const totalAvg26 = storeRows.reduce((a, r) => a + (r.avg26 || 0), 0);
+    const totalAvgPct = totalAvg25 > 0 ? ((totalAvg26 - totalAvg25) / totalAvg25) * 100 : null;
+
+    // UV 합계 (최근 30일 vs 작년 동시기는 UV 데이터 기간상 어려워 최근 누적만)
+    const uvTotalAllTime = URBANPLAY_STORES.reduce((a, name) => a + sumStoreAllTime(uvDaily, name), 0);
+
+    const worst = storeRows.slice().filter(r => r.avgPct !== null).sort((a, b) => a.avgPct - b.avgPct)[0];
+
+    const insights = [];
+    insights.push(`4개 매장 합산 혜택사용+직원사용은 ${latestMonth} ${fmt(totalCur)}건으로, 작년 동월(${prevYearMonth}, ${fmt(totalPrev)}건) 대비 ${liftSpan(totalPct)}이에요`);
+    insights.push(`연 평균으로 봐도 2025년 월평균 ${fmt(Math.round(totalAvg25))}건 → 2026년 월평균 ${fmt(Math.round(totalAvg26))}건으로 ${liftSpan(totalAvgPct)} 수준이에요`);
+    if (worst) {
+      insights.push(`가장 크게 줄어든 곳은 <b>${worst.name}</b>로, 연 평균 기준 ${liftSpan(worst.avgPct)} 감소했어요`);
+    }
+
+    // 월별 추이 차트 데이터 (4개 매장 합산)
+    const trendLabels = months.map(m => m.slice(2));
+    const trendData = months.map(m => URBANPLAY_STORES.reduce((a, name) => a + storeVal(m, name), 0));
+
+    area.innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><h2>🏙️ 어반플레이 제휴 매장 분석</h2></div>
+        <div style="font-size:12.5px; color:var(--ink-faint);">fyi 역삼 · 연남장 · 연남방앗간 DDP점 · 연남방앗간 서울역점 · 4개 매장 통합 분석 (어반플레이 미팅 참고용)</div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h2>📌 종합 인사이트</h2></div>
+        <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
+          ${insights.map(t => `<li>${t}</li>`).join("")}
+        </ul>
+      </div>
+
+      <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-label">${latestMonth} 혜택+직원 합계</div></div>
+          <div class="kpi-value-row"><div class="kpi-value">${fmt(totalCur)}<span class="unit">건</span></div></div>
+          <div class="kpi-sub">작년 동월(${prevYearMonth}) ${fmt(totalPrev)}건 대비 ${liftSpan(totalPct)}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-label">2025년 vs 2026년 월평균</div></div>
+          <div class="kpi-value-row"><div class="kpi-value">${fmt(Math.round(totalAvg26))}<span class="unit">건/월</span></div></div>
+          <div class="kpi-sub">2025년 평균 ${fmt(Math.round(totalAvg25))}건 대비 ${liftSpan(totalAvgPct)}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-label">UV(상세페이지 유입) 누적</div></div>
+          <div class="kpi-value-row"><div class="kpi-value">${fmt(uvTotalAllTime)}<span class="unit">건</span></div></div>
+          <div class="kpi-sub">4개 매장 합산, 데이터 수집 시작 이후 누적</div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h2>📈 월별 추이 (4개 매장 합산, 혜택+직원)</h2></div>
+        <div class="trend-chart-wrap"><canvas id="urbanplayTrendChart"></canvas></div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h2>매장별 상세</h2></div>
+        <table class="rank-table">
+          <thead>
+            <tr>
+              <th>매장명</th>
+              <th style="text-align:right">${latestMonth}</th>
+              <th style="text-align:right">${prevYearMonth}</th>
+              <th style="text-align:right">전년동월비</th>
+              <th style="text-align:right">25년 월평균</th>
+              <th style="text-align:right">26년 월평균</th>
+              <th style="text-align:right">연평균비</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${storeRows.map(r => `
+              <tr>
+                <td>${r.name}</td>
+                <td class="rank-val">${fmt(r.cur)}</td>
+                <td class="rank-val" style="color:var(--ink-faint);">${fmt(r.prev)}</td>
+                <td class="rank-val">${liftSpan(r.pct)}</td>
+                <td class="rank-val" style="color:var(--ink-faint);">${r.avg25 !== null ? r.avg25.toFixed(1) : "-"}</td>
+                <td class="rank-val">${r.avg26 !== null ? r.avg26.toFixed(1) : "-"}</td>
+                <td class="rank-val">${liftSpan(r.avgPct)}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="kpi-sub" style="margin:4px 2px 0;">혜택+직원 합계는 store_breakdown(월별, 혜택사용+직원사용 합산) 기준 · 이 4개 매장은 웹 검색과 내부 데이터 대조로 확인한 목록이에요, 어반플레이 측이 운영하는 다른 매장이 더 있다면 알려주시면 추가할게요</div>`;
+
+    if (urbanplayTrendChart) { urbanplayTrendChart.destroy(); urbanplayTrendChart = null; }
+    const canvas = document.getElementById("urbanplayTrendChart");
+    urbanplayTrendChart = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: trendLabels,
+        datasets: [{
+          label: "혜택+직원 합계",
+          data: trendData,
+          borderColor: "#6366f1",
+          backgroundColor: "#6366f1",
+          tension: 0.3,
+          pointRadius: 3,
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          datalabels: {
+            align: "top", offset: 4,
+            font: { size: 10, family: "'IBM Plex Mono', monospace", weight: 600 },
+            color: "#6366f1",
+            formatter: v => fmt(v),
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 10.5 } } },
+          y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+        },
+      },
+    });
+  }
+
   function renderJeju981Tab() {
     const area = document.getElementById("jeju981-area");
     const uvMetric = METRICS_DATA["daily_store_uv"];
@@ -4909,6 +5078,7 @@
       renderHubTab();
       renderNewStoresTab();
       renderJeju981Tab();
+      renderUrbanplayTab();
 
       document.getElementById("updated-at").textContent = data.updated_at || "-";
     } catch (e) {
