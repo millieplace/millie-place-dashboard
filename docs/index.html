@@ -4622,7 +4622,7 @@
 
   /* ================= 어반플레이 (fyi 역삼 · 연남장 · 연남방앗간) 분석 탭 ================= */
 
-  const URBANPLAY_STORES = ["fyi 역삼", "연남장", "연남방앗간 DDP점", "연남방앗간 서울역점"];
+  const URBANPLAY_STORES = ["fyi 역삼", "연남장", "연남방앗간 DDP점", "연남방앗간 서울역점", "캐비넷클럽라운지 역삼점"];
 
   let urbanplayTrendChart = null;
 
@@ -4685,7 +4685,7 @@
     area.innerHTML = `
       <div class="section-card">
         <div class="section-head"><h2>🏙️ 어반플레이 제휴 매장 분석</h2></div>
-        <div style="font-size:12.5px; color:var(--ink-faint);">fyi 역삼 · 연남장 · 연남방앗간 DDP점 · 연남방앗간 서울역점 · 4개 매장 통합 분석 (어반플레이 미팅 참고용)</div>
+        <div style="font-size:12.5px; color:var(--ink-faint);">fyi 역삼 · 연남장 · 연남방앗간 DDP점 · 연남방앗간 서울역점 · 캐비넷클럽라운지 역삼점 · 5개 매장 통합 분석 (어반플레이 미팅 참고용)</div>
       </div>
 
       <div class="section-card">
@@ -4747,7 +4747,7 @@
         </table>
       </div>
 
-      <div class="kpi-sub" style="margin:4px 2px 0;">혜택+직원 합계는 store_breakdown(월별, 혜택사용+직원사용 합산) 기준 · 이 4개 매장은 웹 검색과 내부 데이터 대조로 확인한 목록이에요, 어반플레이 측이 운영하는 다른 매장이 더 있다면 알려주시면 추가할게요</div>`;
+      <div class="kpi-sub" style="margin:4px 2px 0;">혜택+직원 합계는 store_breakdown(월별, 혜택사용+직원사용 합산) 기준 · 이 5개 매장이 어반플레이 제휴 매장으로 확인됐어요, 다른 매장이 더 있다면 알려주시면 추가할게요</div>`;
 
     if (urbanplayTrendChart) { urbanplayTrendChart.destroy(); urbanplayTrendChart = null; }
     const canvas = document.getElementById("urbanplayTrendChart");
