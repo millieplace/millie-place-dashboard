@@ -127,6 +127,14 @@
         "https://image.millie.co.kr/service/hero_banner/6aa69d5e51380.jpg",
         "https://image.millie.co.kr/service/hero_banner/6aa69e92e07b1.jpg"
       ]
+    },
+    "2026-09-28": {
+      "images": [
+        "https://image.millie.co.kr/service/hero_banner/6ab35ecac1330.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6ab35f41d002e.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6aabc3b8d1980.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6ab1015277dd8.jpg"
+      ]
     }
   },
   "meta": {
@@ -204,6 +212,16 @@
       "title": "동네한바퀴 인터뷰 · 오후 3시에 오세요",
       "subtitle": "햇살이 아름다운 홍대 공상온도",
       "place_seq": "1165"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6ab35ecac1330.jpg": {
+      "title": "동네한바퀴 인터뷰 · 출판사가 만든 카페",
+      "subtitle": "60년 금성출판사의 신용산 카페 흙",
+      "place_seq": "1181"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6ab35f41d002e.jpg": {
+      "title": "동네한바퀴 인터뷰 · 영수증을 꼭 보세요",
+      "subtitle": "책과 음악을 적어주는 신월동 포러리",
+      "place_seq": "1077"
     }
   }
 }
