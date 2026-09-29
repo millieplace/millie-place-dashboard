@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>밀리플레이스 · 제휴처 안내</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --paper: #FAF6EF;
+    --paper-card: #FDFBF6;
+    --ink: #2B2420;
+    --ink-soft: #6b6055;
+    --ink-faint: #a39a8c;
+    --accent: #8B4A3C;
+    --accent-soft: #f3e6e0;
+    --sage: #6B7A5E;
+    --sage-soft: #e9edE3;
+    --border: #E8E0D2;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  h1, h2, h3, .serif { font-family: 'Source Serif 4', Georgia, serif; }
+
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 18px 60px; }
+
+  /* 헤더 */
+  header.top {
+    padding: 28px 18px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--paper);
+    position: sticky; top: 0; z-index: 20;
+    padding-top: calc(28px + env(safe-area-inset-top, 0px));
+  }
+  header.top .inner { max-width: 760px; margin: 0 auto; }
+  .brand-row { display: flex; align-items: baseline; gap: 10px; }
+  .brand-mark {
+    font-family: 'Source Serif 4', serif; font-weight: 700; font-size: 22px;
+    color: var(--accent); letter-spacing: -0.01em;
+  }
+  .brand-sub { font-size: 12.5px; color: var(--ink-faint); }
+  .page-title {
+    font-size: 26px; font-weight: 600; margin: 14px 0 4px; line-height: 1.3;
+  }
+  .page-desc { font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; margin: 0; }
+
+  /* 탭 네비게이션 */
+  .tab-nav {
+    display: flex; gap: 4px; margin-top: 18px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .tab-nav button {
+    flex: 1; min-width: 100px;
+    background: none; border: none; cursor: pointer;
+    font-family: inherit; font-size: 13.5px; font-weight: 600;
+    color: var(--ink-faint);
+    padding: 10px 8px 12px;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  .tab-nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .tab-panel { display: none; padding-top: 22px; }
+  .tab-panel.active { display: block; }
+
+  /* 카드 */
+  .card {
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 18px 18px 20px;
+    margin-bottom: 16px;
+  }
+  .card.sage { border-left-color: var(--sage); }
+  .card h2 {
+    font-size: 16.5px; font-weight: 600; margin: 0 0 4px;
+  }
+  .card .card-note {
+    font-size: 12px; color: var(--ink-faint); margin-bottom: 14px; line-height: 1.6;
+  }
+
+  /* KPI */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  }
+  .kpi {
+    background: #fff; border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 12px 13px;
+  }
+  .kpi .label { font-size: 11.5px; color: var(--ink-faint); margin-bottom: 6px; }
+  .kpi .value { font-family: 'Source Serif 4', serif; font-size: 22px; font-weight: 600; }
+  .kpi .value .unit { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--ink-faint); margin-left: 2px; }
+  .kpi .sub { font-size: 11.5px; margin-top: 5px; }
+  .up { color: var(--accent); font-weight: 600; }
+  .down { color: var(--sage); font-weight: 600; }
+
+  .chart-wrap { position: relative; height: 220px; margin-top: 6px; }
+  .chart-wrap.tall { height: 260px; }
+
+  /* 검색/선택 */
+  .store-search {
+    width: 100%; padding: 13px 14px; font-size: 15px; font-family: inherit;
+    border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .store-search:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  datalist {}
+
+  .placeholder {
+    text-align: center; padding: 50px 20px; color: var(--ink-faint);
+  }
+  .placeholder .icon { font-size: 34px; margin-bottom: 10px; }
+  .placeholder p { font-size: 13.5px; margin: 4px 0 0; }
+
+  /* 배너 갤러리 */
+  .banner-grid {
+    display: grid; grid-template-columns: 1fr; gap: 14px;
+  }
+  .banner-item {
+    border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: #fff;
+  }
+  .banner-item img { width: 100%; display: block; aspect-ratio: 16/10; object-fit: cover; background: #eee; }
+  .banner-item .cap { padding: 12px 14px 14px; }
+  .banner-item .cap .t { font-size: 13.5px; font-weight: 700; line-height: 1.4; }
+  .banner-item .cap .s { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+  .banner-item .cap .d { font-size: 11px; color: var(--ink-faint); margin-top: 6px; }
+
+  .period-row { padding: 10px 0; border-top: 1px solid var(--border); }
+  .period-row:first-child { border-top: none; }
+  .period-row .range { font-size: 12px; font-weight: 700; margin-bottom: 8px; color: var(--ink-soft); }
+  .thumb-row { display: flex; gap: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+  .thumb { flex: 0 0 120px; }
+  .thumb img { width: 120px; height: 80px; object-fit: cover; border-radius: 6px; background: #eee; display: block; }
+  .thumb .tt { font-size: 10.5px; font-weight: 600; margin-top: 4px; line-height: 1.3; }
+
+  footer.page-footer {
+    text-align: center; font-size: 11.5px; color: var(--ink-faint); padding: 28px 0 10px;
+  }
+
+  @media (max-width: 480px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .kpi { padding: 10px 8px 11px; }
+    .kpi .value { font-size: 18px; }
+    .page-title { font-size: 22px; }
+    .card { padding: 15px 14px 17px; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1c1a17; --paper-card: #24211d; --ink: #ece6da; --ink-soft: #b3a999;
+      --ink-faint: #74695b; --border: #3a352d; --accent-soft: #3a2925; --sage-soft: #232a1f;
+    }
+    .kpi { background: #221f1b; }
+    .store-search, .banner-item { background: #221f1b; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="inner">
+    <div class="brand-row">
+      <span class="brand-mark">밀리플레이스</span>
+      <span class="brand-sub">제휴처 안내</span>
+    </div>
+    <div class="page-title">함께해주셔서 감사합니다</div>
+    <p class="page-desc">밀리플레이스 전체 방문 현황과 우리 매장의 데이터, 그리고 최근 마케팅 소식을 확인하실 수 있어요.</p>
+    <nav class="tab-nav">
+      <button data-tab="overview" class="active">방문자 현황</button>
+      <button data-tab="mystore">내 매장 데이터</button>
+      <button data-tab="marketing">마케팅 소식</button>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="tab-panel active" id="tab-overview">
+    <div id="overview-area"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-mystore">
+    <div id="mystore-area"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-marketing">
+    <div id="marketing-area"></div>
+  </div>
+
+  <footer class="page-footer">밀리플레이스 · Millie Place</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  let METRICS = {};
+  let BANNER_DATA = null;
+  let BANNER_HISTORY = null;
+  let overviewChart = null;
+  let storeChart = null;
+
+  function fmt(n) {
+    if (n === null || n === undefined || isNaN(n)) return "-";
+    return Math.round(n).toLocaleString("ko-KR");
+  }
+
+  function toLocalDateStr(d) {
+    const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function pctBadge(pct) {
+    if (pct === null || pct === undefined || !isFinite(pct)) return `<span style="color:var(--ink-faint);">-</span>`;
+    const up = pct >= 0;
+    return `<span class="${up ? "up" : "down"}">${up ? "▲" : "▼"}${Math.abs(pct).toFixed(0)}%</span>`;
+  }
+
+  /* ---------- 탭 전환 ---------- */
+  function setupTabs() {
+    document.querySelectorAll(".tab-nav button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-nav button").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+      });
+    });
+  }
+
+  /* ================= 탭 1: 전체 방문자 현황 ================= */
+  function aggregateMonthlyFromSeries(series) {
+    const byMonth = {};
+    (series || []).forEach(p => {
+      const mk = p.date.slice(0, 7);
+      byMonth[mk] = (byMonth[mk] || 0) + p.value;
+    });
+    return byMonth;
+  }
+
+  function renderOverviewTab() {
+    const area = document.getElementById("overview-area");
+    const uvMetric = METRICS.uv;
+    if (!uvMetric || !uvMetric.series || !uvMetric.series.length) {
+      area.innerHTML = `<div class="placeholder"><div class="icon">📊</div><h3>데이터 준비 중</h3><p>곧 방문자 현황을 보여드릴게요.</p></div>`;
+      return;
+    }
+    const series = uvMetric.series;
+    const monthly = aggregateMonthlyFromSeries(series);
+    const monthKeys = Object.keys(monthly).sort();
+    const latestMonth = monthKeys[monthKeys.length - 1];
+    const prevMonth = monthKeys[monthKeys.length - 2];
+    const curVal = monthly[latestMonth] || 0;
+    const prevVal = prevMonth ? (monthly[prevMonth] || 0) : null;
+    const pct = (prevVal && prevVal > 0) ? ((curVal - prevVal) / prevVal) * 100 : null;
+
+    const last7 = series.slice(-7).reduce((a, p) => a + p.value, 0);
+    const prev7 = series.slice(-14, -7).reduce((a, p) => a + p.value, 0);
+    const week_pct = prev7 > 0 ? ((last7 - prev7) / prev7) * 100 : null;
+
+    const totalAllTime = series.reduce((a, p) => a + p.value, 0);
+
+    area.innerHTML = `
+      <div class="card">
+        <h2>밀리플레이스 전체 방문자수</h2>
+        <div class="card-note">앱 내 밀리플레이스 페이지 전체 방문(UV) 기준이에요</div>
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="label">${latestMonth} 누적</div>
+            <div class="value">${fmt(curVal)}<span class="unit">명</span></div>
+            <div class="sub">${prevVal !== null ? `전월 대비 ${pctBadge(pct)}` : ""}</div>
+          </div>
+          <div class="kpi">
+            <div class="label">최근 7일</div>
+            <div class="value">${fmt(last7)}<span class="unit">명</span></div>
+            <div class="sub">직전 7일 대비 ${pctBadge(week_pct)}</div>
+          </div>
+          <div class="kpi">
+            <div class="label">누적 (전체 기간)</div>
+            <div class="value">${fmt(totalAllTime)}<span class="unit">명</span></div>
+            <div class="sub" style="color:var(--ink-faint);">서비스 시작 이후</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card sage">
+        <h2>월별 방문자 추이</h2>
+        <div class="card-note">최근 12개월</div>
+        <div class="chart-wrap tall"><canvas id="overviewChart"></canvas></div>
+      </div>`;
+
+    const shownMonths = monthKeys.slice(-12);
+    if (overviewChart) { overviewChart.destroy(); overviewChart = null; }
+    overviewChart = new Chart(document.getElementById("overviewChart"), {
+      type: "line",
+      data: {
+        labels: shownMonths.map(m => m.slice(2)),
+        datasets: [{
+          data: shownMonths.map(m => monthly[m]),
+          borderColor: "#8B4A3C",
+          backgroundColor: "rgba(139,74,60,0.08)",
+          fill: true,
+          tension: 0.35,
+          pointRadius: 3,
+          pointBackgroundColor: "#8B4A3C",
+          borderWidth: 2.4,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#a39a8c", font: { size: 11 } } },
+          y: { grid: { color: "#E8E0D2" }, ticks: { color: "#a39a8c", font: { size: 11 } } },
+        },
+      },
+    });
+  }
+
+  /* ================= 탭 2: 내 매장 데이터 ================= */
+  function buildStoreNameList() {
+    const names = new Set();
+    ["daily_store", "daily_store_uv", "daily_store_staff"].forEach(key => {
+      const m = METRICS[key];
+      if (!m || !m.daily_totals) return;
+      Object.values(m.daily_totals).forEach(bucket => {
+        Object.keys(bucket).forEach(n => { if (n && n !== "null") names.add(n); });
+      });
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b, "ko"));
+  }
+
+  function sumRecent(dailyTotals, name, days) {
+    if (!dailyTotals) return 0;
+    const dates = Object.keys(dailyTotals).sort();
+    const recent = dates.slice(-days);
+    return recent.reduce((a, d) => a + ((dailyTotals[d] || {})[name] || 0), 0);
+  }
+
+  function renderMystoreTab() {
+    const area = document.getElementById("mystore-area");
+    const names = buildStoreNameList();
+    area.innerHTML = `
+      <div class="card">
+        <h2>우리 매장 데이터 조회</h2>
+        <div class="card-note">매장명을 입력하거나 목록에서 선택해주세요</div>
+        <input list="store-name-list" id="store-search-input" class="store-search" placeholder="매장명 검색 (예: fyi 역삼)">
+        <datalist id="store-name-list">
+          ${names.map(n => `<option value="${n}">`).join("")}
+        </datalist>
+      </div>
+      <div id="mystore-result"></div>`;
+
+    const input = document.getElementById("store-search-input");
+    input.addEventListener("change", () => renderStoreResult(input.value.trim()));
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") renderStoreResult(input.value.trim());
+    });
+  }
+
+  function renderStoreResult(name) {
+    const resultArea = document.getElementById("mystore-result");
+    const names = buildStoreNameList();
+    if (!name || !names.includes(name)) {
+      resultArea.innerHTML = name
+        ? `<div class="placeholder"><div class="icon">🔍</div><h3>매장을 찾을 수 없어요</h3><p>매장명을 정확히 입력하거나 목록에서 선택해주세요.</p></div>`
+        : "";
+      return;
+    }
+
+    const uvDaily = (METRICS.daily_store_uv && METRICS.daily_store_uv.daily_totals) || {};
+    const clickDaily = (METRICS.daily_store && METRICS.daily_store.daily_totals) || {};
+    const staffDaily = (METRICS.daily_store_staff && METRICS.daily_store_staff.daily_totals) || {};
+
+    const uv30 = sumRecent(uvDaily, name, 30);
+    const click30 = sumRecent(clickDaily, name, 30);
+    const staff30 = sumRecent(staffDaily, name, 30);
+
+    const dates = Object.keys(uvDaily).sort().slice(-60);
+    const trend = dates.map(d => (uvDaily[d] || {})[name] || 0);
+
+    resultArea.innerHTML = `
+      <div class="card">
+        <h2>${name}</h2>
+        <div class="card-note">최근 30일 기준</div>
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="label">페이지 방문(UV)</div>
+            <div class="value">${fmt(uv30)}<span class="unit">명</span></div>
+          </div>
+          <div class="kpi">
+            <div class="label">혜택 사용</div>
+            <div class="value">${fmt(click30)}<span class="unit">건</span></div>
+          </div>
+          <div class="kpi">
+            <div class="label">직원 확인</div>
+            <div class="value">${fmt(staff30)}<span class="unit">건</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card sage">
+        <h2>최근 60일 방문(UV) 추이</h2>
+        <div class="chart-wrap"><canvas id="storeChart"></canvas></div>
+      </div>`;
+
+    if (storeChart) { storeChart.destroy(); storeChart = null; }
+    storeChart = new Chart(document.getElementById("storeChart"), {
+      type: "line",
+      data: {
+        labels: dates.map(d => d.slice(5)),
+        datasets: [{
+          data: trend,
+          borderColor: "#6B7A5E",
+          backgroundColor: "rgba(107,122,94,0.1)",
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#a39a8c", font: { size: 9.5 }, maxTicksLimit: 8 } },
+          y: { grid: { color: "#E8E0D2" }, ticks: { color: "#a39a8c", font: { size: 11 } } },
+        },
+      },
+    });
+  }
+
+  /* ================= 탭 3: 마케팅 소식 ================= */
+  function buildBannerPeriods(history) {
+    if (!history || !history.days) return [];
+    const dates = Object.keys(history.days).sort();
+    if (!dates.length) return [];
+    const meta = history.meta || {};
+    const periods = [];
+    let cur = null;
+    dates.forEach(date => {
+      const images = history.days[date].images || [];
+      const signature = images.slice().sort().join("|");
+      if (cur && cur.signature === signature) {
+        cur.end = date;
+      } else {
+        if (cur) periods.push(cur);
+        cur = { start: date, end: date, signature, images };
+      }
+    });
+    if (cur) periods.push(cur);
+    return periods.reverse().map(p => ({
+      start: p.start, end: p.end,
+      slides: p.images.map(img => ({
+        image: img,
+        title: (meta[img] && meta[img].title) || "",
+        subtitle: (meta[img] && meta[img].subtitle) || "",
+      })),
+    }));
+  }
+
+  function renderMarketingTab() {
+    const area = document.getElementById("marketing-area");
+    const current = BANNER_DATA && BANNER_DATA.slides && BANNER_DATA.slides.length ? BANNER_DATA : null;
+    const periods = buildBannerPeriods(BANNER_HISTORY).slice(0, 8);
+
+    if (!current && !periods.length) {
+      area.innerHTML = `<div class="placeholder"><div class="icon">📰</div><h3>소식 준비 중</h3><p>곧 마케팅 소식을 보여드릴게요.</p></div>`;
+      return;
+    }
+
+    const currentHtml = current ? `
+      <div class="card">
+        <h2>지금 밀리플레이스 메인에 소개되고 있어요</h2>
+        <div class="card-note">${current.captured_at ? current.captured_at.slice(0, 10) + " 기준" : ""}</div>
+        <div class="banner-grid">
+          ${current.slides.map(s => `
+            <div class="banner-item">
+              <img src="${s.image}" alt="${s.title}" loading="lazy">
+              <div class="cap">
+                <div class="t">${s.title}</div>
+                <div class="s">${s.subtitle}</div>
+              </div>
+            </div>`).join("")}
+        </div>
+      </div>` : "";
+
+    const historyHtml = periods.length ? `
+      <div class="card sage">
+        <h2>메인 배너 소개 이력</h2>
+        <div class="card-note">최근 소개된 순서예요</div>
+        ${periods.map(p => `
+          <div class="period-row">
+            <div class="range">${p.start}${p.start !== p.end ? " ~ " + p.end : ""}</div>
+            <div class="thumb-row">
+              ${p.slides.map(s => `
+                <div class="thumb">
+                  <img src="${s.image}" alt="${s.title}" loading="lazy">
+                  <div class="tt">${s.title}</div>
+                </div>`).join("")}
+            </div>
+          </div>`).join("")}
+      </div>` : "";
+
+    area.innerHTML = currentHtml + historyHtml;
+  }
+
+  /* ================= 로드 ================= */
+  async function load() {
+    setupTabs();
+    try {
+      const res = await fetch("./data.json", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        METRICS = data.metrics || {};
+      }
+    } catch (e) { /* noop */ }
+
+    try {
+      const r1 = await fetch("./millieplace_banner.json", { cache: "no-store" });
+      if (r1.ok) BANNER_DATA = await r1.json();
+    } catch (e) { BANNER_DATA = null; }
+
+    try {
+      const r2 = await fetch("./millieplace_banner_history.json", { cache: "no-store" });
+      if (r2.ok) BANNER_HISTORY = await r2.json();
+    } catch (e) { BANNER_HISTORY = null; }
+
+    renderOverviewTab();
+    renderMystoreTab();
+    renderMarketingTab();
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
