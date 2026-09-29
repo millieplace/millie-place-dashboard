@@ -213,6 +213,7 @@
   let METRICS = {};
   let BANNER_DATA = null;
   let BANNER_HISTORY = null;
+  let PLACE_SEQ_MAP = {};
   let overviewChart = null;
   let storeChart = null;
 
@@ -355,34 +356,30 @@
 
   function renderMystoreTab() {
     const area = document.getElementById("mystore-area");
-    const names = buildStoreNameList();
-    area.innerHTML = `
-      <div class="card">
-        <h2>우리 매장 데이터 조회</h2>
-        <div class="card-note">매장명을 입력하거나 목록에서 선택해주세요</div>
-        <input list="store-name-list" id="store-search-input" class="store-search" placeholder="매장명 검색 (예: fyi 역삼)">
-        <datalist id="store-name-list">
-          ${names.map(n => `<option value="${n}">`).join("")}
-        </datalist>
-      </div>
-      <div id="mystore-result"></div>`;
+    const params = new URLSearchParams(window.location.search);
+    const seq = params.get("store");
+    const name = seq ? PLACE_SEQ_MAP[seq] : null;
 
-    const input = document.getElementById("store-search-input");
-    input.addEventListener("change", () => renderStoreResult(input.value.trim()));
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") renderStoreResult(input.value.trim());
-    });
+    if (!name) {
+      area.innerHTML = `
+        <div class="card">
+          <h2>우리 매장 데이터 조회</h2>
+          <div class="card-note">이 화면은 매장별 개인 링크로만 확인하실 수 있어요</div>
+          <div class="placeholder" style="padding:30px 10px;">
+            <div class="icon">🔒</div>
+            <h3>개인 링크가 필요해요</h3>
+            <p>담당 매니저가 안내해드린 링크로 접속해주세요.</p>
+          </div>
+        </div>`;
+      return;
+    }
+    area.innerHTML = `<div id="mystore-result"></div>`;
+    renderStoreResult(name);
   }
 
   function renderStoreResult(name) {
     const resultArea = document.getElementById("mystore-result");
-    const names = buildStoreNameList();
-    if (!name || !names.includes(name)) {
-      resultArea.innerHTML = name
-        ? `<div class="placeholder"><div class="icon">🔍</div><h3>매장을 찾을 수 없어요</h3><p>매장명을 정확히 입력하거나 목록에서 선택해주세요.</p></div>`
-        : "";
-      return;
-    }
+    if (!name) { resultArea.innerHTML = ""; return; }
 
     const uvDaily = (METRICS.daily_store_uv && METRICS.daily_store_uv.daily_totals) || {};
     const clickDaily = (METRICS.daily_store && METRICS.daily_store.daily_totals) || {};
@@ -540,6 +537,11 @@
       const r2 = await fetch("./millieplace_banner_history.json", { cache: "no-store" });
       if (r2.ok) BANNER_HISTORY = await r2.json();
     } catch (e) { BANNER_HISTORY = null; }
+
+    try {
+      const r3 = await fetch("./place_seq_map.json", { cache: "no-store" });
+      if (r3.ok) PLACE_SEQ_MAP = await r3.json();
+    } catch (e) { PLACE_SEQ_MAP = {}; }
 
     renderOverviewTab();
     renderMystoreTab();
