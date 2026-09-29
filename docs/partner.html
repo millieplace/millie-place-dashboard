@@ -213,7 +213,7 @@
   let METRICS = {};
   let BANNER_DATA = null;
   let BANNER_HISTORY = null;
-  let PLACE_SEQ_MAP = {};
+  let PARTNER_TOKENS = {};
   let overviewChart = null;
   let storeChart = null;
 
@@ -357,8 +357,8 @@
   function renderMystoreTab() {
     const area = document.getElementById("mystore-area");
     const params = new URLSearchParams(window.location.search);
-    const seq = params.get("store");
-    const name = seq ? PLACE_SEQ_MAP[seq] : null;
+    const token = params.get("t");
+    const name = token ? PARTNER_TOKENS[token] : null;
 
     if (!name) {
       area.innerHTML = `
@@ -539,9 +539,9 @@
     } catch (e) { BANNER_HISTORY = null; }
 
     try {
-      const r3 = await fetch("./place_seq_map.json", { cache: "no-store" });
-      if (r3.ok) PLACE_SEQ_MAP = await r3.json();
-    } catch (e) { PLACE_SEQ_MAP = {}; }
+      const r3 = await fetch("./partner_tokens.json", { cache: "no-store" });
+      if (r3.ok) PARTNER_TOKENS = await r3.json();
+    } catch (e) { PARTNER_TOKENS = {}; }
 
     renderOverviewTab();
     renderMystoreTab();
