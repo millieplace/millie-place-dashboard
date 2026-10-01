@@ -2651,116 +2651,152 @@
   }
 
   function renderCompletedMonthInsights() {
-    const parts = [];
-    const bits = [];
-    let bestGrowth = null;
-    let label = null, prevLabel = null;
-    METRIC_ORDER.forEach(key => {
-      const m = METRICS_DATA[key];
-      if (!m || !m.series || !m.series.length) return;
-      const cmp = getCompletedMonthComparison(m.series);
-      if (!cmp) return;
-      label = cmp.label; prevLabel = cmp.prevLabel;
-      let pctStr = "";
-      if (cmp.delta !== null) {
-        const up = cmp.delta >= 0;
-        pctStr = ` <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">(${up ? "▲" : "▼"}${Math.abs(cmp.delta).toFixed(1)}%)</span>`;
-        if (bestGrowth === null || cmp.delta > bestGrowth.delta) bestGrowth = { label: m.label, delta: cmp.delta };
-      }
-      bits.push(`${m.label} ${fmt(cmp.value)}건${pctStr}`);
-    });
-    if (!label) return "";
-    parts.push(`<b>${label}</b> 전체 합계는 ${bits.join(" · ")} — ${prevLabel ? `${prevLabel} 대비 변화예요` : "이전 데이터가 없어 비교하지 못했어요"}`);
-    if (bestGrowth && bestGrowth.delta > 0) {
-      parts.push(`${label}에 가장 크게 성장한 지표는 <b>${bestGrowth.label}</b>로, ${prevLabel} 대비 <span style="color:var(--good); font-weight:600;">▲${bestGrowth.delta.toFixed(1)}%</span> 증가했어요`);
+    const uvCmp = METRICS_DATA.uv ? getCompletedMonthComparison(METRICS_DATA.uv.series || []) : null;
+    const benefitCmp = METRICS_DATA.benefit_claims ? getCompletedMonthComparison(METRICS_DATA.benefit_claims.series || []) : null;
+    const baseCmp = uvCmp || benefitCmp;
+    if (!baseCmp) return "";
+    const label = baseCmp.label, prevLabel = baseCmp.prevLabel;
+
+    function deltaSpan(delta, unit) {
+      if (delta === null || delta === undefined || !isFinite(delta)) return "";
+      const up = delta >= 0;
+      return `<span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">${up ? "▲" : "▼"}${Math.abs(delta).toFixed(1)}${unit || "%"}</span>`;
+    }
+    function metricLine(name, cmp) {
+      if (!cmp) return null;
+      const prevStr = cmp.prevValue !== null && cmp.prevValue !== undefined ? ` (${prevLabel} ${fmt(cmp.prevValue)}건 대비 ${deltaSpan(cmp.delta)})` : "";
+      return `${name} <b>${fmt(cmp.value)}건</b>${prevStr}`;
     }
 
-    if (METRICS_DATA.uv && METRICS_DATA.benefit_claims) {
-      const uvCmp = getCompletedMonthComparison(METRICS_DATA.uv.series || []);
-      const benefitCmp = getCompletedMonthComparison(METRICS_DATA.benefit_claims.series || []);
-      if (uvCmp && benefitCmp && uvCmp.value > 0) {
-        const convNow = (benefitCmp.value / uvCmp.value) * 100;
-        let cmpStr = "";
-        if (uvCmp.prevValue > 0) {
-          const convPrev = (benefitCmp.prevValue / uvCmp.prevValue) * 100;
-          const diff = convNow - convPrev;
-          const up = diff >= 0;
-          cmpStr = ` (${prevLabel} ${convPrev.toFixed(1)}% 대비 <span style="color:${up ? "var(--good)" : "var(--bad)"}; font-weight:600;">${up ? "▲" : "▼"}${Math.abs(diff).toFixed(1)}%p</span>)`;
-        }
-        parts.push(`혜택받기 전환율(UV 대비)은 ${label} 기준 <b>${convNow.toFixed(1)}%</b>예요${cmpStr}`);
+    // ── 1. 전체 실적 ──
+    const summary = [];
+    const lines = [metricLine("UV", uvCmp), metricLine("혜택받기", benefitCmp)].filter(Boolean);
+    summary.push(`<b>${label}</b> 전체 실적은 ${lines.join(", ")}이에요`);
+    if (uvCmp && benefitCmp && uvCmp.value > 0) {
+      const convNow = (benefitCmp.value / uvCmp.value) * 100;
+      let cmpStr = "";
+      if (uvCmp.prevValue > 0) {
+        const convPrev = (benefitCmp.prevValue / uvCmp.prevValue) * 100;
+        cmpStr = ` (${prevLabel} ${convPrev.toFixed(1)}% 대비 ${deltaSpan(convNow - convPrev, "%p")})`;
       }
+      summary.push(`UV 대비 혜택받기 전환율은 <b>${convNow.toFixed(1)}%</b>예요${cmpStr}`);
     }
-
-    if (label) {
+    {
       const [ey, em] = label.split("-").map(Number);
-      const lastDay = new Date(ey, em, 0).getDate();
-      const refDate = `${label}-${String(lastDay).padStart(2, "0")}`;
+      const refDate = `${label}-${String(new Date(ey, em, 0).getDate()).padStart(2, "0")}`;
       let prevRefDate = null;
       if (prevLabel) {
         const [py, pm] = prevLabel.split("-").map(Number);
-        const prevLastDay = new Date(py, pm, 0).getDate();
-        prevRefDate = `${prevLabel}-${String(prevLastDay).padStart(2, "0")}`;
+        prevRefDate = `${prevLabel}-${String(new Date(py, pm, 0).getDate()).padStart(2, "0")}`;
       }
       const storeInsight = buildStoreCountInsight(refDate, prevRefDate, `${label} 말`, `${prevLabel || "-"} 말`);
-      if (storeInsight) parts.push(storeInsight);
+      if (storeInsight) summary.push(storeInsight);
     }
 
-    parts.push(...renderStoreLevelInsights());
-
-    // 종합 분석: 매장 이탈/성장이 전체 UV·혜택받기·직원확인 변화와 어느 정도 맞물리는지 연결
-    const storeMetric = METRICS_DATA[STORE_KEY];
-    if (storeMetric) {
-      const monthlyTotals = storeMetric.monthly_totals || {};
-      const monthData = getLastTwoCompleteMonths(monthlyTotals);
-      const uvCmp = getCompletedMonthComparison(METRICS_DATA.uv ? METRICS_DATA.uv.series || [] : []);
-      const benefitCmp = getCompletedMonthComparison(METRICS_DATA.benefit_claims ? METRICS_DATA.benefit_claims.series || [] : []);
-      const staffCmp = getCompletedMonthComparison(METRICS_DATA.staff_verifications ? METRICS_DATA.staff_verifications.series || [] : []);
-
-      if (monthData && monthData.prevLabel && uvCmp && uvCmp.delta !== null) {
-        const changes = computeStoreChanges(monthData.cur, monthData.prev);
-        const topDeclines = changes.filter(c => c.prev >= 10 && c.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 5);
-        const topGrowths = changes.filter(c => c.delta > 0 && c.cur >= 5).sort((a, b) => b.delta - a.delta).slice(0, 5);
-
-        function ratioText(metricLabel, cmp, amount) {
-          if (!cmp || cmp.delta === null || cmp.delta >= 0) return null;
-          const declineAbs = cmp.prevValue - cmp.value;
-          if (declineAbs <= 0) return null;
-          const ratio = (amount / declineAbs) * 100;
-          if (ratio > 100) {
-            return `${metricLabel} 감소분(${fmt(declineAbs)}건)의 약 <b>${ratio.toFixed(0)}%</b> (다른 매장 성장으로 일부 상쇄됨)`;
-          }
-          return `${metricLabel} 감소분(${fmt(declineAbs)}건)의 약 <b>${ratio.toFixed(0)}%</b>`;
-        }
-
-        if (uvCmp.delta < 0 && topDeclines.length) {
-          const totalDecline = topDeclines.reduce((a, c) => a + (-c.delta), 0);
-          const names = topDeclines.slice(0, 3).map(c => c.name).join("·");
-          const closedAny = topDeclines.some(c => { const t = getStoreTerminationInfo(c.name); return t && t.terminated; });
-          const note = closedAny ? ` <span style="color:var(--ink-faint); font-size:11px;">(일부는 폐업·해지 영향)</span>` : "";
-          const ratioBits = [
-            ratioText("UV", uvCmp, totalDecline),
-            ratioText("혜택받기", benefitCmp, totalDecline),
-            ratioText("직원확인", staffCmp, totalDecline),
-          ].filter(Boolean);
-          const ratioStr = ratioBits.length ? ratioBits.join(", ") : "일부";
-          parts.unshift(`<b>${names}</b> 등 상위 감소 매장들의 방문 감소분(약 ${fmt(totalDecline)}건)이, ${label} ${ratioStr}를 차지해요${note}`);
-        } else if (uvCmp.delta > 0 && topGrowths.length) {
-          const names = topGrowths.slice(0, 3).map(c => c.name).join("·");
-          parts.unshift(`<b>${names}</b> 등 매장들의 성장이, ${label} 전체 UV 증가(<span style="color:var(--good); font-weight:600;">▲${uvCmp.delta.toFixed(1)}%</span>)에 기여한 것으로 보여요`);
-        }
+    // ── 2. 변화 요인 (매장별 혜택사용 기준 분해) ──
+    const reasons = [];
+    const sa = computeStoreLevelAnalysis(label);
+    if (sa) {
+      const net = sa.gainSum - sa.lossSum;
+      reasons.push(`매장별로 보면 혜택사용이 줄어든 매장 <b>${sa.declineCount}곳</b>에서 총 <span style="color:var(--bad); font-weight:600;">-${fmt(sa.lossSum)}건</span>, 늘어난 매장 <b>${sa.growthCount}곳</b>에서 총 <span style="color:var(--good); font-weight:600;">+${fmt(sa.gainSum)}건</span>이 생겨, 순 ${net >= 0 ? "+" : ""}${fmt(net)}건 변화했어요`);
+      if (sa.topDeclines.length && sa.lossSum > 0) {
+        const top3 = sa.topDeclines.slice(0, 3);
+        const top3Sum = top3.reduce((a, c) => a + (-c.delta), 0);
+        const share = top3Sum / sa.lossSum * 100;
+        const names = top3.map(c => `<b>${c.name}</b>`).join(", ");
+        reasons.push(share >= 50
+          ? `감소분의 <b>${share.toFixed(0)}%</b>가 ${names} 3곳에 집중돼 있어요 — 전체 감소는 일부 대형 매장의 영향이 커요`
+          : `가장 많이 줄어든 곳은 ${names}지만 이 3곳 비중은 감소분의 <b>${share.toFixed(0)}%</b>뿐이에요 — 감소가 특정 매장보다는 여러 매장에 고르게 퍼져 있어요`);
+      }
+      if (sa.closedLoss > 0) {
+        reasons.push(`이 중 폐업·해지 매장(${sa.closedNames.join(", ")})에서 빠진 몫이 <span style="color:var(--bad); font-weight:600;">-${fmt(sa.closedLoss)}건</span>이에요`);
+      }
+      if (sa.newPartnerNames.length) {
+        reasons.push(`반대로 최근 3개월 내 신규 제휴 매장 <b>${sa.newPartnerNames.length}곳</b>이 전월 대비 <span style="color:var(--good); font-weight:600;">+${fmt(sa.newPartnerGain)}건</span>을 더하며 감소분을 일부 메웠어요`);
       }
     }
 
-    if (!parts.length) return "";
-    return `<div class="section-card">
+    const sectionTitle = t => `<div style="font-size:12px; font-weight:700; color:var(--ink-faint); margin:14px 0 4px; letter-spacing:0.02em;">${t}</div>`;
+    const ul = items => `<ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">${items.map(t => `<li>${t}</li>`).join("")}</ul>`;
+
+    let html = `<div class="section-card">
       <div class="section-head"><h2>📌 지난달(${label}) 종합 인사이트</h2></div>
-      <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">
-        ${parts.map(t => `<li>${t}</li>`).join("")}
-      </ul>
+      ${sectionTitle("전체 실적")}${ul(summary)}
+      ${reasons.length ? sectionTitle(`혜택받기 변화 요인 <span style="font-weight:500;">(매장별 혜택사용 기준)</span>`) + ul(reasons) : ""}
+    </div>`;
+
+    if (sa) html += renderStoreLevelInsightsCard(sa, label, prevLabel);
+    return html;
+  }
+
+  function computeStoreLevelAnalysis(expectLabel) {
+    const storeMetric = METRICS_DATA[STORE_KEY];
+    if (!storeMetric) return null;
+    const monthData = getLastTwoCompleteMonths(storeMetric.monthly_totals || {});
+    if (!monthData || !monthData.prevLabel) return null;
+    const changes = computeStoreChanges(monthData.cur, monthData.prev);
+    const tagOf = name => {
+      const t = getStoreTerminationInfo(name);
+      if (t && t.terminated) return t.reason === "폐업" ? "폐업" : "해지";
+      if (isRecentlyPartnered(name, monthData.curLabel, 3)) return "신규 제휴";
+      return null;
+    };
+    const decl = changes.filter(c => c.delta < 0);
+    const grow = changes.filter(c => c.delta > 0);
+    const closed = decl.filter(c => { const t = getStoreTerminationInfo(c.name); return t && t.terminated; });
+    const newPartners = grow.filter(c => isRecentlyPartnered(c.name, monthData.curLabel, 3));
+    return {
+      curLabel: monthData.curLabel, prevLabel: monthData.prevLabel, tagOf,
+      declineCount: decl.length, growthCount: grow.length,
+      lossSum: decl.reduce((a, c) => a + (-c.delta), 0),
+      gainSum: grow.reduce((a, c) => a + c.delta, 0),
+      topDeclines: decl.filter(c => c.prev >= 10).sort((a, b) => a.delta - b.delta).slice(0, 5),
+      topGrowths: grow.filter(c => c.cur >= 5).sort((a, b) => b.delta - a.delta).slice(0, 5),
+      stopped: changes.filter(c => c.prev >= 10 && c.cur === 0).sort((a, b) => b.prev - a.prev),
+      closedLoss: closed.reduce((a, c) => a + (-c.delta), 0),
+      closedNames: closed.map(c => c.name),
+      newPartnerNames: newPartners.map(c => c.name),
+      newPartnerGain: newPartners.reduce((a, c) => a + c.delta, 0),
+    };
+  }
+
+  function renderStoreLevelInsightsCard(sa, label, prevLabel) {
+    const tag = name => {
+      const t = sa.tagOf(name);
+      if (!t) return "";
+      const color = t === "신규 제휴" ? "var(--good)" : "var(--bad)";
+      return ` <span style="font-size:10.5px; font-weight:700; color:${color}; border:1px solid ${color}; border-radius:10px; padding:0 6px; margin-left:2px;">${t}</span>`;
+    };
+    const row = (c, sign) => `<li><b>${c.name}</b>${tag(c.name)} — ${fmt(c.prev)}→${fmt(c.cur)}건 <span style="color:${sign > 0 ? "var(--good)" : "var(--bad)"}; font-weight:600;">(${sign > 0 ? "+" : ""}${fmt(c.delta)})</span></li>`;
+    const block = (title, items) => items.length ? `
+      <div>
+        <div style="font-size:12.5px; font-weight:700; margin-bottom:6px;">${title}</div>
+        <ol style="margin:0; padding-left:20px; font-size:13px; line-height:1.85;">${items.join("")}</ol>
+      </div>` : "";
+
+    const notes = [];
+    if (sa.stopped.length) {
+      const allClosed = sa.stopped.every(c => { const t = getStoreTerminationInfo(c.name); return t && t.terminated; });
+      const names = sa.stopped.map(c => c.name).join(", ");
+      notes.push(`${label}에 혜택사용이 0건이 된 매장 <b>${sa.stopped.length}곳</b>: ${names}${allClosed ? " — 모두 폐업·해지 매장이에요" : " — 제휴 상태 확인이 필요해요"}`);
+    }
+    if (sa.newPartnerNames.length >= 2) {
+      const inTopGrowth = sa.topGrowths.filter(c => sa.tagOf(c.name) === "신규 제휴").length;
+      notes.push(`성장 TOP5 중 <b>${inTopGrowth}곳</b>이 최근 3개월 내 신규 제휴 매장이에요 — 신규 매장이 빠르게 자리잡고 있어요`);
+    }
+
+    return `<div class="section-card">
+      <div class="section-head"><h2>🏬 제휴처별 인사이트 (${prevLabel} → ${label}, 혜택사용 기준)</h2></div>
+      <div class="two-col" style="gap:18px; margin-top:6px;">
+        ${block("📉 감소 TOP5", sa.topDeclines.map(c => row(c, -1)))}
+        ${block("📈 성장 TOP5", sa.topGrowths.map(c => row(c, 1)))}
+      </div>
+      ${notes.length ? `<ul style="margin:14px 0 0; padding-left:18px; font-size:13px; line-height:1.85; color:var(--ink-soft);">${notes.map(t => `<li>${t}</li>`).join("")}</ul>` : ""}
     </div>`;
   }
 
-  function extractBrand(name) {
+  
+function extractBrand(name) {
     return name.split(" ")[0];
   }
 
@@ -2807,74 +2843,12 @@
 
   function isRecentlyPartnered(name, monthKey, withinMonths) {
     const info = PARTNER_STORE_MASTER.find(s => s.name === name);
-    if (!info || !info.expose) return false;
+    const expose = info ? getEffectiveExposeDate(info) : null; // 엑셀상 제휴예정이어도 실제 트래픽 시작일 사용
+    if (!expose) return false;
     const [y, m] = monthKey.split("-").map(Number);
     const cutoff = new Date(y, m - 1, 1);
     cutoff.setMonth(cutoff.getMonth() - (withinMonths || 3));
-    return info.expose >= toLocalDateStr(cutoff);
-  }
-
-  function renderStoreLevelInsights() {
-    const storeMetric = METRICS_DATA[STORE_KEY];
-    if (!storeMetric) return [];
-    const monthlyTotals = storeMetric.monthly_totals || {};
-    const monthData = getLastTwoCompleteMonths(monthlyTotals);
-    if (!monthData || !monthData.prevLabel) return [];
-
-    const bits = [];
-    const changes = computeStoreChanges(monthData.cur, monthData.prev);
-
-    // TOP 감소 (절대 감소폭 기준, 전월 10건 이상이던 매장만 — 브랜드 묶음 없이 개별 매장 그대로)
-    const declines = changes
-      .filter(c => c.prev >= 10 && c.delta < 0)
-      .sort((a, b) => a.delta - b.delta)
-      .slice(0, 10);
-    if (declines.length) {
-      const top3 = declines.slice(0, 3);
-      const labels = top3.map(c => `<b>${c.name}</b>(${fmt(c.prev)}→${fmt(c.cur)}건)`).join(", ");
-      bits.push(`${monthData.curLabel} 방문 감소 TOP3는 ${labels}예요`);
-
-      const closed = declines.filter(c => { const t = getStoreTerminationInfo(c.name); return t && t.terminated; });
-      if (closed.length) {
-        const names = closed.map(c => {
-          const t = getStoreTerminationInfo(c.name);
-          return `<b>${c.name}</b>(${t.reason || "해지"})`;
-        }).join(", ");
-        bits.push(`이 중 ${names}는 실제로 폐업·해지된 매장이라, 감소분 상당 부분은 자연스러운 영향이에요`);
-      }
-    }
-
-    // TOP 성장 (절대 성장폭 기준) — 최근 신규 제휴 매장 여부도 함께 표시
-    const growths = changes
-      .filter(c => c.delta > 0 && c.cur >= 5)
-      .sort((a, b) => b.delta - a.delta)
-      .slice(0, 10);
-    if (growths.length) {
-      const top3 = growths.slice(0, 3);
-      const labels = top3.map(c => {
-        const tag = isRecentlyPartnered(c.name, monthData.curLabel, 3)
-          ? ` <span style="color:var(--ink-faint); font-size:11px;">(최근 신규 제휴)</span>` : "";
-        return `<b>${c.name}</b>(${fmt(c.prev)}→${fmt(c.cur)}건)${tag}`;
-      }).join(", ");
-      bits.push(`방문 성장 TOP3는 ${labels}예요`);
-
-      const newPartners = growths.filter(c => isRecentlyPartnered(c.name, monthData.curLabel, 3));
-      if (newPartners.length >= 2) {
-        const names = newPartners.slice(0, 5).map(c => c.name).join(", ");
-        bits.push(`최근 신규 제휴된 매장들(${names})의 성장이 특히 눈에 띄어요`);
-      }
-    }
-
-    // 개별 매장 중 완전히 이탈(전월 10건 이상 → 이번달 0건)
-    const droppedStores = Object.entries(monthData.prev || {})
-      .filter(([name, prevVal]) => prevVal >= 10 && !(monthData.cur || {})[name])
-      .sort((a, b) => b[1] - a[1]);
-    if (droppedStores.length) {
-      const names = droppedStores.slice(0, 5).map(([name, val]) => `${name}(${fmt(val)}건)`).join(", ");
-      bits.push(`${monthData.prevLabel}에는 방문 기록이 있었지만 ${monthData.curLabel}에는 방문이 없는 매장이 ${droppedStores.length}곳 있어요: ${names}${droppedStores.length > 5 ? " 외" : ""}`);
-    }
-
-    return bits;
+    return expose >= toLocalDateStr(cutoff);
   }
 
   function getAvailableMonths() {
