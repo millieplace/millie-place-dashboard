@@ -639,7 +639,9 @@
     benefit_claims: { align: "top", anchor: "end" },
     staff_verifications: { align: "bottom", anchor: "start" },
   };
-  const METRIC_ORDER = ["uv", "benefit_claims", "staff_verifications"];
+  // 직원확인 데이터 일괄 제외 스위치 (false로 바꾸면 원래대로 복구)
+  const EXCLUDE_STAFF = true;
+  const METRIC_ORDER = ["uv", "benefit_claims", "staff_verifications"].filter(k => !(EXCLUDE_STAFF && k === "staff_verifications"));
   const STORE_KEY = "store_breakdown";
 
   const KPI_TARGETS = {
@@ -4368,14 +4370,14 @@
           <td class="rank-val">${c.conv !== null && c.conv !== undefined ? fmt(c.conv) : `<span style="color:var(--ink-faint);">-</span>`}</td>
           <td class="rank-val">${liftSpan(c.impact.uvLift)}</td>
           <td class="rank-val">${liftSpan(c.impact.benefitLift)}</td>
-          <td class="rank-val">${liftSpan(c.impact.staffLift)}</td>
+          ${EXCLUDE_STAFF ? "" : `<td class="rank-val">${liftSpan(c.impact.staffLift)}</td>`}
         </tr>`).join("");
     }
 
     function tableHead() {
       return `<tr>
         <th>노출 기간</th><th>소재</th><th style="text-align:right">UV</th><th style="text-align:right">PV</th><th style="text-align:right">혜택전환</th>
-        <th style="text-align:right">UV 영향</th><th style="text-align:right">혜택받기 영향</th><th style="text-align:right">직원확인 영향</th>
+        <th style="text-align:right">UV 영향</th><th style="text-align:right">혜택받기 영향</th>${EXCLUDE_STAFF ? "" : `<th style="text-align:right">직원확인 영향</th>`}
       </tr>`;
     }
 
@@ -4387,9 +4389,9 @@
         .map(t => `<li>${t}</li>`).join("");
 
       document.getElementById("event-hero-millie-table").innerHTML = `
-        <table class="rank-table"><thead>${tableHead()}</thead><tbody>${campaignTableRows(filteredMillie) || `<tr><td colspan="8" class="empty-note">해당 기간 캠페인이 없습니다</td></tr>`}</tbody></table>`;
+        <table class="rank-table"><thead>${tableHead()}</thead><tbody>${campaignTableRows(filteredMillie) || `<tr><td colspan="${EXCLUDE_STAFF ? 7 : 8}" class="empty-note">해당 기간 캠페인이 없습니다</td></tr>`}</tbody></table>`;
       document.getElementById("event-millieplace-table").innerHTML = `
-        <table class="rank-table"><thead>${tableHead()}</thead><tbody>${campaignTableRows(filteredPlace) || `<tr><td colspan="8" class="empty-note">해당 기간 캠페인이 없습니다</td></tr>`}</tbody></table>`;
+        <table class="rank-table"><thead>${tableHead()}</thead><tbody>${campaignTableRows(filteredPlace) || `<tr><td colspan="${EXCLUDE_STAFF ? 7 : 8}" class="empty-note">해당 기간 캠페인이 없습니다</td></tr>`}</tbody></table>`;
       document.getElementById("event-millieplace-count").textContent = `${filteredPlace.length}건`;
       document.getElementById("event-hero-millie-count").textContent = `${filteredMillie.length}건`;
     }
@@ -4454,8 +4456,8 @@
                       <div style="font-size:10px; font-weight:700; margin-top:5px; color:var(--ink-soft);">🏬 ${impact.storeName}</div>
                       <div style="font-size:10px; margin-top:2px; line-height:1.6;">
                         UV ${liftSpan(impact.uvLift)}<br>
-                        혜택클릭 ${liftSpan(impact.clickLift)}<br>
-                        직원확인 ${liftSpan(impact.staffLift)}
+                        혜택클릭 ${liftSpan(impact.clickLift)}${EXCLUDE_STAFF ? "" : `<br>
+                        직원확인 ${liftSpan(impact.staffLift)}`}
                       </div>` : `<div style="font-size:10px; color:var(--ink-faint); margin-top:5px;">연결된 매장 확인 안 됨</div>`}
                   </div>`;
                 }).join("")}
@@ -4475,7 +4477,7 @@
       <div class="section-card">
         <div class="section-head"><h2>🗓 월간 인사이트</h2></div>
         <div style="font-size:12px; color:var(--ink-faint); margin-bottom:10px;">
-          "영향"은 각 배너의 노출 기간 동안 밀리플레이스 전체 UV·혜택받기·직원확인의 일평균이, 노출 시작 <b>직전 7일 평균</b> 대비 얼마나 변했는지를 자동 계산한 값이에요.
+          "영향"은 각 배너의 노출 기간 동안 밀리플레이스 전체 UV·혜택받기${EXCLUDE_STAFF ? "" : "·직원확인"}의 일평균이, 노출 시작 <b>직전 7일 평균</b> 대비 얼마나 변했는지를 자동 계산한 값이에요.
         </div>
         <ul id="event-monthly-insight" style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;"></ul>
       </div>
@@ -4906,7 +4908,7 @@
       return `
         <div class="section-card">
           <div class="section-head"><h2>🏬 ${name}</h2></div>
-          <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="kpi-grid" style="grid-template-columns: repeat(${EXCLUDE_STAFF ? 3 : 4}, 1fr);">
             <div class="kpi-card">
               <div class="kpi-top"><div class="kpi-label">UV (상세페이지 유입, 누적)</div></div>
               <div class="kpi-value-row"><div class="kpi-value">${fmt(uvTotal)}<span class="unit">건</span></div></div>
@@ -4922,11 +4924,11 @@
               <div class="kpi-value-row"><div class="kpi-value">${fmt(clickTotal)}<span class="unit">건</span></div></div>
               <div class="kpi-sub">최근 ${WINDOW_DAYS}일 평균 대비 타 매장: ${compareBadge(clickAvg, otherClickAvg)}</div>
             </div>
-            <div class="kpi-card">
+            ${EXCLUDE_STAFF ? "" : `<div class="kpi-card">
               <div class="kpi-top"><div class="kpi-label">직원확인 (누적)</div></div>
               <div class="kpi-value-row"><div class="kpi-value">${fmt(staffTotal)}<span class="unit">건</span></div></div>
               <div class="kpi-sub">최근 ${WINDOW_DAYS}일 평균 대비 타 매장: ${compareBadge(staffAvg, otherStaffAvg)}</div>
-            </div>
+            </div>`}
           </div>
         </div>`;
     }).join("");
@@ -4965,7 +4967,7 @@
     area.innerHTML = `
       <div class="section-card">
         <div class="section-head"><h2>🏝️ 제주 981 — 9.81파크 제주 · 스페이스컵</h2></div>
-        <div style="font-size:12.5px; color:var(--ink-faint);">제주 2차 붐업 PR 자료용 · UV/QR/혜택클릭/직원확인은 매장 상세페이지 데이터 기준, 최근 ${WINDOW_DAYS}일 일평균을 다른 활성 제휴처("제휴 중") 평균과 비교했어요</div>
+        <div style="font-size:12.5px; color:var(--ink-faint);">제주 2차 붐업 PR 자료용 · UV/QR/혜택클릭${EXCLUDE_STAFF ? "" : "/직원확인"}은 매장 상세페이지 데이터 기준, 최근 ${WINDOW_DAYS}일 일평균을 다른 활성 제휴처("제휴 중") 평균과 비교했어요</div>
       </div>
       ${storeCards}
       ${demoHtml}
@@ -5040,7 +5042,7 @@
       const rows = storesThisMonth.map(name => {
         const cells = monthCols.map(m => `
           <td class="rank-val">${cell((monthlyClickTotals[m] || {})[name])}</td>
-          <td class="rank-val" style="color:var(--ink-soft);">${cell((monthlyStaffTotals[m] || {})[name])}</td>`).join("");
+          ${EXCLUDE_STAFF ? "" : `<td class="rank-val" style="color:var(--ink-soft);">${cell((monthlyStaffTotals[m] || {})[name])}</td>`}`).join("");
         const rank = rankMap[name];
         return `<tr>
           <td>${name}</td>
@@ -5064,7 +5066,7 @@
         <td></td>
         ${colSums.map(c => `
           <td class="rank-val"><b>${fmt(c.clickSum)}</b><br><span style="font-size:10px; font-weight:500; color:var(--ink-faint);">전체의 ${c.clickPct !== null ? c.clickPct.toFixed(1) : "-"}%</span></td>
-          <td class="rank-val"><b>${fmt(c.staffSum)}</b><br><span style="font-size:10px; font-weight:500; color:var(--ink-faint);">전체의 ${c.staffPct !== null ? c.staffPct.toFixed(1) : "-"}%</span></td>`).join("")}
+          ${EXCLUDE_STAFF ? "" : `<td class="rank-val"><b>${fmt(c.staffSum)}</b><br><span style="font-size:10px; font-weight:500; color:var(--ink-faint);">전체의 ${c.staffPct !== null ? c.staffPct.toFixed(1) : "-"}%</span></td>`}`).join("")}
         <td></td>
       </tr>`;
 
@@ -5075,7 +5077,7 @@
             <thead>
               <tr>
                 <th>매장명</th><th>최초 등장일</th>
-                ${monthCols.map(m => `<th style="text-align:right">${m}<br>혜택클릭</th><th style="text-align:right">${m}<br>직원확인</th>`).join("")}
+                ${monthCols.map(m => `<th style="text-align:right">${m}<br>혜택클릭</th>${EXCLUDE_STAFF ? "" : `<th style="text-align:right">${m}<br>직원확인</th>`}`).join("")}
                 <th style="text-align:right">전체 순위<br>(${latestMonth} 혜택클릭)</th>
               </tr>
             </thead>
@@ -5099,15 +5101,15 @@
             <div class="kpi-value-row"><div class="kpi-value">${fmt(totalNewClicks)}<span class="unit">건</span></div></div>
             <div class="kpi-sub">${targetMonths[0]}~${latestMonth} 전체 혜택클릭의 <b>${newClickPct !== null ? newClickPct.toFixed(1) : "-"}%</b></div>
           </div>
-          <div class="kpi-card" style="border-left:3px solid #f59e0b;">
+          ${EXCLUDE_STAFF ? "" : `<div class="kpi-card" style="border-left:3px solid #f59e0b;">
             <div class="kpi-top"><div class="kpi-label"><span class="kpi-dot" style="background:#f59e0b"></span>신규 매장 직원확인 Total</div></div>
             <div class="kpi-value-row"><div class="kpi-value">${fmt(totalNewStaff)}<span class="unit">건</span></div></div>
             <div class="kpi-sub">${targetMonths[0]}~${latestMonth} 전체 직원확인의 <b>${newStaffPct !== null ? newStaffPct.toFixed(1) : "-"}%</b></div>
-          </div>
+          </div>`}
         </div>
       </div>
       ${tablesHtml || `<div class="section-card"><div class="empty-note">해당 기간 신규 매장이 없습니다</div></div>`}
-      <div class="kpi-sub" style="margin:4px 2px 0;">혜택클릭 = 일별 매장 데이터(daily_store) 순 방문자 기준 · 직원확인 = 일별 매장 직원확인(daily_store_staff) 순 방문자 기준</div>`;
+      <div class="kpi-sub" style="margin:4px 2px 0;">혜택클릭 = 일별 매장 데이터(daily_store) 순 방문자 기준${EXCLUDE_STAFF ? "" : " · 직원확인 = 일별 매장 직원확인(daily_store_staff) 순 방문자 기준"}</div>`;
   }
 
   /* ================= 공통 ================= */
@@ -5129,6 +5131,15 @@
       if (!res.ok) throw new Error("data.json을 불러오지 못했습니다");
       const data = await res.json();
       METRICS_DATA = data.metrics || {};
+      if (EXCLUDE_STAFF) {
+        delete METRICS_DATA.staff_verifications;
+        delete METRICS_DATA.daily_store_staff;
+        const sb = METRICS_DATA.store_breakdown;
+        if (sb && sb.benefit_monthly_totals) {
+          sb.combined_monthly_totals = sb.monthly_totals; // 원본(혜택+직원 합산) 보관
+          sb.monthly_totals = sb.benefit_monthly_totals;
+        }
+      }
 
       setupTabs();
       renderKpiTab();
