@@ -1,7 +1,13 @@
 {
-  "captured_at": "2026-10-02 11:04:32 KST",
+  "captured_at": "2026-10-06 09:52:10 KST",
   "source_url": "https://www.millie.co.kr/v4/millieplace",
   "slides": [
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6abe664a733a3.jpg",
+      "title": "동네한바퀴 인터뷰 · 단골이 문을 열어요",
+      "subtitle": "손님을 식구라 부르는 수원 카페 식구",
+      "place_seq": "1103"
+    },
     {
       "image": "https://image.millie.co.kr/service/hero_banner/6ab35ecac1330.jpg",
       "title": "동네한바퀴 인터뷰 · 출판사가 만든 카페",
@@ -15,16 +21,10 @@
       "place_seq": "1077"
     },
     {
-      "image": "https://image.millie.co.kr/service/hero_banner/6aabc3b8d1980.jpg",
-      "title": "동네한바퀴 인터뷰 · 기분대로 커피 골라요",
-      "subtitle": "자리까지 고르는 목동 커피집, 이공",
-      "place_seq": "1170"
-    },
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6ab1015277dd8.jpg",
-      "title": "동네한바퀴 인터뷰 · 오후 3시에 오세요",
-      "subtitle": "햇살이 아름다운 홍대 공상온도",
-      "place_seq": "1165"
+      "image": "https://image.millie.co.kr/service/hero_banner/6abe665c9087a.jpg",
+      "title": "동네한바퀴 인터뷰 · 불이 켜졌으면 오세요",
+      "subtitle": "낮엔 책, 밤엔 술이 있는 결핍의 결핍",
+      "place_seq": "1175"
     }
   ],
   "error": null
