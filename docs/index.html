@@ -405,6 +405,7 @@
       <button data-tab="hub">밀플 허브 페이지</button>
       <button data-tab="jeju981">제주 981</button>
       <button data-tab="urbanplay">어반플레이</button>
+      <button data-tab="spain">스페인 미술</button>
     </div>
 
     <div class="tab-panel active" id="tab-kpi">
@@ -625,6 +626,10 @@
 
     <div class="tab-panel" id="tab-urbanplay">
       <div id="urbanplay-area"></div>
+    </div>
+
+    <div class="tab-panel" id="tab-spain">
+      <div id="spain-area"></div>
     </div>
 
     <div class="footer">밀리의서재 · Millie Place</div>
@@ -4676,6 +4681,132 @@ function extractBrand(name) {
     return rates.length ? avgOfArr(rates) : null;
   }
 
+  /* ================= 스페인 미술 500년 (10월 단기 제휴) 분석 탭 ================= */
+
+  const SPAIN_STORE = "스페인 미술 500년: 빛과 어둠의 연대기";
+  const SPAIN_START = "2026-10-01";
+  let spainCharts = {};
+
+  function renderSpainTab() {
+    const area = document.getElementById("spain-area");
+    Object.values(spainCharts).forEach(c => c && c.destroy()); spainCharts = {};
+    const uvM = METRICS_DATA["daily_store_uv"], clkM = METRICS_DATA["daily_store"];
+    const uvDaily = (uvM && uvM.daily_totals) || {}, qrDaily = (uvM && uvM.qr_daily_totals) || {};
+    const clkDaily = (clkM && clkM.daily_totals) || {};
+    const allDates = getSortedDates(uvDaily);
+    const end = allDates.length ? allDates[allDates.length - 1] : null;
+    if (!end || end < SPAIN_START) {
+      area.innerHTML = `<div class="placeholder-panel"><div class="icon">🎨</div><h3>데이터 준비 중</h3><p>${SPAIN_START} 이후 데이터가 아직 없어요.</p></div>`;
+      return;
+    }
+    const days = allDates.filter(d => d >= SPAIN_START && d <= end);
+    const nDays = days.length;
+    const val = (src, d, n) => ((src[d] || {})[n]) || 0;
+    const sumFor = (src, n) => days.reduce((a, d) => a + val(src, d, n), 0);
+    const totalsBy = src => { const t = {}; days.forEach(d => Object.entries(src[d] || {}).forEach(([n, v]) => { if (n && n !== "null") t[n] = (t[n] || 0) + v; })); return t; };
+
+    const uvSum = sumFor(uvDaily, SPAIN_STORE), clkSum = sumFor(clkDaily, SPAIN_STORE), qrSum = sumFor(qrDaily, SPAIN_STORE);
+    const conv = uvSum > 0 ? clkSum / uvSum * 100 : null;
+
+    const uvTot = totalsBy(uvDaily), clkTot = totalsBy(clkDaily);
+    const rankOf = (tot) => { const s = Object.entries(tot).sort((a, b) => b[1] - a[1]); return { rank: s.findIndex(([n]) => n === SPAIN_STORE) + 1, total: s.length, sorted: s }; };
+    const uvRank = rankOf(uvTot), clkRank = rankOf(clkTot);
+    const others = uvRank.sorted.filter(([n]) => n !== SPAIN_STORE);
+    const second = others[0];
+    const otherUvSum = Object.entries(uvTot).filter(([n]) => n !== SPAIN_STORE).reduce((a, [, v]) => a + v, 0);
+    const otherClkSum = Object.entries(clkTot).filter(([n]) => n !== SPAIN_STORE).reduce((a, [, v]) => a + v, 0);
+    const otherConv = otherUvSum > 0 ? otherClkSum / otherUvSum * 100 : null;
+
+    // 밀리플레이스 전체 대비 비중 & 직전 동일기간 대비
+    const serMap = key => { const m = {}; ((METRICS_DATA[key] || {}).series || []).forEach(p => { m[p.date] = p.value; }); return m; };
+    const totUv = serMap("uv"), totBen = serMap("benefit_claims");
+    const prevDays = days.map((_, i) => { const x = new Date(SPAIN_START + "T00:00:00"); x.setDate(x.getDate() - (i + 1)); return toLocalDateStr(x); });
+    const sumMap = (m, ds) => ds.reduce((a, d) => a + (m[d] || 0), 0);
+    const benNow = sumMap(totBen, days), benPrev = sumMap(totBen, prevDays);
+    const uvNow = sumMap(totUv, days), uvPrev = sumMap(totUv, prevDays);
+    const benShare = benNow > 0 ? clkSum / benNow * 100 : null;
+    const pctChg = (a, b) => b > 0 ? (a - b) / b * 100 : null;
+
+    // 일자별 피크
+    const dayRows = days.map(d => ({ d, uv: val(uvDaily, d, SPAIN_STORE), clk: val(clkDaily, d, SPAIN_STORE), totBen: totBen[d] || 0 }));
+    const peaks = dayRows.slice().sort((a, b) => b.uv - a.uv);
+    const peakTop2 = peaks.slice(0, 2);
+    const peakShare = uvSum > 0 ? peakTop2.reduce((a, r) => a + r.uv, 0) / uvSum * 100 : 0;
+    const wd = d => ["일", "월", "화", "수", "목", "금", "토"][new Date(d + "T00:00:00").getDay()];
+    const preLaunch = allDates.filter(d => d < SPAIN_START).reduce((a, d) => a + val(uvDaily, d, SPAIN_STORE), 0);
+
+    const insights = [];
+    insights.push(`${SPAIN_START} ~ ${end} (${nDays}일) 동안 상세페이지 UV <b>${fmt(uvSum)}명</b>, 혜택클릭 <b>${fmt(clkSum)}건</b>으로 두 지표 모두 전체 ${uvRank.total}개 매장 중 <b>1위</b>예요${second ? ` — 2위 ${second[0]}(${fmt(second[1])}명)의 약 <b>${(uvSum / second[1]).toFixed(1)}배</b>` : ""}`);
+    if (conv !== null && otherConv !== null) insights.push(`UV 대비 혜택클릭 전환율이 <b>${conv.toFixed(0)}%</b>로, 다른 매장 평균(${otherConv.toFixed(0)}%)보다 훨씬 높아요 — 상세페이지에 들어온 사람 대부분이 혜택까지 받아갔어요`);
+    if (benShare !== null) insights.push(`같은 기간 밀리플레이스 전체 혜택받기(${fmt(benNow)}건)의 <b>${benShare.toFixed(0)}%</b>를 이 한 곳이 만들었어요. 전체 혜택받기는 직전 ${nDays}일(${fmt(benPrev)}건) 대비 ${liftSpan(pctChg(benNow, benPrev))}, UV는 ${liftSpan(pctChg(uvNow, uvPrev))}예요`);
+    if (peakTop2.length === 2 && peakShare >= 50) insights.push(`방문이 <b>${peakTop2.map(r => `${r.d.slice(5)}(${wd(r.d)})`).join(", ")}</b> 이틀에 집중됐어요 (전체 UV의 ${peakShare.toFixed(0)}%) — 나머지 날은 하루 10명 안팎이라, 해당 일자의 푸시·SNS·현장 안내 등 노출 이슈를 확인해보면 좋아요`);
+    insights.push(`QR 스캔 유입은 ${qrSum > 0 ? `${fmt(qrSum)}건` : "아직 0건"}이에요${qrSum > 0 ? "" : " — 전시장 현장 QR 안내가 있는지 확인이 필요해요"}${preLaunch > 0 ? ` · 오픈 전(9월)에도 상세페이지 사전 유입이 ${fmt(preLaunch)}명 있었어요` : ""}`);
+
+    const top5 = uvRank.sorted.slice(0, 6);
+    area.innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><h2>🎨 스페인 미술 500년: 빛과 어둠의 연대기 — 10월 단기 제휴</h2></div>
+        <div style="font-size:12.5px; color:var(--ink-faint);">분석 기간 ${SPAIN_START} ~ ${end} (${nDays}일) · 매장 상세페이지 UV · 혜택클릭 기준</div>
+      </div>
+      <div class="section-card">
+        <div class="section-head"><h2>📌 핵심 인사이트</h2></div>
+        <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">${insights.map(t => `<li>${t}</li>`).join("")}</ul>
+      </div>
+      <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">상세페이지 UV</div></div>
+          <div class="kpi-value-row"><div class="kpi-value">${fmt(uvSum)}<span class="unit">명</span></div></div>
+          <div class="kpi-sub">일평균 ${fmt(uvSum / nDays)}명 · ${uvRank.rank}위/${uvRank.total}</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">혜택클릭</div></div>
+          <div class="kpi-value-row"><div class="kpi-value">${fmt(clkSum)}<span class="unit">건</span></div></div>
+          <div class="kpi-sub">일평균 ${fmt(clkSum / nDays)}건 · ${clkRank.rank}위/${clkRank.total}</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">혜택클릭 전환율</div></div>
+          <div class="kpi-value-row"><div class="kpi-value">${conv !== null ? conv.toFixed(1) : "-"}<span class="unit">%</span></div></div>
+          <div class="kpi-sub">타 매장 평균 ${otherConv !== null ? otherConv.toFixed(1) + "%" : "-"}</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">전체 혜택받기 중 비중</div></div>
+          <div class="kpi-value-row"><div class="kpi-value">${benShare !== null ? benShare.toFixed(1) : "-"}<span class="unit">%</span></div></div>
+          <div class="kpi-sub">밀리플레이스 전체 ${fmt(benNow)}건 중</div></div>
+      </div>
+      <div class="section-card">
+        <div class="section-head"><h2>📈 일별 추이</h2></div>
+        <div class="trend-chart-wrap"><canvas id="spainDailyChart"></canvas></div>
+      </div>
+      <div class="two-col">
+        <div class="section-card">
+          <div class="section-head"><h2>일자별 상세</h2></div>
+          <table class="rank-table">
+            <thead><tr><th>날짜</th><th style="text-align:right">UV</th><th style="text-align:right">혜택클릭</th><th style="text-align:right">전체 혜택받기 중 비중</th></tr></thead>
+            <tbody>${dayRows.map(r => `<tr><td>${r.d.slice(5)} (${wd(r.d)})</td><td class="rank-val">${fmt(r.uv)}</td><td class="rank-val">${fmt(r.clk)}</td><td class="rank-val">${r.totBen > 0 ? (r.clk / r.totBen * 100).toFixed(0) + "%" : "-"}</td></tr>`).join("")}</tbody>
+          </table>
+        </div>
+        <div class="section-card">
+          <div class="section-head"><h2>기간 내 UV 상위 매장</h2></div>
+          <table class="rank-table">
+            <thead><tr><th>순위</th><th>매장명</th><th style="text-align:right">UV</th><th style="text-align:right">혜택클릭</th></tr></thead>
+            <tbody>${top5.map(([n, v], i) => `<tr${n === SPAIN_STORE ? ' style="background:#f5f3ff; font-weight:700;"' : ""}><td>${i + 1}</td><td>${n === SPAIN_STORE ? "스페인 미술 500년" : n}</td><td class="rank-val">${fmt(v)}</td><td class="rank-val">${fmt(clkTot[n] || 0)}</td></tr>`).join("")}</tbody>
+          </table>
+        </div>
+      </div>
+      <div class="kpi-sub" style="margin:4px 2px 0;">방문객 성별·연령(Demo) 데이터는 월 단위로 집계돼, 10월이 끝난 뒤 추가할 수 있어요</div>`;
+
+    spainCharts.daily = new Chart(document.getElementById("spainDailyChart"), {
+      type: "bar",
+      data: {
+        labels: days.map(d => `${d.slice(5)}(${wd(d)})`),
+        datasets: [
+          { label: "UV", data: dayRows.map(r => r.uv), backgroundColor: COLORS.uv, borderRadius: 4, maxBarThickness: 34 },
+          { label: "혜택클릭", data: dayRows.map(r => r.clk), backgroundColor: COLORS.benefit_claims, borderRadius: 4, maxBarThickness: 34 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: "top", align: "end", labels: { boxWidth: 10, font: { size: 11 } } },
+          datalabels: { anchor: "end", align: "top", offset: 2, font: { size: 10, weight: 600 }, color: "#6b7280", formatter: v => v ? fmt(v) : "" } },
+        scales: { x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+                  y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } } },
+      },
+    });
+  }
+
   /* ================= 어반플레이 (fyi 역삼 · 연남장 · 연남방앗간) 분석 탭 ================= */
 
   const URBANPLAY_STORES = ["fyi 역삼", "연남장", "연남방앗간 DDP점", "연남방앗간 서울역점", "캐비넷클럽라운지 역삼점"];
@@ -5195,6 +5326,7 @@ function extractBrand(name) {
       renderNewStoresTab();
       renderJeju981Tab();
       renderUrbanplayTab();
+      renderSpainTab();
 
       document.getElementById("updated-at").textContent = data.updated_at || "-";
     } catch (e) {
