@@ -1,7 +1,13 @@
 {
-  "captured_at": "2026-10-06 09:52:10 KST",
+  "captured_at": "2026-10-06 11:45:41 KST",
   "source_url": "https://www.millie.co.kr/v4/millieplace",
   "slides": [
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6abe665c9087a.jpg",
+      "title": "동네한바퀴 인터뷰 · 불이 켜졌으면 오세요",
+      "subtitle": "낮엔 책, 밤엔 술이 있는 결핍의 결핍",
+      "place_seq": "1175"
+    },
     {
       "image": "https://image.millie.co.kr/service/hero_banner/6abe664a733a3.jpg",
       "title": "동네한바퀴 인터뷰 · 단골이 문을 열어요",
@@ -19,12 +25,6 @@
       "title": "동네한바퀴 인터뷰 · 영수증을 꼭 보세요",
       "subtitle": "책과 음악을 적어주는 신월동 포러리",
       "place_seq": "1077"
-    },
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6abe665c9087a.jpg",
-      "title": "동네한바퀴 인터뷰 · 불이 켜졌으면 오세요",
-      "subtitle": "낮엔 책, 밤엔 술이 있는 결핍의 결핍",
-      "place_seq": "1175"
     }
   ],
   "error": null
