@@ -4,1091 +4,1247 @@
   "expose": "2025-04-15",
   "sido": "경기",
   "gugun": "고양시",
-  "size": "중형"
+  "size": "중형",
+  "address": "경기 고양시 일산동구 위시티로 43 1층"
  },
  "칩멍크": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "강북구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 강북구 삼양로98길 7 1층"
  },
  "인크커피 가산점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "금천구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울 금천구 가산디지털2로 127-20"
  },
  "인크커피 다산점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "경기",
   "gugun": "남양주시",
-  "size": "대형"
+  "size": "대형",
+  "address": "경기 남양주시 다산순환로 20 다산 현대프리미어캠퍼스몰 A동 B1F-1F"
  },
  "마하 한남": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "용산구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울 용산구 서빙고로91나길 85 4층"
  },
  "커브힐": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "용산구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울 용산구 녹사평대로40길 42 1층"
  },
  "유월커피 회현점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "중구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울 중구 퇴계로2길 9-3 F동"
  },
  "유월커피 역삼점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "강남구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울 강남구 봉은사로30길 76 1층"
  },
  "프로토콜 연희점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "서대문구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울특별시 서대문구 연희로 109 2층"
  },
  "프로토콜 상수점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 마포구 어울마당로2길 13-4"
  },
  "fyi 역삼": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "강남구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 강남구 역삼로 180 1층 fyi"
  },
  "연남장": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "서대문구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울 서대문구 연희로5길 22 1층 연남장"
  },
  "연남방앗간 DDP점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "중구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울 중구 을지로 281 ddp 디자인랩 2F 연남방앗간 다이닝 DDP"
  },
  "연남방앗간 서울역점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "중구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울 중구 통일로 1"
  },
  "캐비넷클럽라운지 역삼점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "강남구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 강남구 역삼로 172 1층"
  },
  "쎈느 성수점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "성동구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 성동구 연무장5길 20 1F Scène"
  },
  "쎈느 건국점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "광진구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 광진구 아차산로 207 1층"
  },
  "노우즈 종로 풍경점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "종로구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 종로구 우정국로2길 8 3층"
  },
  "노우즈 창덕점": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "종로구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 종로구 돈화문로 88-1 1층"
  },
  "리제로 서울": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "종로구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울 종로구 경희궁3길 3-5 3층"
  },
  "센티멘트": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "서대문구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 서대문구 연희맛로 17-14 2층 센티멘트 sentiment"
  },
  "다용도실": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "은평구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울특별시 은평구 연서로20길 17 1층"
  },
  "센토브": {
   "status": "제휴 중",
   "expose": "2025-04-15",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 마포구 희우정로 98 1층 센토브"
  },
  "부암동 스코프": {
   "status": "제휴 중",
   "expose": "2025-05-15",
   "sido": "서울",
   "gugun": "종로구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울특별시 종로구 창의문로 149 1층"
  },
  "카페허블&남산책방": {
   "status": "제휴 중",
   "expose": "2025-05-30",
   "sido": "서울",
   "gugun": "중구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 중구 필동로8길 73 1, 2층"
  },
  "필리그랑": {
   "status": "제휴 중",
   "expose": "2025-05-30",
   "sido": "부산",
   "gugun": "수영구",
-  "size": "소형"
+  "size": "소형",
+  "address": "부산 수영구 민락본동로27번길 58 1층"
  },
  "멀멀 판교": {
   "status": "제휴 중",
   "expose": "2025-05-30",
   "sido": "경기",
   "gugun": "성남시",
-  "size": "소형"
+  "size": "소형",
+  "address": "경기 성남시 분당구 판교역로2번길 6 1층"
  },
  "모을": {
   "status": "제휴 중",
   "expose": "2025-05-30",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 마포구 월드컵로19길 71 3층"
  },
  "밤부 베이커리&브루잉 합정점": {
   "status": "제휴 중",
   "expose": "2025-06-09",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울 마포구 월드컵로5길 33-23"
  },
  "밤부 베이커리&브루잉 서래점": {
   "status": "제휴 중",
   "expose": "2025-06-09",
   "sido": "서울",
   "gugun": "서초구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울 서초구 동광로 77"
  },
  "누아": {
   "status": "제휴 중",
   "expose": "2025-06-09",
   "sido": "부산",
   "gugun": "북구",
-  "size": "소형"
+  "size": "소형",
+  "address": "부산 북구 덕천1길 93 1층"
  },
  "커피맨션문장": {
   "status": "제휴 중",
   "expose": "2025-06-09",
   "sido": "대전",
   "gugun": "중구",
-  "size": "중형"
+  "size": "중형",
+  "address": "대전 중구 대흥로139번길 10"
  },
  "문지살롱": {
   "status": "제휴 중",
   "expose": "2025-06-16",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울특별시 마포구 잔다리로7길 18 B1층"
  },
  "런 커피 RUN COFFEE": {
   "status": "제휴 중",
   "expose": "2025-06-16",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울특별시 마포구 와우산로35길 19 금화빌딩 지1층 RUN COFFEE"
  },
  "EMME": {
   "status": "제휴 중",
   "expose": "2025-06-16",
   "sido": "울산",
   "gugun": "남구",
-  "size": "소형"
+  "size": "소형",
+  "address": "울산 남구 삼산중로114번길 7 1층"
  },
  "쓰리어클락 연희": {
   "status": "제휴 중",
   "expose": "2025-06-16",
   "sido": "서울",
   "gugun": "서대문구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 서대문구 연희로25길 66 지층"
  },
  "쓰리어클락 김포": {
   "status": "제휴 중",
   "expose": "2025-06-16",
   "sido": "경기",
   "gugun": "김포시",
-  "size": "소형"
+  "size": "소형",
+  "address": "경기 김포시 김포한강1로 247 115호"
  },
  "캣냅": {
   "status": "제휴 중",
   "expose": "2025-06-16",
   "sido": "대구",
   "gugun": "중구",
-  "size": "소형"
+  "size": "소형",
+  "address": "대구 중구 달구벌대로446길 24-14 캣냅"
  },
  "단위": {
   "status": "제휴 중",
   "expose": "2025-06-16",
   "sido": "대전",
   "gugun": "중구",
-  "size": "소형"
+  "size": "소형",
+  "address": "대전 중구 보문로262번길 28 1층, 2층"
  },
  "에테르": {
   "status": "제휴 중",
   "expose": "2025-06-16",
   "sido": "부산",
   "gugun": "영도구",
-  "size": "대형"
+  "size": "대형",
+  "address": "부산 영도구 절영로 234 에테르"
  },
  "코이": {
   "status": "제휴 중",
   "expose": "2025-06-23",
   "sido": "부산",
   "gugun": "서전로68번길",
-  "size": "소형"
+  "size": "소형",
+  "address": "부산진구 서전로68번길 104, 2층(전포동)"
  },
  "포러리": {
   "status": "제휴 중",
   "expose": "2025-06-23",
   "sido": "서울",
   "gugun": "양천구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 양천구 신월로 156 2층"
  },
  "카페온휴": {
   "status": "제휴 중",
   "expose": "2025-06-23",
   "sido": "충남",
   "gugun": "부여군",
-  "size": "소형"
+  "size": "소형",
+  "address": "충남 부여군 부여읍 성말로 45-3"
  },
  "트램서울": {
   "status": "제휴 중",
   "expose": "2025-06-23",
   "sido": "서울",
   "gugun": "관악구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울 관악구 남부순환로226길 23-10 1층 101호"
  },
  "무화과나무 아래": {
   "status": "제휴 중",
   "expose": "2025-06-23",
   "sido": "경기",
   "gugun": "성남시",
-  "size": "소형"
+  "size": "소형",
+  "address": "경기도 성남시 수정구 남문로17번길 4 1층"
  },
  "김성종추리문학관": {
   "status": "제휴 중",
   "expose": "2025-07-07",
   "sido": "부산",
   "gugun": "해운대",
-  "size": "대형"
+  "size": "대형",
+  "address": "부산 해운대 달맞이길117번나길 111"
  },
  "앤드아워": {
   "status": "제휴 중",
   "expose": "2025-07-07",
   "sido": "인천",
   "gugun": "동구",
-  "size": "대형"
+  "size": "대형",
+  "address": "인천 동구 수문통로 27 1층앤드아워"
  },
  "커피문화사 수유": {
   "status": "제휴 중",
   "expose": "2025-07-14",
   "sido": "서울",
   "gugun": "강북구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울 강북구 노해로32길 32 1층 커피문화사"
  },
  "비단베이커리&카페": {
   "status": "제휴 중",
   "expose": "2025-07-14",
   "sido": "세종",
   "gugun": "부강면",
-  "size": "대형"
+  "size": "대형",
+  "address": "세종 부강면 부촌길 10 1, 2층"
  },
  "카페다옴": {
   "status": "제휴 중",
   "expose": "2025-07-14",
   "sido": "경남",
   "gugun": "창원시",
-  "size": "대형"
+  "size": "대형",
+  "address": "경남 창원시 성산구 용지로 159 2층 카페 다옴"
  },
  "어노렌지": {
   "status": "제휴 중",
   "expose": "2025-07-21",
   "sido": "전북",
   "gugun": "전주시",
-  "size": "대형"
+  "size": "대형",
+  "address": "전북 전주시 완산구 전주천서로 65 카페 어노렌지"
  },
  "올드북촌": {
   "status": "제휴 중",
   "expose": "2025-07-21",
   "sido": "제주",
   "gugun": "제주시",
-  "size": "대형"
+  "size": "대형",
+  "address": "제주 제주시 조천읍 일주동로 1437 1층"
  },
  "세시라기": {
   "status": "제휴 중",
   "expose": "2025-07-21",
   "sido": "경남",
   "gugun": "창원시",
-  "size": "중형"
+  "size": "중형",
+  "address": "경남 창원시 마산회원구 내서읍 송평로 365-334 1층"
  },
  "소피 soffee": {
   "status": "제휴 중",
   "expose": "2025-07-21",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 마포구 망원로 49-1 2층"
  },
  "스틸히어": {
   "status": "제휴 중",
   "expose": "2025-07-21",
   "sido": "광주",
   "gugun": "남구",
-  "size": "소형"
+  "size": "소형",
+  "address": "광주 남구 제중로 46 1층 103호"
  },
  "진소아 커피": {
   "status": "제휴 중",
   "expose": "2025-07-21",
   "sido": "서울",
   "gugun": "용산구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울 용산구 후암로28가길 23 1층"
  },
  "녹음집": {
   "status": "제휴 중",
   "expose": "2025-07-21",
   "sido": "서울",
   "gugun": "용산구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울 용산구 원효로 177-2 2층"
  },
  "애틱인서울하우스": {
   "status": "제휴 중",
   "expose": "2025-07-28",
   "sido": "서울",
   "gugun": "양천구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울 양천구 오목로54길 9 수정빌딩 2층 201호"
  },
  "식구": {
   "status": "제휴 중",
   "expose": "2025-07-28",
   "sido": "경기",
   "gugun": "수원시",
-  "size": "소형"
+  "size": "소형",
+  "address": "경기 수원시 영통구 매탄로65번길 18 1층 101호"
  },
  "홍제멘션 에스프레소 바": {
   "status": "제휴 중",
   "expose": "2025-07-28",
   "sido": "강원",
   "gugun": "강릉시",
-  "size": "중형"
+  "size": "중형",
+  "address": "강원 강릉시 홍제로23번길 5-2 1층"
  },
  "엔드 투 앤드": {
   "status": "제휴 중",
   "expose": "2025-07-28",
   "sido": "강원",
   "gugun": "강릉시",
-  "size": "대형"
+  "size": "대형",
+  "address": "강원특별자치도 강릉시 창해로 245 엔드투앤드"
  },
  "밋업커피하우스": {
   "status": "제휴 중",
   "expose": "2025-08-04",
   "sido": "경북",
   "gugun": "경주시",
-  "size": "중형"
+  "size": "중형",
+  "address": "경북 경주시 북문로 30 융용빌딩 1층"
  },
  "디센시커피스튜디오": {
   "status": "제휴 중",
   "expose": "2025-08-04",
   "sido": "경기",
   "gugun": "수원시",
-  "size": "소형"
+  "size": "소형",
+  "address": "경기 수원시 팔달구 인계로138번길 8 리슈빌s 101호 디센시 커피스튜디오"
  },
  "휴앤안커피": {
   "status": "제휴 중",
   "expose": "2025-08-13",
   "sido": "전북",
   "gugun": "완주군",
-  "size": "중형"
+  "size": "중형",
+  "address": "전북 완주군 삼례읍 후정로 68 휴앤안 커피"
  },
  "현해탄": {
   "status": "제휴 중",
   "expose": "2025-08-13",
   "sido": "전북",
   "gugun": "전주시",
-  "size": "중형"
+  "size": "중형",
+  "address": "전북 전주시 완산구 태평1길 32 2층"
  },
  "피삼사": {
   "status": "제휴 중",
   "expose": "2025-08-13",
   "sido": "대구",
   "gugun": "중구",
-  "size": "중형"
+  "size": "중형",
+  "address": "대구 중구 국채보상로 643 2층"
  },
  "종이숲": {
   "status": "제휴 중",
   "expose": "2025-08-19",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울특별시 마포구 희우정로 93 1층 종이숲"
  },
  "시로": {
   "status": "제휴 중",
   "expose": "2025-08-19",
   "sido": "울산",
   "gugun": "남구",
-  "size": "소형"
+  "size": "소형",
+  "address": "울산광역시 남구 왕생로20번길 20 2층"
  },
  "소소밀밀 북카페": {
   "status": "제휴 중",
   "expose": "2025-08-28",
   "sido": "경북",
   "gugun": "경주시",
-  "size": "중형"
+  "size": "중형",
+  "address": "경상북도 경주시 능남길 15 주2동"
  },
  "무우수 커피 로스터스": {
   "status": "제휴 중",
   "expose": "2025-08-28",
   "sido": "제주",
   "gugun": "제주시",
-  "size": "소형"
+  "size": "소형",
+  "address": "제주 제주시 조천읍 조천11길 22-2 1층"
  },
  "홀리몰리": {
   "status": "제휴 중",
   "expose": "2025-08-28",
   "sido": "충북",
   "gugun": "청주시",
-  "size": "대형"
+  "size": "대형",
+  "address": "충청북도 청주시 청원구 오창읍 성산리 435-9"
  },
  "가배초당": {
   "status": "제휴 중",
   "expose": "2025-08-28",
   "sido": "강원",
   "gugun": "강릉시",
-  "size": "중형"
+  "size": "중형",
+  "address": "강원도 강릉시 난설헌로 228-35 1층"
  },
  "평정": {
   "status": "제휴 중",
   "expose": "2025-09-01",
   "sido": "충북",
   "gugun": "충주시",
-  "size": "소형"
+  "size": "소형",
+  "address": "충북 충주시 성서1길 14-1 빨간문"
  },
  "애딩웜스": {
   "status": "제휴 중",
   "expose": "2025-09-01",
   "sido": "서울",
   "gugun": "서대문구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울 서대문구 증가로 10 403호"
  },
  "커피리브레 파란점": {
   "status": "제휴 중",
   "expose": "2025-09-10",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울 마포구 성미산로29길 17-8 지하1층, 1, 2층"
  },
  "커피 리브레 연남점": {
   "status": "제휴 중",
   "expose": "2025-09-09",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울특별시 마포구 성미산로32길 20-5"
  },
  "에피소드": {
   "status": "제휴 중",
   "expose": "2025-09-12",
   "sido": "서울",
   "gugun": "양천구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울특별시 양천구 목동로21길 4 2층"
  },
  "트레바리 안국아지트 슈퍼마켙": {
   "status": "제휴 중",
   "expose": "2025-09-22",
   "sido": "서울",
   "gugun": "종로구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울 종로구 율곡로10길 12 트레바리 안국 아지트 1층"
  },
  "원베일리 인바이트 스카이 11": {
   "status": "제휴 중",
   "expose": "2025-09-23",
   "sido": "서울",
   "gugun": "서초구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울특별시 서초구 반포대로 333"
  },
  "1984": {
   "status": "제휴 중",
   "expose": "2025-09-26",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 마포구 동교로 194 혜원빌딩 1층"
  },
  "인텐스491": {
   "status": "제휴 중",
   "expose": "2025-10-21",
   "sido": "인천",
   "gugun": "중구",
-  "size": "대형"
+  "size": "대형",
+  "address": "인천 중구 축항대로69번길 20 인천국제수산물타운 A동 4층"
  },
  "cafe N&D": {
   "status": "제휴 중",
   "expose": "2025-10-27",
   "sido": "대전",
   "gugun": "서구",
-  "size": "대형"
+  "size": "대형",
+  "address": "대전 서구 갑천서쪽자전거길 9 (도안동 2155)"
  },
  "나지트": {
   "status": "제휴 중",
   "expose": "2025-10-28",
   "sido": "서울",
   "gugun": "종로구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울 종로구 창경궁로26길 33 1층"
  },
  "콥프키노": {
   "status": "제휴 중",
   "expose": "2025-10-30",
   "sido": "충북",
   "gugun": "청주시",
-  "size": "소형"
+  "size": "소형",
+  "address": "충북 청주시 흥덕구 가포산로 137 강서동 382-2 1층"
  },
  "에르네스토": {
   "status": "제휴 중",
   "expose": "2025-11-24",
   "sido": "서울",
   "gugun": "은평구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울 은평구 증산로17길 41 1층"
  },
  "한쪽가게": {
   "status": "제휴 중",
   "expose": "2025-12-01",
   "sido": "대전",
   "gugun": "서구",
-  "size": "소형"
+  "size": "소형",
+  "address": "대전 서구 신갈마로181번길 24-23"
  },
  "플라세르 과천": {
   "status": "제휴 중",
   "expose": "2026-02-02",
   "sido": "경기",
   "gugun": "과천시",
-  "size": "중형"
+  "size": "중형",
+  "address": "경기 과천시 관문로 92 힐스테이트 과천중앙 A동 208호"
  },
  "플라세르 신당": {
   "status": "제휴 중",
   "expose": "2026-02-02",
   "sido": "서울",
   "gugun": "중구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 중구 동호로18길 13 1층"
  },
  "언리튼잉크": {
   "status": "제휴 중",
   "expose": "2026-02-13",
   "sido": "서울",
   "gugun": "용산구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울 용산구 신흥로26길 11-20 1층"
  },
  "도망": {
   "status": "제휴 중",
   "expose": "2026-03-01",
   "sido": "서울",
   "gugun": "동대문구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울 동대문구 망우로6길 3 1층"
  },
  "넛지스 북카페": {
   "status": "제휴 중",
   "expose": "2026-03-09",
   "sido": "서울",
   "gugun": "동대문구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울 동대문구 답십리로60길 1 1층"
  },
  "로흐": {
   "status": "제휴 중",
   "expose": "2026-04-09",
   "sido": "서울",
   "gugun": "강남구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울특별시 강남구 테헤란로13길 17 1층 로흐"
  },
  "숲터 그로브 허브 망원 ": {
   "status": "제휴 중",
   "expose": "2026-06-08",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울특별시 마포구 희우정로12길 39 B1, 1F"
  },
  "서울북카페 센버스": {
   "status": "제휴 중",
   "expose": "2026-07-22",
   "sido": "서울",
   "gugun": "성동구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울특별시 성동구 아차산로13길 31 자원빌딩 2층"
  },
  "엔게디에스프레소": {
   "status": "제휴 중",
   "expose": "2026-07-22",
   "sido": "경기",
   "gugun": "안양시",
-  "size": "소형"
+  "size": "소형",
+  "address": "경기 안양시 만안구 안양로223번길 35 1층"
  },
  "Boyo": {
   "status": "제휴 중",
   "expose": "2026-07-22",
   "sido": "경기",
   "gugun": "남양주시",
-  "size": "중형"
+  "size": "중형",
+  "address": "경기도 남양주시 수동면 비룡로1343번길 18"
  },
  "하우스 결": {
   "status": "제휴 중",
   "expose": "2026-07-27",
   "sido": "경기",
   "gugun": "수원시",
-  "size": "중형"
+  "size": "중형",
+  "address": "경기 수원시 장안구 팔달로 277 2층"
  },
  "별빛서재": {
   "status": "제휴 중",
   "expose": "2026-07-21",
   "sido": "경기",
   "gugun": "고양시",
-  "size": "대형"
+  "size": "대형",
+  "address": "경기 고양시 일산동구 호수로 358-39 동문타워1 2층 205, 206호 별빛서재"
  },
  "무주": {
   "status": "제휴 중",
   "expose": "2026-07-22",
   "sido": "경북",
   "gugun": "포항시",
-  "size": "소형"
+  "size": "소형",
+  "address": "경상북도 포항시 북구 법원로8번길 39-15 카페 무주"
  },
  "컨트롤러스 커피웍스": {
   "status": "제휴 중",
   "expose": "2026-07-23",
   "sido": "광주",
   "gugun": "서구",
-  "size": "소형"
+  "size": "소형",
+  "address": "광주광역시 서구 화정로260번길 9 1층 카페"
  },
  "무제": {
   "status": "제휴 중",
   "expose": "2026-07-22",
   "sido": "서울",
   "gugun": "은평구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울특별시 은평구 응암로25길 11-1 1층"
  },
  "호소인": {
   "status": "제휴 중",
   "expose": "2026-07-27",
   "sido": "경기",
   "gugun": "수원시",
-  "size": "중형"
+  "size": "중형",
+  "address": "경기 수원시 권선구 덕영대로 1124-1 2F / 호소인(hosoin)"
  },
  "소설과 농담": {
   "status": "제휴 중",
   "expose": "2026-07-22",
   "sido": "제주",
   "gugun": "제주시",
-  "size": "소형"
+  "size": "소형",
+  "address": "제주도 제주시 남성로 160 1층 소설과농담"
  },
  "라우더댄밤즈": {
   "status": "제휴 중",
   "expose": "2026-07-23",
   "sido": "광주",
   "gugun": "동구",
-  "size": "소형"
+  "size": "소형",
+  "address": "광주광역시 동구 백서로153번길 2 2층"
  },
  "공상온도": {
   "status": "제휴 중",
   "expose": "2026-07-23",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울특별시 마포구 동교로23길 40 B1층"
  },
  "온뒤": {
   "status": "제휴 중",
   "expose": "2026-07-22",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울특별시 마포구 연남로3길 13 1층 102호"
  },
  "감동": {
   "status": "제휴 중",
   "expose": "2026-07-21",
   "sido": "서울",
   "gugun": "동대문구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울특별시 동대문구 회기로25길 101-13 1층"
  },
  "모우": {
   "status": "제휴 중",
   "expose": "2026-07-21",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울특별시 마포구 포은로 139 1층 모우"
  },
  "카페미우": {
   "status": "제휴 중",
   "expose": "2026-07-21",
   "sido": "서울",
   "gugun": "용산구",
-  "size": "소형"
+  "size": "소형",
+  "address": "서울특별시 용산구 새창로14길 7 1층"
  },
  "커피집 이공": {
   "status": "제휴 중",
   "expose": "2026-07-21",
   "sido": "서울",
   "gugun": "양천구",
-  "size": "중형"
+  "size": "중형",
+  "address": "서울특별시 양천구 오목로 204 2층"
  },
  "콤파일": {
   "status": "제휴 중",
   "expose": "2026-07-21",
   "sido": "서울",
   "gugun": "마포구",
-  "size": "대형"
+  "size": "대형",
+  "address": "서울특별시 마포구 잔다리로 73 1F"
  },
  "9.81파크 제주": {
   "status": "제휴 중",
   "expose": "2026-07-26",
   "sido": "제주",
   "gugun": "제주시",
-  "size": "대형"
+  "size": "대형",
+  "address": "제주 제주시 애월읍 천덕로 880-24(9.81파크 제주)"
  },
  "스페이스컵": {
   "status": "제휴 중",
   "expose": "2026-07-26",
   "sido": "제주",
   "gugun": "제주시",
-  "size": "중형"
+  "size": "중형",
+  "address": "제주 제주시 애월읍 천덕로 880-24(9.81파크 제주)"
  },
  "결핍의결핍": {
   "status": "제휴 중",
   "expose": "2026-08-14",
   "sido": "서울",
   "gugun": "용산구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 용산구 원효로 203 1층"
  },
  "북살롱 텍스트북": {
   "status": "제휴 중",
   "expose": "2026-08-13",
   "sido": "서울",
   "gugun": "종로구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 종로구 사직로9길 22 2층"
  },
  "을커피브루어스": {
   "status": "제휴 중",
   "expose": "2026-08-13",
   "sido": "전남",
   "gugun": "광주",
-  "size": null
+  "size": null,
+  "address": "전남광주통합특별시 동구 동명로67번길 32-3 2층"
  },
  "내면의 발견": {
   "status": "제휴 중",
   "expose": "2026-08-22",
   "sido": "서울",
   "gugun": "마포구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 마포구 월드컵북로5길 53"
  },
  "라이피": {
   "status": "제휴 중",
   "expose": "2026-08-19",
   "sido": "서울",
   "gugun": "중구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 중구 서소문로6길 34 107호"
  },
  "송커피X책공간": {
   "status": "제휴 중",
   "expose": "2026-08-19",
   "sido": "서울",
   "gugun": "강남구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 강남구 논현로18길 14-6 1층, B1"
  },
  "cafe heulg 카페 흙": {
   "status": "제휴 중",
   "expose": "2026-08-19",
   "sido": "서울",
   "gugun": "용산구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 용산구 한강대로49길 14"
  },
  "우리커피클럽": {
   "status": "제휴 중",
   "expose": "2026-08-19",
   "sido": "서울",
   "gugun": "중구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 중구 다산로33길 13 1층"
  },
  "무가공": {
   "status": "제휴 중",
   "expose": "2026-08-19",
   "sido": "서울",
   "gugun": "서초구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 서초구 효령로 423 3층"
  },
  "비온디앤": {
   "status": "제휴 중",
   "expose": "2026-08-26",
   "sido": "서울",
   "gugun": "중구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 중구 세종대로18길 28 성원빌딩 1층"
  },
  "온숨": {
   "status": "제휴 중",
   "expose": "2026-08-27",
   "sido": "경상남도",
   "gugun": "창원",
-  "size": null
+  "size": null,
+  "address": "경상남도 창원시 의창구 대산면 우암로23번길 7 1층"
  },
  "탐석과 사랑": {
   "status": "제휴 중",
   "expose": "2026-08-24",
   "sido": "서울",
   "gugun": "동대문구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 동대문구 망우로 99 2층"
  },
  "인덱스숍": {
   "status": "제휴 중",
   "expose": "2026-08-26",
   "sido": "서울",
   "gugun": "광진구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 광진구 아차산로 200 커먼그라운드 나이키 건물 3층"
  },
  "예스커피": {
   "status": "제휴 중",
   "expose": "2026-08-27",
   "sido": "서울",
   "gugun": "중랑구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 중랑구 용마산로112길 37 1층"
  },
  "어코트 A CUP OF TEXT": {
   "status": "제휴 중",
   "expose": "2026-08-31",
   "sido": "서울",
   "gugun": "용산구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 용산구 소월로20길 6 1층 1호"
  },
  "하츠하우스": {
   "status": "제휴 중",
   "expose": "2026-08-26",
   "sido": "서울",
   "gugun": "성동구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 성동구 송정6길 8 2층"
  },
  "책방 바라타리아": {
   "status": "제휴 중",
   "expose": "2026-09-11",
   "sido": "강원도",
   "gugun": "춘천",
-  "size": null
+  "size": null,
+  "address": "강원 춘천시 당간지주길74번길 5 책방바라타리아"
  },
  "종이의 서재 by grape lab": {
   "status": "제휴 중",
   "expose": "2026-09-12",
   "sido": "서울",
   "gugun": "마포구",
-  "size": null
+  "size": null,
+  "address": "서울 마포구 토정로3길 11 그레이프랩"
  },
  "렉터스라운지 홍대": {
   "status": "제휴 중",
   "expose": "2026-09-12",
   "sido": "서울",
   "gugun": "마포구",
-  "size": null
+  "size": null,
+  "address": "서울 마포구 와우산로29가길 54-6 지하1층, 지상1층 렉터스라운지"
  },
  "텅앤빈 청파": {
   "status": "제휴 중",
   "expose": "2026-09-11",
   "sido": "서울",
   "gugun": "용산구",
-  "size": null
+  "size": null,
+  "address": "서울 용산구 청파로45길 14 지하1층"
  },
  "스페인 미술 500년: 빛과 어둠의 연대기": {
   "status": "10월 단기",
   "expose": "2026-10-01",
   "sido": "서울",
   "gugun": "서초구",
-  "size": null
+  "size": null,
+  "address": "서울특별시 서초구 서초동 700번지"
  },
  "콜로라도 프로젝트": {
   "status": "제휴 중",
   "expose": "2026-09-21",
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "녹턴": {
   "status": "제휴 중",
   "expose": "2026-09-21",
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "나울": {
   "status": "제휴 중",
   "expose": "2026-09-21",
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "바논카페": {
   "status": "제휴 중",
   "expose": "2026-09-21",
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "이스트만필름랩": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "카페 라이츠": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "오우커 로스터리": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "북앤브루": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "하버커피": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "어떤날": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "수록": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "솜양책방": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "네이티브서울2": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "가배도 노량진점": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "가배도 시청점": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "가배도 남대문시장점": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "가배도 신논현점": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "가배도 명동점": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "공명 연남": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "공명 홍대": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "공명 망원책빵": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  },
  "공명 마곡책빵": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
   "gugun": null,
-  "size": null
+  "size": null,
+  "address": null
  }
 }
