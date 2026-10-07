@@ -306,25 +306,31 @@
     const resultArea = document.getElementById("mystore-result");
     destroyStoreCharts();
     const r = e.rank || {};
-    const highlights = [];
-    const push = (x, label) => { if (x && x.top_pct <= 50) highlights.push({ label, ...x }); };
-    push(r.gugun, r.gugun ? `${r.gugun.group}` : "");
-    push(r.sido, r.sido ? `${r.sido.group} 지역` : "");
-    push(r.size, r.size ? `${r.size.group} 매장` : "");
-    push(r.overall, "밀리플레이스 전체");
-    highlights.sort((a, b) => a.top_pct - b.top_pct);
+    const rankItems = [];
+    const add = (x, label) => { if (x) rankItems.push({ label, ...x }); };
+    add(r.area, r.area ? r.area.group : "");
+    add(r.sido, r.sido ? `${r.sido.group} 지역` : "");
+    add(r.size, r.size ? `${r.size.group} 매장` : "");
+    add(r.overall, "밀리플레이스 전체");
+    const highlights = rankItems.slice().sort((a, b) => a.rank / a.total - b.rank / b.total);
+    const changeBadge = x => {
+      if (x.prev_rank === null || x.prev_rank === undefined) return `<span class="kpi-delta" style="background:#f1efe9; color:var(--ink-faint);">NEW</span>`;
+      const d = x.prev_rank - x.rank;
+      if (d > 0) return `<span class="kpi-delta up">▲${d}</span>`;
+      if (d < 0) return `<span class="kpi-delta down">▼${-d}</span>`;
+      return `<span class="kpi-delta" style="background:#f1efe9; color:var(--ink-faint);">유지</span>`;
+    };
 
     const m = monthsSince(e.since);
     const sinceText = e.since ? (m >= 1 ? `${m}개월째 함께하고 있어요` : `이번 달부터 함께하고 있어요`) : "";
-    const region = [e.sido, e.gugun].filter(Boolean).join(" ");
+    const region = e.area || [e.sido, e.gugun].filter(Boolean).join(" ");
 
     // 요약 문장
     const lines = [];
     if (highlights.length) {
       const h = highlights[0];
-      lines.push(h.rank <= 3
-        ? `<b>${h.label}</b> ${h.total}곳 중 방문자 <b>${h.rank}위</b>예요`
-        : `<b>${h.label}</b> ${h.total}곳 중 방문자 <b>상위 ${Math.max(1, Math.round(h.top_pct))}%</b>예요`);
+      const d = (h.prev_rank !== null && h.prev_rank !== undefined) ? h.prev_rank - h.rank : null;
+      lines.push(`<b>${h.label}</b> ${h.total}곳 중 방문자 <b>${h.rank}위</b>예요${d > 0 ? ` (지난달보다 <span class="up">${d}계단 상승</span>)` : ""}`);
     }
     if (e.trend30_pct !== null && e.trend30_pct !== undefined && e.trend30_pct >= 10) {
       lines.push(`최근 30일 방문이 직전 30일보다 <b class="up">${e.trend30_pct}% 늘었어요</b>`);
@@ -339,11 +345,11 @@
       lines.push(`주 방문객은 <b>${AGE_LABEL[topAge[0]]}</b>(${topAge[1].toFixed(0)}%)이에요`);
     }
 
-    const rankCards = highlights.length ? highlights.map(h => `
+    const rankCards = rankItems.length ? rankItems.map(h => `
       <div class="kpi">
         <div class="label">${h.label}</div>
-        <div class="value">${h.rank <= 3 ? `${h.rank}<span class="unit">위</span>` : `상위 ${Math.max(1, Math.round(h.top_pct))}<span class="unit">%</span>`}</div>
-        <div class="sub" style="color:var(--ink-faint);">${h.total}곳 중</div>
+        <div class="value">${h.rank}<span class="unit">위</span></div>
+        <div class="sub" style="color:var(--ink-faint);">${h.total}곳 중 ${changeBadge(h)}</div>
       </div>`).join("") : "";
 
     const wd = e.weekday_share;
@@ -371,6 +377,26 @@
       demoHtml = `<div class="card"><h2>방문객 특징</h2><div class="card-note">방문객 정보가 충분히 쌓이면 연령·성별 특징을 보여드릴게요</div></div>`;
     }
 
+    // 방문 흐름 (평소=100 지수, 7일 이동평균, 밀리플레이스 전체 비교)
+    let flowHtml = "";
+    const flow = e.flow, flowAll = STATS.flow_all, flowDates = STATS.flow_dates || [];
+    if (flow && flow.some(v => v !== null)) {
+      const recentAvg = arr => { const v = (arr || []).slice(-14).filter(x => x !== null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+      const mine = recentAvg(flow), all = recentAvg(flowAll);
+      const chips = [];
+      if (mine !== null) chips.push(`최근 2주 평소 대비 <b class="${mine >= 100 ? "up" : "down"}">${mine >= 100 ? "+" : ""}${Math.round(mine - 100)}%</b>`);
+      if (mine !== null && all !== null) {
+        const gap = mine - all;
+        chips.push(Math.abs(gap) < 5 ? `밀리플레이스 전체 흐름과 <b>비슷해요</b>` : gap > 0 ? `밀리플레이스 전체 흐름보다 <b class="up">좋아요</b>` : `밀리플레이스 전체 흐름보다 <b class="down">주춤해요</b>`);
+      }
+      flowHtml = `<div class="card sage">
+        <h2>방문 흐름</h2>
+        <div class="card-note">최근 90일 · 7일 이동평균 · 기간 평균을 100(평소)으로 둔 지수예요${(e.featured || []).length ? " · 음영은 메인 배너 노출 기간" : ""}</div>
+        ${chips.length ? `<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;">${chips.map(c => `<span style="font-size:12.5px; background:#fff; border:1px solid var(--border); border-radius:20px; padding:5px 11px;">${c}</span>`).join("")}</div>` : ""}
+        <div class="chart-wrap tall"><canvas id="storeFlowChart"></canvas></div>
+      </div>`;
+    }
+
     const featuredHtml = (e.featured && e.featured.length) ? `
       <div class="card sage">
         <h2>밀리플레이스 메인에 소개됐어요</h2>
@@ -387,16 +413,12 @@
       </div>
 
       ${rankCards ? `<div class="card">
-        <h2>우리 매장이 돋보이는 기준</h2>
-        <div class="card-note">최근 ${STATS.window.days}일 방문자 기준 (${STATS.window.start} ~ ${STATS.window.end}) · 신규 매장은 노출 이후 일평균으로 비교해요</div>
-        <div class="kpi-grid">${rankCards}</div>
+        <h2>방문자 순위</h2>
+        <div class="card-note">최근 ${STATS.window.days}일 기준 (${STATS.window.start} ~ ${STATS.window.end}) · 괄호 안은 직전 30일 대비 순위 변화 · 신규 매장은 노출 이후 일평균으로 비교해요</div>
+        <div class="kpi-grid" style="grid-template-columns: repeat(${Math.min(rankItems.length, 4)}, 1fr);">${rankCards}</div>
       </div>` : ""}
 
-      ${e.weekly_index ? `<div class="card sage">
-        <h2>방문 흐름</h2>
-        <div class="card-note">최근 12주 · 가장 많았던 주를 100으로 둔 상대 지표예요</div>
-        <div class="chart-wrap"><canvas id="storeFlowChart"></canvas></div>
-      </div>` : ""}
+      ${flowHtml}
 
       ${wd ? `<div class="card">
         <h2>요일별 방문 패턴</h2>
@@ -414,12 +436,57 @@
       ${demoHtml}
       ${featuredHtml}`;
 
-    if (e.weekly_index && document.getElementById("storeFlowChart")) {
+    if (flowHtml && document.getElementById("storeFlowChart")) {
+      const lastI = flowDates.length - 1;
+      const idx = d => d <= flowDates[0] ? 0 : d >= flowDates[lastI] ? lastI : flowDates.indexOf(d);
+      const bands = (e.featured || []).filter(f => f.end >= flowDates[0] && f.start <= flowDates[lastI]).map(f => [idx(f.start), idx(f.end)]).filter(([a, b]) => a >= 0 && b >= a);
+      const guidePlugin = {
+        id: "flowGuides",
+        beforeDatasetsDraw(chart) {
+          const { ctx, chartArea: { left, right, top, bottom }, scales: { x, y } } = chart;
+          ctx.save();
+          bands.forEach(([a, b]) => {
+            const x0 = x.getPixelForValue(a), x1 = x.getPixelForValue(b);
+            ctx.fillStyle = "rgba(139,74,60,0.07)"; ctx.fillRect(x0, top, Math.max(x1 - x0, 3), bottom - top);
+          });
+          const y100 = y.getPixelForValue(100);
+          if (y100 >= top && y100 <= bottom) {
+            ctx.setLineDash([4, 4]); ctx.strokeStyle = "#b9ab97"; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(left, y100); ctx.lineTo(right, y100); ctx.stroke(); ctx.setLineDash([]);
+            ctx.fillStyle = "#a39a8c"; ctx.font = "11px Inter, sans-serif"; ctx.textAlign = "right"; ctx.fillText("평소", right - 2, y100 - 4);
+          }
+          ctx.restore();
+        },
+      };
+      const vals = flow.concat(flowAll || []).filter(v => v !== null);
+      const ctx2 = document.getElementById("storeFlowChart").getContext("2d");
+      let grad = "rgba(139,74,60,0.12)";
+      if (ctx2 && ctx2.createLinearGradient) {
+        grad = ctx2.createLinearGradient(0, 0, 0, 260);
+        grad.addColorStop(0, "rgba(139,74,60,0.28)"); grad.addColorStop(1, "rgba(139,74,60,0.01)");
+      }
       storeCharts.flow = new Chart(document.getElementById("storeFlowChart"), {
         type: "line",
-        data: { labels: e.weekly_index.map(w => w.week.slice(5)), datasets: [{ data: e.weekly_index.map(w => w.index), borderColor: "#6B7A5E", backgroundColor: "rgba(107,122,94,0.12)", fill: true, tension: 0.35, pointRadius: 2.5, borderWidth: 2 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `지수 ${c.parsed.y}` } } },
-          scales: { x: { grid: { display: false }, ticks: { color: "#a39a8c", font: { size: 10 }, maxTicksLimit: 6 } }, y: { min: 0, max: 110, display: false } } },
+        data: {
+          labels: flowDates.map(d => d.slice(5)),
+          datasets: [
+            { label: "우리 매장", data: flow, borderColor: "#8B4A3C", backgroundColor: grad, fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2.4, spanGaps: false },
+            { label: "밀리플레이스 전체", data: flowAll || [], borderColor: "#9aa58e", borderDash: [5, 4], fill: false, tension: 0.4, pointRadius: 0, borderWidth: 1.6 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 14, boxHeight: 2, font: { size: 11 }, color: "#6b6055" } },
+            tooltip: { callbacks: { label: c => c.parsed.y === null ? "" : `${c.dataset.label}: 평소 대비 ${c.parsed.y >= 100 ? "+" : ""}${c.parsed.y - 100}%` } },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: "#a39a8c", font: { size: 10 }, maxTicksLimit: 7, maxRotation: 0 } },
+            y: { suggestedMin: Math.max(0, Math.min(...vals, 60) - 10), suggestedMax: Math.max(...vals, 140) + 10, grid: { color: "#efe8dc" },
+                 ticks: { color: "#a39a8c", font: { size: 10 }, maxTicksLimit: 5, callback: v => (v === 100 ? "평소" : (v > 100 ? "+" : "") + (v - 100) + "%") } },
+          },
+        },
+        plugins: [guidePlugin],
       });
     }
     if (storeCharts._demoAges && document.getElementById("storeDemoChart")) {
