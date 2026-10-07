@@ -18,6 +18,31 @@ SIDO_NORM = {"서울특별시": "서울", "경기도": "경기", "강원도": "�
              "광주광역시": "광주", "대전광역시": "대전", "울산광역시": "울산", "세종특별자치시": "세종"}
 
 
+# 밀리플레이스 앱 공식 지역 구분 (주소 도로명 기반 근사 분류)
+YEONNAM_ROADS = ("연남로", "성미산로", "동교로", "월드컵북로")
+
+
+def area_of(s):
+    sido, gugun, addr = s.get("sido") or "", s.get("gugun") or "", s.get("address") or ""
+    if sido == "부산":
+        return "부산"
+    if sido == "제주":
+        return "제주"
+    if sido == "경기":
+        if "고양" in gugun or "일산" in addr:
+            return "고양/일산"
+        if "분당" in addr or "판교" in addr:
+            return "분당/판교"
+        return None
+    if sido != "서울":
+        return None
+    if gugun == "서대문구":
+        return "연남/서대문"
+    if gugun == "마포구":
+        return "연남/서대문" if any(r in addr for r in YEONNAM_ROADS) else "망원/합정"
+    return {"종로구": "종로/광화문", "용산구": "용산/한남/이태원", "강남구": "강남/역삼", "성동구": "성수"}.get(gugun)
+
+
 def _load(path, default):
     try:
         with open(path, encoding="utf-8") as f:
@@ -113,32 +138,40 @@ def build(docs_dir: str) -> dict:
             if v and n not in first_seen:
                 first_seen[n] = d
 
-    # 순위 대상: 제휴 중인 매장 중 실제 노출(노출일 또는 실제 트래픽)이 30일 구간 시작 전부터 있던 곳
-    window_start = (latest - timedelta(days=29)).isoformat()
-    pool = {}
-    for n, s in info.items():
-        if s.get("status") not in ACTIVE_STATUSES:
-            continue
-        exposed = s.get("expose") or first_seen.get(n)
-        if not exposed or exposed > latest.isoformat():
-            continue
-        start = max(exposed, window_start)
-        active_days = (latest - _d(start)).days + 1
-        if active_days < 3:  # 노출 직후 2일 이내는 순위 산정 제외
-            continue
-        total = sum((uv_daily.get(d) or {}).get(n, 0) or 0 for d in dates if start <= d)
-        pool[n] = total / active_days
+    # 순위 대상: 제휴 중 매장. 구간 내 노출 이후 일평균 방문자로 비교 (신규 매장 불이익 방지)
+    def build_pool(w_start, w_end):
+        out = {}
+        for n, s in info.items():
+            if s.get("status") not in ACTIVE_STATUSES:
+                continue
+            exposed = s.get("expose") or first_seen.get(n)
+            if not exposed or exposed > w_end:
+                continue
+            start = max(exposed, w_start)
+            active_days = (_d(w_end) - _d(start)).days + 1
+            if active_days < 3:  # 노출 직후 2일 이내는 순위 산정 제외
+                continue
+            total = sum((uv_daily.get(d) or {}).get(n, 0) or 0 for d in dates if start <= d <= w_end)
+            out[n] = total / active_days
+        return out
 
-    def group_rank(name, key_fn):
+    window_start = (latest - timedelta(days=29)).isoformat()
+    pool = build_pool(window_start, latest.isoformat())
+    prev_pool = build_pool((latest - timedelta(days=59)).isoformat(), (latest - timedelta(days=30)).isoformat())
+
+    def group_rank(name, key_fn, min_size=3):
         k = key_fn(info.get(name, {}))
         if not k:
             return None
         sub = {n: v for n, v in pool.items() if key_fn(info.get(n, {})) == k}
-        if len(sub) < 3:
+        if len(sub) < min_size:
             return None
         r = _rank(sub, name)
         if r:
             r["group"] = k
+            psub = {n: v for n, v in prev_pool.items() if key_fn(info.get(n, {})) == k}
+            pr = _rank(psub, name) if len(psub) >= min_size else None
+            r["prev_rank"] = pr["rank"] if pr else None
         return r
 
     # 주간 지수 (최근 12개 완결 주, 월~일)
@@ -148,6 +181,23 @@ def build(docs_dir: str) -> dict:
         end = last_sunday - timedelta(days=7 * i)
         start = end - timedelta(days=6)
         weeks.append((start.isoformat(), end.isoformat()))
+
+    flow_dates = [(latest - timedelta(days=i)).isoformat() for i in range(90, -1, -1)]
+
+    def flow_index(getter, since=None):
+        vals = [getter(d) if (not since or d >= since) else None for d in flow_dates]
+        ma = []
+        for i in range(len(vals)):
+            win = [v for v in vals[max(0, i - 6): i + 1] if v is not None]
+            ma.append(sum(win) / len(win) if len(win) >= 4 else None)
+        base = [v for v in ma if v is not None]
+        avg = sum(base) / len(base) if base else 0
+        if avg <= 0:
+            return None
+        return [round(v / avg * 100) if v is not None else None for v in ma]
+
+    pool_names = set(pool)
+    overall_flow = flow_index(lambda d: sum(v or 0 for n, v in (uv_daily.get(d) or {}).items() if n in pool_names))
 
     # 데모 (최신 완결 월)
     demo_metric = metrics.get("store_demo") or {}
@@ -176,20 +226,23 @@ def build(docs_dir: str) -> dict:
             "sido": s.get("sido"),
             "gugun": s.get("gugun"),
             "size": s.get("size"),
+            "area": area_of(s),
             "since": s.get("expose") or first_seen.get(name),
         }
         if name in pool:
-            overall = _rank(pool, name)
+            overall = group_rank(name, lambda x: "전체")
             entry["rank"] = {
-                "overall": overall,
+                "area": group_rank(name, area_of, min_size=2),
                 "sido": group_rank(name, lambda x: x.get("sido")),
-                "gugun": group_rank(name, lambda x: f'{x.get("sido")} {x.get("gugun")}' if x.get("sido") and x.get("gugun") else None),
                 "size": group_rank(name, lambda x: x.get("size")),
+                "overall": overall,
             }
             entry["tier"] = _tier(overall["top_pct"]) if overall and pool.get(name, 0) > 0 else None
 
             p = prev30.get(name, 0)
             entry["trend30_pct"] = round((cur30.get(name, 0) - p) / p * 100) if p >= 10 else None
+
+            entry["flow"] = flow_index(lambda d: (uv_daily.get(d) or {}).get(name, 0) or 0, since=entry["since"])
 
             wk = []
             for ws, we in weeks:
@@ -250,6 +303,8 @@ def build(docs_dir: str) -> dict:
         "window": {"start": window_start, "end": latest.isoformat(), "days": 30},
         "demo_month": demo_month,
         "demo_all": demo_all,
+        "flow_dates": flow_dates,
+        "flow_all": overall_flow,
         "overview": overview,
         "stores": stores,
     }
