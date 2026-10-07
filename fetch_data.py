@@ -638,6 +638,14 @@ def main():
     else:
         print(f"배너 스냅샷 갱신 실패 (이전 파일 유지): {banner_snapshot.get('error')}", file=sys.stderr)
 
+    # 제휴처 안내 페이지용 가공 통계 (순위·비율만, 원본 숫자 제외)
+    try:
+        import build_partner_stats
+        cnt = build_partner_stats.write(docs_dir)
+        print(f"제휴처용 통계 갱신: {cnt}개 매장")
+    except Exception as e:
+        print(f"제휴처용 통계 생성 실패 (이전 파일 유지): {e}", file=sys.stderr)
+
 
 if __name__ == "__main__":
     main()
