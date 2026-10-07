@@ -1,0 +1,1094 @@
+{
+ "커피사촌로스터스": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "경기",
+  "gugun": "고양시",
+  "size": "중형"
+ },
+ "칩멍크": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "강북구",
+  "size": "중형"
+ },
+ "인크커피 가산점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "금천구",
+  "size": "대형"
+ },
+ "인크커피 다산점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "경기",
+  "gugun": "남양주시",
+  "size": "대형"
+ },
+ "마하 한남": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "용산구",
+  "size": "대형"
+ },
+ "커브힐": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "용산구",
+  "size": "대형"
+ },
+ "유월커피 회현점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "중구",
+  "size": "대형"
+ },
+ "유월커피 역삼점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "강남구",
+  "size": "대형"
+ },
+ "프로토콜 연희점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "서대문구",
+  "size": "중형"
+ },
+ "프로토콜 상수점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "중형"
+ },
+ "fyi 역삼": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "강남구",
+  "size": "중형"
+ },
+ "연남장": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "서대문구",
+  "size": "대형"
+ },
+ "연남방앗간 DDP점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "중구",
+  "size": "대형"
+ },
+ "연남방앗간 서울역점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "중구",
+  "size": "대형"
+ },
+ "캐비넷클럽라운지 역삼점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "강남구",
+  "size": "중형"
+ },
+ "쎈느 성수점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "성동구",
+  "size": "중형"
+ },
+ "쎈느 건국점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "광진구",
+  "size": "중형"
+ },
+ "노우즈 종로 풍경점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "종로구",
+  "size": "중형"
+ },
+ "노우즈 창덕점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "종로구",
+  "size": "중형"
+ },
+ "리제로 서울": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "종로구",
+  "size": "대형"
+ },
+ "센티멘트": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "서대문구",
+  "size": "중형"
+ },
+ "다용도실": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "은평구",
+  "size": "소형"
+ },
+ "센토브": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "중형"
+ },
+ "부암동 스코프": {
+  "status": "제휴 중",
+  "expose": "2025-05-15",
+  "sido": "서울",
+  "gugun": "종로구",
+  "size": "중형"
+ },
+ "카페허블&남산책방": {
+  "status": "제휴 중",
+  "expose": "2025-05-30",
+  "sido": "서울",
+  "gugun": "중구",
+  "size": "중형"
+ },
+ "필리그랑": {
+  "status": "제휴 중",
+  "expose": "2025-05-30",
+  "sido": "부산",
+  "gugun": "수영구",
+  "size": "소형"
+ },
+ "멀멀 판교": {
+  "status": "제휴 중",
+  "expose": "2025-05-30",
+  "sido": "경기",
+  "gugun": "성남시",
+  "size": "소형"
+ },
+ "모을": {
+  "status": "제휴 중",
+  "expose": "2025-05-30",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "중형"
+ },
+ "밤부 베이커리&브루잉 합정점": {
+  "status": "제휴 중",
+  "expose": "2025-06-09",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "대형"
+ },
+ "밤부 베이커리&브루잉 서래점": {
+  "status": "제휴 중",
+  "expose": "2025-06-09",
+  "sido": "서울",
+  "gugun": "서초구",
+  "size": "대형"
+ },
+ "누아": {
+  "status": "제휴 중",
+  "expose": "2025-06-09",
+  "sido": "부산",
+  "gugun": "북구",
+  "size": "소형"
+ },
+ "커피맨션문장": {
+  "status": "제휴 중",
+  "expose": "2025-06-09",
+  "sido": "대전",
+  "gugun": "중구",
+  "size": "중형"
+ },
+ "문지살롱": {
+  "status": "제휴 중",
+  "expose": "2025-06-16",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "소형"
+ },
+ "런 커피 RUN COFFEE": {
+  "status": "제휴 중",
+  "expose": "2025-06-16",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "소형"
+ },
+ "EMME": {
+  "status": "제휴 중",
+  "expose": "2025-06-16",
+  "sido": "울산",
+  "gugun": "남구",
+  "size": "소형"
+ },
+ "쓰리어클락 연희": {
+  "status": "제휴 중",
+  "expose": "2025-06-16",
+  "sido": "서울",
+  "gugun": "서대문구",
+  "size": "중형"
+ },
+ "쓰리어클락 김포": {
+  "status": "제휴 중",
+  "expose": "2025-06-16",
+  "sido": "경기",
+  "gugun": "김포시",
+  "size": "소형"
+ },
+ "캣냅": {
+  "status": "제휴 중",
+  "expose": "2025-06-16",
+  "sido": "대구",
+  "gugun": "중구",
+  "size": "소형"
+ },
+ "단위": {
+  "status": "제휴 중",
+  "expose": "2025-06-16",
+  "sido": "대전",
+  "gugun": "중구",
+  "size": "소형"
+ },
+ "에테르": {
+  "status": "제휴 중",
+  "expose": "2025-06-16",
+  "sido": "부산",
+  "gugun": "영도구",
+  "size": "대형"
+ },
+ "코이": {
+  "status": "제휴 중",
+  "expose": "2025-06-23",
+  "sido": "부산",
+  "gugun": "서전로68번길",
+  "size": "소형"
+ },
+ "포러리": {
+  "status": "제휴 중",
+  "expose": "2025-06-23",
+  "sido": "서울",
+  "gugun": "양천구",
+  "size": "중형"
+ },
+ "카페온휴": {
+  "status": "제휴 중",
+  "expose": "2025-06-23",
+  "sido": "충남",
+  "gugun": "부여군",
+  "size": "소형"
+ },
+ "트램서울": {
+  "status": "제휴 중",
+  "expose": "2025-06-23",
+  "sido": "서울",
+  "gugun": "관악구",
+  "size": "소형"
+ },
+ "무화과나무 아래": {
+  "status": "제휴 중",
+  "expose": "2025-06-23",
+  "sido": "경기",
+  "gugun": "성남시",
+  "size": "소형"
+ },
+ "김성종추리문학관": {
+  "status": "제휴 중",
+  "expose": "2025-07-07",
+  "sido": "부산",
+  "gugun": "해운대",
+  "size": "대형"
+ },
+ "앤드아워": {
+  "status": "제휴 중",
+  "expose": "2025-07-07",
+  "sido": "인천",
+  "gugun": "동구",
+  "size": "대형"
+ },
+ "커피문화사 수유": {
+  "status": "제휴 중",
+  "expose": "2025-07-14",
+  "sido": "서울",
+  "gugun": "강북구",
+  "size": "소형"
+ },
+ "비단베이커리&카페": {
+  "status": "제휴 중",
+  "expose": "2025-07-14",
+  "sido": "세종",
+  "gugun": "부강면",
+  "size": "대형"
+ },
+ "카페다옴": {
+  "status": "제휴 중",
+  "expose": "2025-07-14",
+  "sido": "경남",
+  "gugun": "창원시",
+  "size": "대형"
+ },
+ "어노렌지": {
+  "status": "제휴 중",
+  "expose": "2025-07-21",
+  "sido": "전북",
+  "gugun": "전주시",
+  "size": "대형"
+ },
+ "올드북촌": {
+  "status": "제휴 중",
+  "expose": "2025-07-21",
+  "sido": "제주",
+  "gugun": "제주시",
+  "size": "대형"
+ },
+ "세시라기": {
+  "status": "제휴 중",
+  "expose": "2025-07-21",
+  "sido": "경남",
+  "gugun": "창원시",
+  "size": "중형"
+ },
+ "소피 soffee": {
+  "status": "제휴 중",
+  "expose": "2025-07-21",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "중형"
+ },
+ "스틸히어": {
+  "status": "제휴 중",
+  "expose": "2025-07-21",
+  "sido": "광주",
+  "gugun": "남구",
+  "size": "소형"
+ },
+ "진소아 커피": {
+  "status": "제휴 중",
+  "expose": "2025-07-21",
+  "sido": "서울",
+  "gugun": "용산구",
+  "size": "소형"
+ },
+ "녹음집": {
+  "status": "제휴 중",
+  "expose": "2025-07-21",
+  "sido": "서울",
+  "gugun": "용산구",
+  "size": "소형"
+ },
+ "애틱인서울하우스": {
+  "status": "제휴 중",
+  "expose": "2025-07-28",
+  "sido": "서울",
+  "gugun": "양천구",
+  "size": "소형"
+ },
+ "식구": {
+  "status": "제휴 중",
+  "expose": "2025-07-28",
+  "sido": "경기",
+  "gugun": "수원시",
+  "size": "소형"
+ },
+ "홍제멘션 에스프레소 바": {
+  "status": "제휴 중",
+  "expose": "2025-07-28",
+  "sido": "강원",
+  "gugun": "강릉시",
+  "size": "중형"
+ },
+ "엔드 투 앤드": {
+  "status": "제휴 중",
+  "expose": "2025-07-28",
+  "sido": "강원",
+  "gugun": "강릉시",
+  "size": "대형"
+ },
+ "밋업커피하우스": {
+  "status": "제휴 중",
+  "expose": "2025-08-04",
+  "sido": "경북",
+  "gugun": "경주시",
+  "size": "중형"
+ },
+ "디센시커피스튜디오": {
+  "status": "제휴 중",
+  "expose": "2025-08-04",
+  "sido": "경기",
+  "gugun": "수원시",
+  "size": "소형"
+ },
+ "휴앤안커피": {
+  "status": "제휴 중",
+  "expose": "2025-08-13",
+  "sido": "전북",
+  "gugun": "완주군",
+  "size": "중형"
+ },
+ "현해탄": {
+  "status": "제휴 중",
+  "expose": "2025-08-13",
+  "sido": "전북",
+  "gugun": "전주시",
+  "size": "중형"
+ },
+ "피삼사": {
+  "status": "제휴 중",
+  "expose": "2025-08-13",
+  "sido": "대구",
+  "gugun": "중구",
+  "size": "중형"
+ },
+ "종이숲": {
+  "status": "제휴 중",
+  "expose": "2025-08-19",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "소형"
+ },
+ "시로": {
+  "status": "제휴 중",
+  "expose": "2025-08-19",
+  "sido": "울산",
+  "gugun": "남구",
+  "size": "소형"
+ },
+ "소소밀밀 북카페": {
+  "status": "제휴 중",
+  "expose": "2025-08-28",
+  "sido": "경북",
+  "gugun": "경주시",
+  "size": "중형"
+ },
+ "무우수 커피 로스터스": {
+  "status": "제휴 중",
+  "expose": "2025-08-28",
+  "sido": "제주",
+  "gugun": "제주시",
+  "size": "소형"
+ },
+ "홀리몰리": {
+  "status": "제휴 중",
+  "expose": "2025-08-28",
+  "sido": "충북",
+  "gugun": "청주시",
+  "size": "대형"
+ },
+ "가배초당": {
+  "status": "제휴 중",
+  "expose": "2025-08-28",
+  "sido": "강원",
+  "gugun": "강릉시",
+  "size": "중형"
+ },
+ "평정": {
+  "status": "제휴 중",
+  "expose": "2025-09-01",
+  "sido": "충북",
+  "gugun": "충주시",
+  "size": "소형"
+ },
+ "애딩웜스": {
+  "status": "제휴 중",
+  "expose": "2025-09-01",
+  "sido": "서울",
+  "gugun": "서대문구",
+  "size": "소형"
+ },
+ "커피리브레 파란점": {
+  "status": "제휴 중",
+  "expose": "2025-09-10",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "대형"
+ },
+ "커피 리브레 연남점": {
+  "status": "제휴 중",
+  "expose": "2025-09-09",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "중형"
+ },
+ "에피소드": {
+  "status": "제휴 중",
+  "expose": "2025-09-12",
+  "sido": "서울",
+  "gugun": "양천구",
+  "size": "중형"
+ },
+ "트레바리 안국아지트 슈퍼마켙": {
+  "status": "제휴 중",
+  "expose": "2025-09-22",
+  "sido": "서울",
+  "gugun": "종로구",
+  "size": "소형"
+ },
+ "원베일리 인바이트 스카이 11": {
+  "status": "제휴 중",
+  "expose": "2025-09-23",
+  "sido": "서울",
+  "gugun": "서초구",
+  "size": "대형"
+ },
+ "1984": {
+  "status": "제휴 중",
+  "expose": "2025-09-26",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "중형"
+ },
+ "인텐스491": {
+  "status": "제휴 중",
+  "expose": "2025-10-21",
+  "sido": "인천",
+  "gugun": "중구",
+  "size": "대형"
+ },
+ "cafe N&D": {
+  "status": "제휴 중",
+  "expose": "2025-10-27",
+  "sido": "대전",
+  "gugun": "서구",
+  "size": "대형"
+ },
+ "나지트": {
+  "status": "제휴 중",
+  "expose": "2025-10-28",
+  "sido": "서울",
+  "gugun": "종로구",
+  "size": "소형"
+ },
+ "콥프키노": {
+  "status": "제휴 중",
+  "expose": "2025-10-30",
+  "sido": "충북",
+  "gugun": "청주시",
+  "size": "소형"
+ },
+ "에르네스토": {
+  "status": "제휴 중",
+  "expose": "2025-11-24",
+  "sido": "서울",
+  "gugun": "은평구",
+  "size": "소형"
+ },
+ "한쪽가게": {
+  "status": "제휴 중",
+  "expose": "2025-12-01",
+  "sido": "대전",
+  "gugun": "서구",
+  "size": "소형"
+ },
+ "플라세르 과천": {
+  "status": "제휴 중",
+  "expose": "2026-02-02",
+  "sido": "경기",
+  "gugun": "과천시",
+  "size": "중형"
+ },
+ "플라세르 신당": {
+  "status": "제휴 중",
+  "expose": "2026-02-02",
+  "sido": "서울",
+  "gugun": "중구",
+  "size": "중형"
+ },
+ "언리튼잉크": {
+  "status": "제휴 중",
+  "expose": "2026-02-13",
+  "sido": "서울",
+  "gugun": "용산구",
+  "size": "소형"
+ },
+ "도망": {
+  "status": "제휴 중",
+  "expose": "2026-03-01",
+  "sido": "서울",
+  "gugun": "동대문구",
+  "size": "소형"
+ },
+ "넛지스 북카페": {
+  "status": "제휴 중",
+  "expose": "2026-03-09",
+  "sido": "서울",
+  "gugun": "동대문구",
+  "size": "중형"
+ },
+ "로흐": {
+  "status": "제휴 중",
+  "expose": "2026-04-09",
+  "sido": "서울",
+  "gugun": "강남구",
+  "size": "중형"
+ },
+ "숲터 그로브 허브 망원 ": {
+  "status": "제휴 중",
+  "expose": "2026-06-08",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "중형"
+ },
+ "서울북카페 센버스": {
+  "status": "제휴 중",
+  "expose": "2026-07-22",
+  "sido": "서울",
+  "gugun": "성동구",
+  "size": "대형"
+ },
+ "엔게디에스프레소": {
+  "status": "제휴 중",
+  "expose": "2026-07-22",
+  "sido": "경기",
+  "gugun": "안양시",
+  "size": "소형"
+ },
+ "Boyo": {
+  "status": "제휴 중",
+  "expose": "2026-07-22",
+  "sido": "경기",
+  "gugun": "남양주시",
+  "size": "중형"
+ },
+ "하우스 결": {
+  "status": "제휴 중",
+  "expose": "2026-07-27",
+  "sido": "경기",
+  "gugun": "수원시",
+  "size": "중형"
+ },
+ "별빛서재": {
+  "status": "제휴 중",
+  "expose": "2026-07-21",
+  "sido": "경기",
+  "gugun": "고양시",
+  "size": "대형"
+ },
+ "무주": {
+  "status": "제휴 중",
+  "expose": "2026-07-22",
+  "sido": "경북",
+  "gugun": "포항시",
+  "size": "소형"
+ },
+ "컨트롤러스 커피웍스": {
+  "status": "제휴 중",
+  "expose": "2026-07-23",
+  "sido": "광주",
+  "gugun": "서구",
+  "size": "소형"
+ },
+ "무제": {
+  "status": "제휴 중",
+  "expose": "2026-07-22",
+  "sido": "서울",
+  "gugun": "은평구",
+  "size": "소형"
+ },
+ "호소인": {
+  "status": "제휴 중",
+  "expose": "2026-07-27",
+  "sido": "경기",
+  "gugun": "수원시",
+  "size": "중형"
+ },
+ "소설과 농담": {
+  "status": "제휴 중",
+  "expose": "2026-07-22",
+  "sido": "제주",
+  "gugun": "제주시",
+  "size": "소형"
+ },
+ "라우더댄밤즈": {
+  "status": "제휴 중",
+  "expose": "2026-07-23",
+  "sido": "광주",
+  "gugun": "동구",
+  "size": "소형"
+ },
+ "공상온도": {
+  "status": "제휴 중",
+  "expose": "2026-07-23",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "중형"
+ },
+ "온뒤": {
+  "status": "제휴 중",
+  "expose": "2026-07-22",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "소형"
+ },
+ "감동": {
+  "status": "제휴 중",
+  "expose": "2026-07-21",
+  "sido": "서울",
+  "gugun": "동대문구",
+  "size": "소형"
+ },
+ "모우": {
+  "status": "제휴 중",
+  "expose": "2026-07-21",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "소형"
+ },
+ "카페미우": {
+  "status": "제휴 중",
+  "expose": "2026-07-21",
+  "sido": "서울",
+  "gugun": "용산구",
+  "size": "소형"
+ },
+ "커피집 이공": {
+  "status": "제휴 중",
+  "expose": "2026-07-21",
+  "sido": "서울",
+  "gugun": "양천구",
+  "size": "중형"
+ },
+ "콤파일": {
+  "status": "제휴 중",
+  "expose": "2026-07-21",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": "대형"
+ },
+ "9.81파크 제주": {
+  "status": "제휴 중",
+  "expose": "2026-07-26",
+  "sido": "제주",
+  "gugun": "제주시",
+  "size": "대형"
+ },
+ "스페이스컵": {
+  "status": "제휴 중",
+  "expose": "2026-07-26",
+  "sido": "제주",
+  "gugun": "제주시",
+  "size": "중형"
+ },
+ "결핍의결핍": {
+  "status": "제휴 중",
+  "expose": "2026-08-14",
+  "sido": "서울",
+  "gugun": "용산구",
+  "size": null
+ },
+ "북살롱 텍스트북": {
+  "status": "제휴 중",
+  "expose": "2026-08-13",
+  "sido": "서울",
+  "gugun": "종로구",
+  "size": null
+ },
+ "을커피브루어스": {
+  "status": "제휴 중",
+  "expose": "2026-08-13",
+  "sido": "전남",
+  "gugun": "광주",
+  "size": null
+ },
+ "내면의 발견": {
+  "status": "제휴 중",
+  "expose": "2026-08-22",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": null
+ },
+ "라이피": {
+  "status": "제휴 중",
+  "expose": "2026-08-19",
+  "sido": "서울",
+  "gugun": "중구",
+  "size": null
+ },
+ "송커피X책공간": {
+  "status": "제휴 중",
+  "expose": "2026-08-19",
+  "sido": "서울",
+  "gugun": "강남구",
+  "size": null
+ },
+ "cafe heulg 카페 흙": {
+  "status": "제휴 중",
+  "expose": "2026-08-19",
+  "sido": "서울",
+  "gugun": "용산구",
+  "size": null
+ },
+ "우리커피클럽": {
+  "status": "제휴 중",
+  "expose": "2026-08-19",
+  "sido": "서울",
+  "gugun": "중구",
+  "size": null
+ },
+ "무가공": {
+  "status": "제휴 중",
+  "expose": "2026-08-19",
+  "sido": "서울",
+  "gugun": "서초구",
+  "size": null
+ },
+ "비온디앤": {
+  "status": "제휴 중",
+  "expose": "2026-08-26",
+  "sido": "서울",
+  "gugun": "중구",
+  "size": null
+ },
+ "온숨": {
+  "status": "제휴 중",
+  "expose": "2026-08-27",
+  "sido": "경상남도",
+  "gugun": "창원",
+  "size": null
+ },
+ "탐석과 사랑": {
+  "status": "제휴 중",
+  "expose": "2026-08-24",
+  "sido": "서울",
+  "gugun": "동대문구",
+  "size": null
+ },
+ "인덱스숍": {
+  "status": "제휴 중",
+  "expose": "2026-08-26",
+  "sido": "서울",
+  "gugun": "광진구",
+  "size": null
+ },
+ "예스커피": {
+  "status": "제휴 중",
+  "expose": "2026-08-27",
+  "sido": "서울",
+  "gugun": "중랑구",
+  "size": null
+ },
+ "어코트 A CUP OF TEXT": {
+  "status": "제휴 중",
+  "expose": "2026-08-31",
+  "sido": "서울",
+  "gugun": "용산구",
+  "size": null
+ },
+ "하츠하우스": {
+  "status": "제휴 중",
+  "expose": "2026-08-26",
+  "sido": "서울",
+  "gugun": "성동구",
+  "size": null
+ },
+ "책방 바라타리아": {
+  "status": "제휴 중",
+  "expose": "2026-09-11",
+  "sido": "강원도",
+  "gugun": "춘천",
+  "size": null
+ },
+ "종이의 서재 by grape lab": {
+  "status": "제휴 중",
+  "expose": "2026-09-12",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": null
+ },
+ "렉터스라운지 홍대": {
+  "status": "제휴 중",
+  "expose": "2026-09-12",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": null
+ },
+ "텅앤빈 청파": {
+  "status": "제휴 중",
+  "expose": "2026-09-11",
+  "sido": "서울",
+  "gugun": "용산구",
+  "size": null
+ },
+ "스페인 미술 500년: 빛과 어둠의 연대기": {
+  "status": "10월 단기",
+  "expose": "2026-10-01",
+  "sido": "서울",
+  "gugun": "서초구",
+  "size": null
+ },
+ "콜로라도 프로젝트": {
+  "status": "제휴 중",
+  "expose": "2026-09-21",
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "녹턴": {
+  "status": "제휴 중",
+  "expose": "2026-09-21",
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "나울": {
+  "status": "제휴 중",
+  "expose": "2026-09-21",
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "바논카페": {
+  "status": "제휴 중",
+  "expose": "2026-09-21",
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "이스트만필름랩": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "카페 라이츠": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "오우커 로스터리": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "북앤브루": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "하버커피": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "어떤날": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "수록": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "솜양책방": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "네이티브서울2": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "가배도 노량진점": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "가배도 시청점": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "가배도 남대문시장점": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "가배도 신논현점": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "가배도 명동점": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "공명 연남": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "공명 홍대": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "공명 망원책빵": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ },
+ "공명 마곡책빵": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null
+ }
+}
