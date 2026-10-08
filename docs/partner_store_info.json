@@ -1112,73 +1112,97 @@
   "address": null
  },
  "카페 라이츠": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
+  "status": "제휴 중",
+  "expose": "2026-10-07",
+  "sido": "서울",
   "gugun": null,
   "size": null,
-  "address": null
+  "address": "서울특별시 광진구 동일로20길 114 1,2,3층"
  },
  "오우커 로스터리": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
+  "status": "제휴 중",
+  "expose": "2026-10-07",
+  "sido": "부산",
   "gugun": null,
   "size": null,
-  "address": null
+  "address": "부산광역시 수영구 무학로10번길 35 2층"
  },
  "북앤브루": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
+  "status": "제휴 중",
+  "expose": "2026-10-07",
+  "sido": "서울",
   "gugun": null,
   "size": null,
-  "address": null
+  "address": "서울특별시 양천구 오목로54길 6 1층"
  },
  "하버커피": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
+  "status": "제휴 중",
+  "expose": "2026-10-07",
+  "sido": "대구",
   "gugun": null,
   "size": null,
-  "address": null
+  "address": "대구광역시 남구 중앙대로31길 103 1층"
  },
  "어떤날": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
+  "status": "제휴 중",
+  "expose": "2026-10-07",
+  "sido": "서울",
   "gugun": null,
   "size": null,
-  "address": null
+  "address": "서울특별시 마포구 신수동 85-16"
  },
  "수록": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
+  "status": "제휴 중",
+  "expose": "2026-10-07",
+  "sido": "서울",
   "gugun": null,
   "size": null,
-  "address": null
+  "address": "서울특별시 성북구 삼선교로6길 10 1층"
  },
  "솜양책방": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
+  "status": "제휴 중",
+  "expose": "2026-10-07",
+  "sido": "제주",
   "gugun": null,
   "size": null,
-  "address": null
+  "address": "제주도 서귀포시 서문로38번길 34-1 솜양책방"
  },
  "네이티브서울2": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
+  "status": "제휴 중",
+  "expose": "2026-10-07",
+  "sido": "서울",
   "gugun": null,
   "size": null,
-  "address": null
+  "address": "서울특별시 관악구 남부순환로 1746 3층"
+ },
+ "리드엑스": {
+  "status": "제휴 중",
+  "expose": "2026-10-07",
+  "sido": "경기",
+  "gugun": null,
+  "size": null,
+  "address": "경기도 용인시 기흥구 덕영대로 1698 101호 리드엑스"
+ },
+ "mlc.": {
+  "status": "제휴 중",
+  "expose": "2026-10-07",
+  "sido": "서울",
+  "gugun": null,
+  "size": null,
+  "address": "서울특별시 마포구 성미산로29길 40-6 지1층"
+ },
+ "브루티풀커피": {
+  "status": "제휴 중",
+  "expose": "2026-10-07",
+  "sido": "강원도",
+  "gugun": null,
+  "size": null,
+  "address": "강원도 속초시 만천7길 19-18"
  },
  "가배도 노량진점": {
   "status": "제휴예정",
   "expose": null,
-  "sido": null,
+  "sido": "서울",
   "gugun": null,
   "size": null,
   "address": null
@@ -1186,7 +1210,7 @@
  "가배도 시청점": {
   "status": "제휴예정",
   "expose": null,
-  "sido": null,
+  "sido": "서울",
   "gugun": null,
   "size": null,
   "address": null
@@ -1194,7 +1218,7 @@
  "가배도 남대문시장점": {
   "status": "제휴예정",
   "expose": null,
-  "sido": null,
+  "sido": "서울",
   "gugun": null,
   "size": null,
   "address": null
@@ -1202,12 +1226,52 @@
  "가배도 신논현점": {
   "status": "제휴예정",
   "expose": null,
-  "sido": null,
+  "sido": "서울",
   "gugun": null,
   "size": null,
   "address": null
  },
- "가배도 명동점": {
+ "가배도 명동": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": "서울",
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "카페 공명 연남점": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": "서울",
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "카페 공명 홍대점": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": "서울",
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "카페 공명 망원책빵": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": "서울",
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "카페 공명 마곡책빵": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": "서울",
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "일글책": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
@@ -1215,7 +1279,7 @@
   "size": null,
   "address": null
  },
- "공명 연남": {
+ "사티커피바": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
@@ -1223,23 +1287,7 @@
   "size": null,
   "address": null
  },
- "공명 홍대": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
-  "gugun": null,
-  "size": null,
-  "address": null
- },
- "공명 망원책빵": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
-  "gugun": null,
-  "size": null,
-  "address": null
- },
- "공명 마곡책빵": {
+ "파트투": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
