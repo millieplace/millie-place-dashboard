@@ -1,7 +1,13 @@
 {
-  "captured_at": "2026-10-13 10:07:41 KST",
+  "captured_at": "2026-10-13 10:10:26 KST",
   "source_url": "https://www.millie.co.kr/v4/millieplace",
   "slides": [
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6acb54d72d15e.jpg",
+      "title": "동네한바퀴 인터뷰 · 테라스에서 읽는 가을",
+      "subtitle": "작은 전율을 더하는 샤로수길 트램서울",
+      "place_seq": "1079"
+    },
     {
       "image": "https://image.millie.co.kr/service/hero_banner/6acb5500877ee.jpg",
       "title": "동네한바퀴 인터뷰 · 장르 대신 알파벳으로",
@@ -19,12 +25,6 @@
       "title": "동네한바퀴 인터뷰 · 단골이 문을 열어요",
       "subtitle": "손님을 식구라 부르는 수원 카페 식구",
       "place_seq": "1103"
-    },
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6acb54d72d15e.jpg",
-      "title": "동네한바퀴 인터뷰 · 테라스에서 읽는 가을",
-      "subtitle": "작은 전율을 더하는 샤로수길 트램서울",
-      "place_seq": "1079"
     }
   ],
   "error": null
