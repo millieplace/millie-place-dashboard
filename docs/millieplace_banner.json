@@ -1,13 +1,7 @@
 {
-  "captured_at": "2026-10-15 10:18:06 KST",
+  "captured_at": "2026-10-16 10:03:46 KST",
   "source_url": "https://www.millie.co.kr/v4/millieplace",
   "slides": [
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6abce26bb39a3.jpg",
-      "title": "책으로 먼저 만나는 · 스페인 미술 500년",
-      "subtitle": "밀리 회원이라면 전시 티켓 20% 할인",
-      "place_seq": "1196"
-    },
     {
       "image": "https://image.millie.co.kr/service/hero_banner/6ac928f95a5fd.jpg",
       "title": "새로운 밀리플레이스 · 확인하고 선물 받으세요",
@@ -25,6 +19,12 @@
       "title": "동네한바퀴 인터뷰 · 장르 대신 알파벳으로",
       "subtitle": "나만의 색인을 만드는 건대 인덱스숍",
       "place_seq": "1188"
+    },
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6abce26bb39a3.jpg",
+      "title": "책으로 먼저 만나는 · 스페인 미술 500년",
+      "subtitle": "밀리 회원이라면 전시 티켓 20% 할인",
+      "place_seq": "1196"
     }
   ],
   "error": null
