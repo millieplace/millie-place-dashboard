@@ -2009,18 +2009,27 @@
     { name: "리드엑스", status: "제휴 중", expose: "2026-10-07", term: null, termReason: null, plannedExpose: null },
     { name: "mlc.", status: "제휴 중", expose: "2026-10-07", term: null, termReason: null, plannedExpose: null },
     { name: "브루티풀커피", status: "제휴 중", expose: "2026-10-07", term: null, termReason: null, plannedExpose: null },
-    { name: "가배도 노량진점", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: "2026-10-08" },
-    { name: "가배도 시청점", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: "2026-10-08" },
-    { name: "가배도 남대문시장점", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: "2026-10-08" },
-    { name: "가배도 신논현점", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: "2026-10-08" },
-    { name: "가배도 명동", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: "2026-10-08" },
-    { name: "카페 공명 연남점", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: "2026-10-12" },
-    { name: "카페 공명 홍대점", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: "2026-10-12" },
-    { name: "카페 공명 망원책빵", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: "2026-10-12" },
-    { name: "카페 공명 마곡책빵", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: "2026-10-12" },
-    { name: "일글책", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: null },
-    { name: "사티커피바", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: null },
-    { name: "파트투", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: null },
+    { name: "가배도 노량진점", status: "제휴 중", expose: "2026-10-08", term: null, termReason: null, plannedExpose: null },
+    { name: "가배도 시청점", status: "제휴 중", expose: "2026-10-08", term: null, termReason: null, plannedExpose: null },
+    { name: "가배도 남대문시장점", status: "제휴 중", expose: "2026-10-08", term: null, termReason: null, plannedExpose: null },
+    { name: "가배도 신논현점", status: "제휴 중", expose: "2026-10-08", term: null, termReason: null, plannedExpose: null },
+    { name: "가배도 명동", status: "제휴 중", expose: "2026-10-08", term: null, termReason: null, plannedExpose: null },
+    { name: "카페 공명 연남점", status: "제휴 중", expose: "2026-10-12", term: null, termReason: null, plannedExpose: null },
+    { name: "카페 공명 홍대점", status: "제휴 중", expose: "2026-10-12", term: null, termReason: null, plannedExpose: null },
+    { name: "카페 공명 망원책빵", status: "제휴 중", expose: "2026-10-12", term: null, termReason: null, plannedExpose: null },
+    { name: "카페 공명 마곡책빵", status: "제휴 중", expose: "2026-10-12", term: null, termReason: null, plannedExpose: null },
+    { name: "일글책", status: "제휴 중", expose: "2026-10-16", term: null, termReason: null, plannedExpose: null },
+    { name: "사티커피바", status: "제휴 중", expose: "2026-10-16", term: null, termReason: null, plannedExpose: null },
+    { name: "카페 파트투", status: "제휴 중", expose: "2026-10-16", term: null, termReason: null, plannedExpose: null },
+    { name: "르 사이트", status: "제휴 중", expose: "2026-10-16", term: null, termReason: null, plannedExpose: null },
+    { name: "마론테일", status: "제휴 중", expose: "2026-10-16", term: null, termReason: null, plannedExpose: null },
+    { name: "키하라", status: "제휴 중", expose: "2026-10-16", term: null, termReason: null, plannedExpose: null },
+    { name: "아오모모", status: "제휴 중", expose: "2026-10-16", term: null, termReason: null, plannedExpose: null },
+    { name: "이런저런", status: "제휴 중", expose: "2026-10-16", term: null, termReason: null, plannedExpose: null },
+    { name: "이로 로스터리", status: "제휴 중", expose: "2026-10-16", term: null, termReason: null, plannedExpose: null },
+    { name: "결", status: "제휴 중", expose: "2026-10-16", term: null, termReason: null, plannedExpose: null },
+    { name: "업스탠딩", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: null },
+    { name: "치치하하", status: "제휴예정", expose: null, term: null, termReason: null, plannedExpose: null },
   ];
 
   // 엑셀 매장명 ↔ 실제 데이터(Superset) 매장명이 다른 경우 연결 (엑셀명 → 데이터명)
@@ -2031,6 +2040,7 @@
     "숲터 그로브 허브 망원": "숲터 그로브 허브 망원 ",
     "북카페 별빛서재": "별빛서재",
     "RATHER GOO:D (래더굿)": "오히려 좋아요 (래더굿)",
+    "가배도 명동": "가배도 명동점",
   };
   PARTNER_STORE_MASTER.forEach(s => {
     if (PARTNER_NAME_ALIASES[s.name]) { s.excelName = s.name; s.name = PARTNER_NAME_ALIASES[s.name]; }
@@ -2421,7 +2431,7 @@
           const detail = `신규 매장 혜택클릭 기준 ${prevMonthKey} Total ${fmt(prevMonthNewSum)}회 (전체의 ${prevMonthPct.toFixed(1)}%) → ${curMonthKey} ${latestDayLabel}일까지 ${fmt(curMonthNewSum)}회 (전체의 ${curMonthPct.toFixed(1)}%)`;
           const shareGrowth = curMonthPct - prevMonthPct;
           if (shareGrowth >= 2) {
-            momLines.push(`${parseInt(prevMonthKey.slice(5), 10)}월 말부터 신규매장 ${newStoreNames.length}개가 추가되면서, 전체에서 차지하는 혜택클릭 비중이 ${prevMonthPct.toFixed(1)}%→${curMonthPct.toFixed(1)}%로 뚜렷하게 늘었어요 — 혜택받기/직원확인 증가에 일부 기여했을 가능성이 있어요`);
+            momLines.push(`${parseInt(prevMonthKey.slice(5), 10)}월 말부터 신규매장 ${newStoreNames.length}개가 추가되면서, 전체에서 차지하는 혜택클릭 비중이 ${prevMonthPct.toFixed(1)}%→${curMonthPct.toFixed(1)}%로 뚜렷하게 늘었어요 — 혜택받기${EXCLUDE_STAFF ? "" : "/직원확인"} 증가에 일부 기여했을 가능성이 있어요`);
           } else {
             momLines.push(`${parseInt(prevMonthKey.slice(5), 10)}월 말부터 신규매장 ${newStoreNames.length}개가 추가됐지만, 전체 혜택클릭에서 차지하는 비중 변화는 크지 않아요 (${prevMonthPct.toFixed(1)}%→${curMonthPct.toFixed(1)}%) — 다른 요인을 더 확인해볼 필요가 있어요`);
           }
