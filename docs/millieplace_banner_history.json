@@ -215,6 +215,14 @@
         "https://image.millie.co.kr/service/hero_banner/6acb5500877ee.jpg",
         "https://image.millie.co.kr/service/hero_banner/6abce26bb39a3.jpg"
       ]
+    },
+    "2026-10-19": {
+      "images": [
+        "https://image.millie.co.kr/service/hero_banner/6ad1e476cff56.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6ad1e4e7a6726.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6ac928f95a5fd.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6abce26bb39a3.jpg"
+      ]
     }
   },
   "meta": {
@@ -332,6 +340,16 @@
       "title": "새로운 밀리플레이스 · 확인하고 선물 받으세요",
       "subtitle": "책 읽기 좋은 카페 가배도 삼행시 이벤트",
       "place_seq": "1222"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6ad1e476cff56.jpg": {
+      "title": "동네한바퀴 인터뷰 · 좋아하는 걸 주워요",
+      "subtitle": "취향을 주워 모은 휘경동 탐석과 사랑",
+      "place_seq": "1187"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6ad1e4e7a6726.jpg": {
+      "title": "동네한바퀴 인터뷰 · 누군가의 첫 전시가",
+      "subtitle": "예술이 시작되는 마포 콜로라도프로젝트",
+      "place_seq": "1197"
     }
   }
 }
