@@ -1,0 +1,165 @@
+{
+ "as_of": "2026-10-20 10:49",
+ "source_rows": 1650,
+ "coupons": [
+  {
+   "id": "11009",
+   "name": "[밀리의서재] 무제한 1개월 구독권(밀리플레이스 제휴처 증정 26.08.27~27.02.28)",
+   "label": "밀리플레이스 제휴처 증정 26.08.27~27.02.28",
+   "valid_from": "2026-08-27",
+   "valid_to": "2027-02-28",
+   "issued_at": "2026-08-27",
+   "issued": 1650,
+   "registered": 86,
+   "used": 59,
+   "registered_unused": 27,
+   "members": 72,
+   "multi_members": 7,
+   "max_per_member": 4,
+   "first_registered": "2026-09-16",
+   "last_registered": "2026-10-20",
+   "lag_buckets": {
+    "당일": 53,
+    "1~3일": 4,
+    "4~7일": 0,
+    "8일 이상": 2
+   },
+   "lag_median_hours": 0.0,
+   "daily": {
+    "2026-09-16": {
+     "registered": 2,
+     "used": 1
+    },
+    "2026-09-17": {
+     "registered": 4,
+     "used": 3
+    },
+    "2026-09-18": {
+     "registered": 8,
+     "used": 3
+    },
+    "2026-09-19": {
+     "registered": 5,
+     "used": 4
+    },
+    "2026-09-20": {
+     "registered": 3,
+     "used": 1
+    },
+    "2026-09-21": {
+     "registered": 2,
+     "used": 2
+    },
+    "2026-09-22": {
+     "registered": 8,
+     "used": 3
+    },
+    "2026-09-24": {
+     "registered": 3,
+     "used": 3
+    },
+    "2026-09-25": {
+     "registered": 1,
+     "used": 1
+    },
+    "2026-09-26": {
+     "registered": 2,
+     "used": 2
+    },
+    "2026-09-27": {
+     "registered": 3,
+     "used": 3
+    },
+    "2026-09-28": {
+     "registered": 1,
+     "used": 0
+    },
+    "2026-09-29": {
+     "registered": 2,
+     "used": 2
+    },
+    "2026-09-30": {
+     "registered": 1,
+     "used": 1
+    },
+    "2026-10-01": {
+     "registered": 2,
+     "used": 2
+    },
+    "2026-10-03": {
+     "registered": 2,
+     "used": 1
+    },
+    "2026-10-04": {
+     "registered": 1,
+     "used": 1
+    },
+    "2026-10-05": {
+     "registered": 3,
+     "used": 3
+    },
+    "2026-10-06": {
+     "registered": 4,
+     "used": 2
+    },
+    "2026-10-07": {
+     "registered": 5,
+     "used": 2
+    },
+    "2026-10-08": {
+     "registered": 2,
+     "used": 1
+    },
+    "2026-10-09": {
+     "registered": 2,
+     "used": 2
+    },
+    "2026-10-10": {
+     "registered": 3,
+     "used": 3
+    },
+    "2026-10-11": {
+     "registered": 5,
+     "used": 3
+    },
+    "2026-10-12": {
+     "registered": 1,
+     "used": 1
+    },
+    "2026-10-13": {
+     "registered": 1,
+     "used": 0
+    },
+    "2026-10-14": {
+     "registered": 3,
+     "used": 1
+    },
+    "2026-10-15": {
+     "registered": 4,
+     "used": 4
+    },
+    "2026-10-16": {
+     "registered": 2,
+     "used": 0
+    },
+    "2026-10-17": {
+     "registered": 0,
+     "used": 1
+    },
+    "2026-10-18": {
+     "registered": 0,
+     "used": 1
+    },
+    "2026-10-19": {
+     "registered": 0,
+     "used": 2
+    },
+    "2026-10-20": {
+     "registered": 1,
+     "used": 0
+    }
+   },
+   "paid_converted": null
+  }
+ ]
+}
