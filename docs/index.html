@@ -401,7 +401,7 @@
       <button data-tab="monthly">월간 데이터</button>
       <button data-tab="newstores">신규 매장 분석</button>
       <button data-tab="partner">제휴처별 데이터</button>
-      <button data-tab="event">이벤트 Tracking</button>
+      <button data-tab="coupon">구독권 Tracking</button>
       <button data-tab="hub">밀플 허브 페이지</button>
       <button data-tab="jeju981">제주 981</button>
       <button data-tab="urbanplay">어반플레이</button>
@@ -426,6 +426,10 @@
 
     <div class="tab-panel" id="tab-partner">
       <div id="partner-area"></div>
+    </div>
+
+    <div class="tab-panel" id="tab-coupon">
+      <div id="coupon-area"></div>
     </div>
 
     <div class="tab-panel" id="tab-event">
@@ -4697,6 +4701,138 @@ function extractBrand(name) {
     return rates.length ? avgOfArr(rates) : null;
   }
 
+  /* ================= 구독권 Tracking 탭 ================= */
+  let COUPON_STATS = null;
+  let couponCharts = {};
+
+  function renderCouponTab() {
+    const area = document.getElementById("coupon-area");
+    Object.values(couponCharts).forEach(c => c && c.destroy()); couponCharts = {};
+    const list = (COUPON_STATS && COUPON_STATS.coupons) || [];
+    if (!list.length) {
+      area.innerHTML = `<div class="placeholder-panel"><div class="icon">🎟️</div><h3>구독권 데이터 없음</h3><p>구독권 발급 리스트를 업로드하면 집계해서 보여드려요.</p></div>`;
+      return;
+    }
+    const sel = area.dataset.selected && list.find(c => c.id === area.dataset.selected) ? area.dataset.selected : list[0].id;
+    const c = list.find(x => x.id === sel);
+    const pct = (a, b) => b > 0 ? a / b * 100 : null;
+    const regRate = pct(c.registered, c.issued), useRate = pct(c.used, c.registered);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const dLeft = Math.ceil((new Date(c.valid_to + "T00:00:00") - today) / 86400000);
+
+    // 주별 집계 (월~일)
+    const days = Object.keys(c.daily).sort();
+    const weekKey = d => { const x = new Date(d + "T00:00:00"); const wd = (x.getDay() + 6) % 7; x.setDate(x.getDate() - wd); return toLocalDateStr(x); };
+    const weeks = {};
+    if (days.length) {
+      const s = new Date(weekKey(days[0]) + "T00:00:00"), e = new Date(weekKey(days[days.length - 1]) + "T00:00:00");
+      for (let x = new Date(s); x <= e; x.setDate(x.getDate() + 7)) weeks[toLocalDateStr(x)] = { registered: 0, used: 0 };
+    }
+    days.forEach(d => { const w = weeks[weekKey(d)]; w.registered += c.daily[d].registered || 0; w.used += c.daily[d].used || 0; });
+    const wKeys = Object.keys(weeks).sort();
+    let cum = 0; const cumReg = wKeys.map(k => (cum += weeks[k].registered));
+    const asOf = (COUPON_STATS.as_of || "").slice(0, 10) || toLocalDateStr(today);
+    const shift = (d, n) => { const x = new Date(d + "T00:00:00"); x.setDate(x.getDate() + n); return toLocalDateStr(x); };
+    const sumReg = (a, b) => days.filter(d => d >= a && d <= b).reduce((t, d) => t + (c.daily[d].registered || 0), 0);
+    const last2 = sumReg(shift(asOf, -13), asOf), prev2 = sumReg(shift(asOf, -27), shift(asOf, -14));
+    const curWeekPartial = wKeys.length && shift(wKeys[wKeys.length - 1], 6) > asOf;
+
+    const lb = c.lag_buckets || {};
+    const insights = [];
+    insights.push(`발급 <b>${fmt(c.issued)}장</b> 중 <b>${fmt(c.registered)}장(${regRate.toFixed(1)}%)</b>이 회원 계정에 등록됐고, 그중 <b>${fmt(c.used)}장(${useRate.toFixed(0)}%)</b>이 실제 사용됐어요`);
+    if (wKeys.length >= 2) {
+      const trend = prev2 > 0 ? ` (직전 14일 ${fmt(prev2)}장 대비 ${liftSpan(pct(last2 - prev2, prev2))})` : "";
+      insights.push(`${c.first_registered} 첫 등록 이후, 최근 14일(${shift(asOf, -13).slice(5)}~${asOf.slice(5)}) 동안 <b>${fmt(last2)}장</b>이 등록됐어요${trend}`);
+    }
+    if (c.used > 0 && lb["당일"] !== undefined) insights.push(`사용된 ${fmt(c.used)}장 중 <b>${fmt(lb["당일"])}장(${pct(lb["당일"], c.used).toFixed(0)}%)</b>이 등록 당일 바로 사용됐어요 — 등록만 하면 대부분 곧바로 이용을 시작해요`);
+    if (c.registered_unused > 0) insights.push(`등록만 하고 아직 사용하지 않은 구독권이 <b>${fmt(c.registered_unused)}장</b> 있어요 — 유효기간(${c.valid_to}) 전 리마인드 대상이에요`);
+    if (c.multi_members > 0) insights.push(`등록 회원 ${fmt(c.members)}명 중 <b>${fmt(c.multi_members)}명</b>이 2장 이상 등록했어요 (1인 최대 ${c.max_per_member}장) — 1인당 등록 한도 정책을 확인해보면 좋아요`);
+    insights.push(`남은 미등록 코드는 <b>${fmt(c.issued - c.registered)}장</b>, 유효기간 종료까지 <b>D-${dLeft}</b>예요`);
+
+    const funnel = [
+      { label: "발급", v: c.issued, sub: "" },
+      { label: "등록", v: c.registered, sub: `발급 대비 ${regRate.toFixed(1)}%` },
+      { label: "사용", v: c.used, sub: `등록 대비 ${useRate.toFixed(0)}%` },
+      { label: "유료 전환", v: c.paid_converted, sub: c.paid_converted === null ? "데이터 연동 예정" : `사용 대비 ${pct(c.paid_converted, c.used).toFixed(0)}%` },
+    ];
+    const fMax = c.issued;
+
+    area.innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><h2>🎟️ 구독권 Tracking</h2></div>
+        ${list.length > 1 ? `<select id="coupon-select" class="store-select" style="max-width:520px; padding:9px 14px; margin-bottom:8px;">
+          ${list.map(x => `<option value="${x.id}" ${x.id === sel ? "selected" : ""}>${x.label} (${x.issued_at || "-"})</option>`).join("")}</select>` : ""}
+        <div style="font-size:14px; font-weight:700;">${c.name}</div>
+        <div style="font-size:12.5px; color:var(--ink-faint); margin-top:4px;">구독권번호 ${c.id} · 발급 ${c.issued_at || "-"} · 유효기간 ${c.valid_from} ~ ${c.valid_to} (D-${dLeft}) · 데이터 기준 ${COUPON_STATS.as_of}</div>
+      </div>
+      <div class="section-card">
+        <div class="section-head"><h2>📌 인사이트</h2></div>
+        <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">${insights.map(t => `<li>${t}</li>`).join("")}</ul>
+      </div>
+      <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+        ${funnel.map(f => `<div class="kpi-card"${f.v === null ? ' style="opacity:0.6;"' : ""}><div class="kpi-top"><div class="kpi-label">${f.label}</div></div>
+          <div class="kpi-value-row"><div class="kpi-value">${f.v === null ? "-" : fmt(f.v)}<span class="unit">${f.v === null ? "" : "장"}</span></div></div>
+          <div class="kpi-sub">${f.sub || "&nbsp;"}</div></div>`).join("")}
+      </div>
+      <div class="section-card">
+        <div class="section-head"><h2>퍼널</h2></div>
+        ${funnel.map((f, i) => {
+          const w = f.v === null ? 0 : Math.max(f.v / fMax * 100, f.v > 0 ? 0.8 : 0);
+          return `<div style="display:flex; align-items:center; gap:12px; margin:10px 0;">
+            <div style="width:70px; font-size:13px; font-weight:600;">${f.label}</div>
+            <div style="flex:1; background:#f1f2f5; border-radius:6px; height:26px; position:relative; overflow:hidden;">
+              <div style="width:${w}%; height:100%; background:${["#c7d2fe", "#818cf8", "#6366f1", "#4338ca"][i]};"></div>
+              ${f.v === null ? `<div style="position:absolute; inset:0; display:flex; align-items:center; padding-left:10px; font-size:12px; color:var(--ink-faint);">유료 구독 데이터 연동 후 표시돼요</div>` : ""}
+            </div>
+            <div style="width:150px; text-align:right; font-size:12.5px;"><b>${f.v === null ? "-" : fmt(f.v)}</b> <span style="color:var(--ink-faint);">${f.sub}</span></div>
+          </div>`;
+        }).join("")}
+      </div>
+      <div class="two-col">
+        <div class="section-card">
+          <div class="section-head"><h2>📈 주별 등록·사용 추이</h2></div>
+          <div class="trend-chart-wrap"><canvas id="couponWeeklyChart"></canvas></div>
+        </div>
+        <div class="section-card">
+          <div class="section-head"><h2>⏱ 등록 후 사용까지 걸린 시간</h2></div>
+          ${Object.entries(lb).map(([k, v]) => `
+            <div style="display:flex; align-items:center; gap:10px; margin:9px 0; font-size:13px;">
+              <div style="width:70px;">${k}</div>
+              <div style="flex:1; background:#f1f2f5; border-radius:4px; height:14px; overflow:hidden;"><div style="width:${c.used ? v / c.used * 100 : 0}%; height:100%; background:#06b6d4;"></div></div>
+              <div style="width:80px; text-align:right;"><b>${fmt(v)}</b>장 <span style="color:var(--ink-faint);">${c.used ? (v / c.used * 100).toFixed(0) : 0}%</span></div>
+            </div>`).join("")}
+          <div style="display:flex; align-items:center; gap:10px; margin:9px 0; font-size:13px; color:var(--ink-faint);">
+            <div style="width:70px;">미사용</div><div style="flex:1;"></div><div style="width:80px; text-align:right;"><b>${fmt(c.registered_unused)}</b>장</div>
+          </div>
+        </div>
+      </div>
+      <div class="kpi-sub" style="margin:4px 2px 0;">관리자 구독권 발급 리스트 기준 · 등록 = 회원이 코드를 계정에 등록, 사용 = 구독권을 실제 사용 시작 · 보안을 위해 구독권 코드·회원번호는 대시보드에 올리지 않고 집계만 표시해요</div>`;
+
+    const selEl = document.getElementById("coupon-select");
+    if (selEl) selEl.addEventListener("change", e => { area.dataset.selected = e.target.value; renderCouponTab(); });
+
+    couponCharts.weekly = new Chart(document.getElementById("couponWeeklyChart"), {
+      data: {
+        labels: wKeys.map((k, i) => k.slice(5) + "~" + (curWeekPartial && i === wKeys.length - 1 ? "(진행 중)" : "")),
+        datasets: [
+          { type: "bar", label: "등록", data: wKeys.map(k => weeks[k].registered), backgroundColor: "#818cf8", borderRadius: 4, maxBarThickness: 22, yAxisID: "y" },
+          { type: "bar", label: "사용", data: wKeys.map(k => weeks[k].used), backgroundColor: "#06b6d4", borderRadius: 4, maxBarThickness: 22, yAxisID: "y" },
+          { type: "line", label: "누적 등록", data: cumReg, borderColor: "#4338ca", backgroundColor: "#4338ca", pointRadius: 2.5, tension: 0.3, borderWidth: 2, yAxisID: "y2" },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: "top", align: "end", labels: { boxWidth: 10, font: { size: 11 } } },
+          datalabels: { display: ctx => ctx.dataset.type === "bar" && ctx.raw > 0, anchor: "end", align: "top", offset: 1, font: { size: 9.5, weight: 600 }, color: "#6b7280" } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 10.5 } } },
+          y: { beginAtZero: true, grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 10.5 }, precision: 0 } },
+          y2: { beginAtZero: true, position: "right", grid: { display: false }, ticks: { color: "#4338ca", font: { size: 10.5 }, precision: 0 } },
+        },
+      },
+    });
+  }
+
   /* ================= 스페인 미술 500년 (10월 단기 제휴) 분석 탭 ================= */
 
   const SPAIN_STORE = "스페인 미술 500년: 빛과 어둠의 연대기";
@@ -5336,7 +5472,13 @@ function extractBrand(name) {
       } catch (e) {
         PLACE_SEQ_MAP = {};
       }
-      renderEventTab();
+      // 이벤트 Tracking 탭은 숨김 (코드는 유지, 필요 시 버튼과 아래 호출만 복구)
+      // renderEventTab();
+      try {
+        const cr = await fetch("./coupon_stats.json", { cache: "no-store" });
+        if (cr.ok) COUPON_STATS = await cr.json();
+      } catch (e) { COUPON_STATS = null; }
+      renderCouponTab();
 
       renderHubTab();
       renderNewStoresTab();
