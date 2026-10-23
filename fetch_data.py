@@ -231,18 +231,33 @@ def fetch_chart_data(
             # 잘리는 것을 방지하기 위해 넉넉하게 override
             q["row_limit"] = max(int(q.get("row_limit") or 0), 100000)
 
-    resp = session.post(
-        f"{SUPERSET_BASE_URL}/api/v1/chart/data",
-        headers={
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "X-CSRFToken": csrf_token,
-            "Referer": SUPERSET_BASE_URL + "/",
-        },
-        json=query_context,
-        timeout=60,
-    )
+    # VPN 순간 끊김·서버 지연에 대비해 최대 3회 재시도
+    import time
+    last_err = None
+    for attempt in range(1, 4):
+        try:
+            resp = session.post(
+                f"{SUPERSET_BASE_URL}/api/v1/chart/data",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CSRFToken": csrf_token,
+                    "Referer": SUPERSET_BASE_URL + "/",
+                },
+                json=query_context,
+                timeout=(15, 120),
+            )
+            if resp.status_code >= 500:
+                raise requests.HTTPError(f"Superset {resp.status_code}", response=resp)
+            break
+        except (requests.ConnectionError, requests.Timeout, requests.HTTPError) as e:
+            last_err = e
+            if attempt == 3:
+                raise
+            wait = 10 * attempt
+            print(f"  ↳ 요청 실패({type(e).__name__}), {wait}초 후 재시도 ({attempt}/3)", file=sys.stderr)
+            time.sleep(wait)
     resp.raise_for_status()
     payload = resp.json()
     result = payload.get("result", [{}])[0]
