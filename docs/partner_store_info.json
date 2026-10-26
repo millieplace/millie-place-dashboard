@@ -1366,5 +1366,61 @@
   "gugun": null,
   "size": null,
   "address": null
+ },
+ "물흐르듯": {
+  "status": "제휴 중",
+  "expose": "2026-10-21",
+  "sido": "광주",
+  "gugun": "동구",
+  "size": null,
+  "address": "광주광역시 동구 동명로 62 1층"
+ },
+ "산수커피": {
+  "status": "제휴 중",
+  "expose": "2026-10-21",
+  "sido": "광주",
+  "gugun": "동구",
+  "size": null,
+  "address": "광주광역시 동구 동계로 12번길 13 1층"
+ },
+ "서로만나는사이, 서사": {
+  "status": "제휴 중",
+  "expose": "2026-10-21",
+  "sido": "광주",
+  "gugun": "남구",
+  "size": null,
+  "address": "광주광역시 남구 대남대로127번길 24 상가 1층 및 지하 1층"
+ },
+ "책과생활": {
+  "status": "제휴 중",
+  "expose": "2026-10-21",
+  "sido": "광주",
+  "gugun": "동구",
+  "size": null,
+  "address": "광주광역시 동구 제봉로 100-1 1층"
+ },
+ "휴게소": {
+  "status": "제휴 중",
+  "expose": "2026-10-21",
+  "sido": "광주",
+  "gugun": "북구",
+  "size": null,
+  "address": "광주광역시 북구 효산로 3 1층"
+ },
+ "숨은책방": {
+  "status": "제휴 중",
+  "expose": "2026-10-23",
+  "sido": "강원",
+  "gugun": "속초",
+  "size": null,
+  "address": "강원도 속초시 바람꽃마을길 160-3 숨은책방"
+ },
+ "코모레커피": {
+  "status": "제휴 중",
+  "expose": "2026-10-23",
+  "sido": "경기",
+  "gugun": "안양",
+  "size": null,
+  "address": "경기도 안양시 만안구 안양로 481 1,2층"
  }
 }
