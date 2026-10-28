@@ -1,7 +1,19 @@
 {
-  "captured_at": "2026-10-28 09:54:17 KST",
+  "captured_at": "2026-10-28 11:04:09 KST",
   "source_url": "https://www.millie.co.kr/v4/millieplace",
   "slides": [
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6abce26bb39a3.jpg",
+      "title": "책으로 먼저 만나는 · 스페인 미술 500년",
+      "subtitle": "밀리 회원이라면 전시 티켓 20% 할인",
+      "place_seq": "1196"
+    },
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6ac928f95a5fd.jpg",
+      "title": "새로운 밀리플레이스 · 확인하고 선물 받으세요",
+      "subtitle": "책 읽기 좋은 카페 가배도 삼행시 이벤트",
+      "place_seq": "1222"
+    },
     {
       "image": "https://image.millie.co.kr/service/hero_banner/6ad9b37b1bbb8.jpg",
       "title": "동네한바퀴 인터뷰 · 방명록 한 줄 남기며",
@@ -13,18 +25,6 @@
       "title": "동네한바퀴 인터뷰 · 책에도 제철이 있어요",
       "subtitle": "부부가 각각 고르는 제주 소설과 농담",
       "place_seq": "1163"
-    },
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6ac928f95a5fd.jpg",
-      "title": "새로운 밀리플레이스 · 확인하고 선물 받으세요",
-      "subtitle": "책 읽기 좋은 카페 가배도 삼행시 이벤트",
-      "place_seq": "1222"
-    },
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6abce26bb39a3.jpg",
-      "title": "책으로 먼저 만나는 · 스페인 미술 500년",
-      "subtitle": "밀리 회원이라면 전시 티켓 20% 할인",
-      "place_seq": "1196"
     }
   ],
   "error": null
