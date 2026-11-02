@@ -715,6 +715,7 @@
   }
 
   let monthlyPeriod = "month";
+  let monthlyRange = "12"; // 그래프 표시 기간: "6" | "12" | "all" (개월)
   let dailyChartInstance = null;
   let weeklyChartInstance = null;
   let monthlyChartInstance = null;
@@ -2643,7 +2644,15 @@
         agg.forEach(p => allKeys.add(p.key));
       }
     });
-    const sortedKeys = Array.from(allKeys).sort();
+    let sortedKeys = Array.from(allKeys).sort();
+    // 표시 기간 제한 (연별 보기는 전체 연도 유지)
+    const rangeToggle = document.getElementById("monthly-range-toggle");
+    if (rangeToggle) rangeToggle.style.opacity = monthlyPeriod === "year" ? "0.4" : "1";
+    if (monthlyRange !== "all" && monthlyPeriod !== "year") {
+      const months = Number(monthlyRange);
+      const keep = monthlyPeriod === "quarter" ? Math.ceil(months / 3) : months;
+      sortedKeys = sortedKeys.slice(-keep);
+    }
     if (sortedKeys.length === 0) return;
     const labelMap = {};
     METRIC_ORDER.forEach(key => (perMetric[key] || []).forEach(p => { labelMap[p.key] = p.label; }));
@@ -3469,6 +3478,11 @@ function extractBrand(name) {
                 <span class="legend-item"><span class="legend-dot" style="background:${COLORS[k]}"></span>${METRICS_DATA[k].label}</span>
               `).join("")}
             </div>
+            <div class="segmented" id="monthly-range-toggle" title="그래프에 보여줄 기간">
+              <button data-range="6">최근 6개월</button>
+              <button class="active" data-range="12">최근 1년</button>
+              <button data-range="all">전체</button>
+            </div>
             <div class="segmented" id="monthly-period-toggle">
               <button class="active" data-period="month">월별</button>
               <button data-period="quarter">분기별</button>
@@ -3534,6 +3548,14 @@ function extractBrand(name) {
         document.querySelectorAll("#monthly-period-toggle button").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         monthlyPeriod = btn.dataset.period;
+        renderMonthlyTrendChart();
+      });
+    });
+    document.querySelectorAll("#monthly-range-toggle button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#monthly-range-toggle button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        monthlyRange = btn.dataset.range;
         renderMonthlyTrendChart();
       });
     });
