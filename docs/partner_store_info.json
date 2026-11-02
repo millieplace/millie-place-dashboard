@@ -1360,12 +1360,12 @@
   "address": null
  },
  "치치하하": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
-  "gugun": null,
+  "status": "제휴 중",
+  "expose": "2026-10-26",
+  "sido": "광주",
+  "gugun": "동구",
   "size": null,
-  "address": null
+  "address": "광주광역시 동구 경양로 350 1층"
  },
  "물흐르듯": {
   "status": "제휴 중",
@@ -1422,5 +1422,29 @@
   "gugun": "안양",
   "size": null,
   "address": "경기도 안양시 만안구 안양로 481 1,2층"
+ },
+ "호미카페": {
+  "status": "제휴 중",
+  "expose": "2026-10-30",
+  "sido": null,
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "라이키": {
+  "status": "제휴 중",
+  "expose": "2026-10-30",
+  "sido": null,
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "영원": {
+  "status": "제휴 중",
+  "expose": "2026-10-30",
+  "sido": null,
+  "gugun": null,
+  "size": null,
+  "address": null
  }
 }
