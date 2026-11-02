@@ -827,12 +827,13 @@
     series.forEach(p => {
       let key;
       if (period === "month") key = p.date.slice(0, 7);
+      else if (period === "year") key = p.date.slice(0, 4);
       else key = `${p.date.slice(0, 4)}-Q${getQuarter(p.date)}`;
       buckets[key] = (buckets[key] || 0) + p.value;
     });
     return Object.keys(buckets).sort().map(key => ({
       key,
-      label: period === "month" ? key : key.replace("-", " "),
+      label: period === "month" ? key : period === "year" ? `${key}년` : key.replace("-", " "),
       value: buckets[key],
     }));
   }
@@ -2574,6 +2575,56 @@
     return html;
   }
 
+  function renderMonthlyYearSummary(yearRange) {
+    const box = document.getElementById("monthly-year-summary");
+    if (!box) return;
+    if (!yearRange || Object.keys(yearRange).length < 1) { box.innerHTML = ""; return; }
+    const years = Object.keys(yearRange).sort();
+    const md = d => d.slice(5);
+    const mdLabel = d => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+    // 동기간: 모든 연도에 공통으로 데이터가 있는 월-일 구간
+    const comStart = years.map(y => md(yearRange[y].start)).sort().slice(-1)[0];
+    const comEnd = years.map(y => md(yearRange[y].end)).sort()[0];
+    const hasCommon = years.length >= 2 && comStart <= comEnd;
+    const pctSpan = (a, b) => (b > 0 ? liftSpan((a - b) / b * 100) : "-");
+    const days = (a, b) => Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 86400000) + 1;
+    const last = years[years.length - 1], prev = years.length >= 2 ? years[years.length - 2] : null;
+
+    const rows = METRIC_ORDER.filter(k => METRICS_DATA[k] && METRICS_DATA[k].series).map(key => {
+      const ser = METRICS_DATA[key].series;
+      const tot = {}, same = {};
+      ser.forEach(p => {
+        const y = p.date.slice(0, 4);
+        tot[y] = (tot[y] || 0) + p.value;
+        if (hasCommon && md(p.date) >= comStart && md(p.date) <= comEnd) same[y] = (same[y] || 0) + p.value;
+      });
+      const avg = y => (tot[y] || 0) / days(yearRange[y].start, yearRange[y].end);
+      return `<tr>
+        <td><span class="legend-dot" style="background:${COLORS[key]}; display:inline-block; margin-right:6px;"></span>${METRICS_DATA[key].label}</td>
+        ${years.map(y => `<td class="rank-val">${fmt(tot[y] || 0)}</td>`).join("")}
+        ${years.map(y => `<td class="rank-val" style="color:var(--ink-soft);">${fmt(avg(y))}</td>`).join("")}
+        <td class="rank-val">${prev ? pctSpan(avg(last), avg(prev)) : "-"}</td>
+        ${hasCommon ? `<td class="rank-val">${fmt(same[prev] || 0)} → ${fmt(same[last] || 0)}</td><td class="rank-val">${pctSpan(same[last] || 0, same[prev] || 0)}</td>` : ""}
+      </tr>`;
+    }).join("");
+
+    const comLabel = hasCommon ? `${Number(comStart.slice(0, 2))}/${Number(comStart.slice(3))}~${Number(comEnd.slice(0, 2))}/${Number(comEnd.slice(3))}` : "";
+    box.innerHTML = `
+      <div style="margin-top:18px; overflow-x:auto;">
+        <table class="rank-table">
+          <thead><tr>
+            <th>지표</th>
+            ${years.map(y => `<th style="text-align:right">${y}년 합계<br><span style="font-weight:500; color:var(--ink-faint);">${mdLabel(yearRange[y].start)}~${mdLabel(yearRange[y].end)}</span></th>`).join("")}
+            ${years.map(y => `<th style="text-align:right">${y}년 일평균</th>`).join("")}
+            <th style="text-align:right">일평균 증감</th>
+            ${hasCommon ? `<th style="text-align:right">동기간 합계<br><span style="font-weight:500; color:var(--ink-faint);">${comLabel}</span></th><th style="text-align:right">동기간 증감</th>` : ""}
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="kpi-sub" style="margin-top:8px;">연도마다 데이터가 있는 기간이 달라 합계만으로는 비교가 어려워요 · 일평균과 동기간(두 해 모두 데이터가 있는 같은 날짜 구간) 기준으로 비교해보세요</div>
+      </div>`;
+  }
+
   function renderMonthlyTrendChart() {
     const ctx = document.getElementById("monthlyTrendChart");
     if (!ctx) return;
@@ -2593,7 +2644,24 @@
     if (sortedKeys.length === 0) return;
     const labelMap = {};
     METRIC_ORDER.forEach(key => (perMetric[key] || []).forEach(p => { labelMap[p.key] = p.label; }));
-    const labels = sortedKeys.map(k => labelMap[k] || k);
+    const isYear = monthlyPeriod === "year";
+    const yearRange = {};
+    if (isYear) {
+      METRIC_ORDER.forEach(key => {
+        const ser = (METRICS_DATA[key] && METRICS_DATA[key].series) || [];
+        ser.forEach(p => {
+          const y = p.date.slice(0, 4);
+          if (!yearRange[y]) yearRange[y] = { start: p.date, end: p.date };
+          if (p.date < yearRange[y].start) yearRange[y].start = p.date;
+          if (p.date > yearRange[y].end) yearRange[y].end = p.date;
+        });
+      });
+    }
+    const mdLabel = d => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+    const labels = sortedKeys.map(k => isYear && yearRange[k]
+      ? [`${k}년`, `(${mdLabel(yearRange[k].start)}~${mdLabel(yearRange[k].end)})`]
+      : (labelMap[k] || k));
+    renderMonthlyYearSummary(isYear ? yearRange : null);
 
     const datasets = METRIC_ORDER.filter(k => perMetric[k]).map(key => {
       const valueByKey = {};
@@ -2609,12 +2677,14 @@
         pointBackgroundColor: COLORS[key],
         borderWidth: 2,
         spanGaps: true,
-        datalabels: { align: pos.align, anchor: pos.anchor, offset: 5 },
+        borderRadius: isYear ? 6 : 0,
+        maxBarThickness: isYear ? 70 : undefined,
+        datalabels: isYear ? { align: "end", anchor: "end", offset: 2 } : { align: pos.align, anchor: pos.anchor, offset: 5 },
       };
     });
 
     monthlyChartInstance = new Chart(ctx, {
-      type: "line",
+      type: isYear ? "bar" : "line",
       data: { labels, datasets },
       options: {
         responsive: true,
@@ -3399,10 +3469,12 @@ function extractBrand(name) {
             <div class="segmented" id="monthly-period-toggle">
               <button class="active" data-period="month">월별</button>
               <button data-period="quarter">분기별</button>
+              <button data-period="year">연별</button>
             </div>
           </div>
         </div>
         <div class="trend-chart-wrap tall"><canvas id="monthlyTrendChart"></canvas></div>
+        <div id="monthly-year-summary"></div>
       </div>
 
       <div class="sub-tab-nav" id="monthly-subtab-nav">
