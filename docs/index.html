@@ -718,7 +718,8 @@
   let monthlyRange = "12"; // 그래프 표시 기간: "6" | "12" | "all" (개월)
   let dailyChartInstance = null;
   let weeklyChartInstance = null;
-  let monthlyChartInstance = null;
+  let monthlyChartInstances = {};
+  let monthlyIncludeCurrent = false; // 이번 달(진행 중) 포함 여부
   let monthlyDemoCharts = {};
   let storeChartInstance = null;
 
@@ -2595,7 +2596,7 @@
     const last = years[years.length - 1], prev = years.length >= 2 ? years[years.length - 2] : null;
 
     const rows = METRIC_ORDER.filter(k => METRICS_DATA[k] && METRICS_DATA[k].series).map(key => {
-      const ser = METRICS_DATA[key].series;
+      const ser = getMonthlySeries(key);
       const tot = {}, same = {};
       ser.forEach(p => {
         const y = p.date.slice(0, 4);
@@ -2629,95 +2630,125 @@
       </div>`;
   }
 
-  function renderMonthlyTrendChart() {
-    const ctx = document.getElementById("monthlyTrendChart");
-    if (!ctx) return;
-    if (monthlyChartInstance) { monthlyChartInstance.destroy(); monthlyChartInstance = null; }
+  // 이번 달(아직 끝나지 않은 달) 포함 여부에 따라 시리즈를 잘라서 반환
+  function getMonthlyCurrentInfo() {
+    const ser = (METRICS_DATA.uv && METRICS_DATA.uv.series) || (METRICS_DATA.benefit_claims && METRICS_DATA.benefit_claims.series) || [];
+    if (!ser.length) return null;
+    const last = ser[ser.length - 1].date;
+    const [y, m, d] = last.split("-").map(Number);
+    const monthEnd = new Date(y, m, 0).getDate();
+    return { monthKey: last.slice(0, 7), lastDate: last, complete: d === monthEnd };
+  }
+  function getMonthlySeries(key) {
+    const ser = (METRICS_DATA[key] && METRICS_DATA[key].series) || [];
+    const cur = getMonthlyCurrentInfo();
+    if (monthlyIncludeCurrent || !cur || cur.complete) return ser;
+    return ser.filter(p => p.date.slice(0, 7) !== cur.monthKey);
+  }
 
-    const perMetric = {};
-    let allKeys = new Set();
-    METRIC_ORDER.forEach(key => {
-      const m = METRICS_DATA[key];
-      if (m && m.series && m.series.length) {
-        const agg = aggregateSeries(m.series, monthlyPeriod);
-        perMetric[key] = agg;
-        agg.forEach(p => allKeys.add(p.key));
+  function renderMonthlyTrendChart() {
+    Object.values(monthlyChartInstances).forEach(c => c && c.destroy());
+    monthlyChartInstances = {};
+    const box = document.getElementById("monthly-trend-charts");
+    if (!box) return;
+
+    const cur = getMonthlyCurrentInfo();
+    const curBtn = document.getElementById("monthly-current-toggle");
+    if (curBtn) {
+      curBtn.style.display = cur && !cur.complete ? "" : "none";
+      curBtn.classList.toggle("active", monthlyIncludeCurrent);
+      if (cur) {
+        const mm = Number(cur.monthKey.slice(5)), dd = Number(cur.lastDate.slice(8));
+        curBtn.textContent = `${monthlyIncludeCurrent ? "✓ " : ""}이번 달 포함 (${dd === 1 ? `${mm}/1` : `${mm}/1~${mm}/${dd}`})`;
       }
-    });
-    let sortedKeys = Array.from(allKeys).sort();
-    // 표시 기간 제한 (연별 보기는 전체 연도 유지)
+    }
     const rangeToggle = document.getElementById("monthly-range-toggle");
     if (rangeToggle) rangeToggle.style.opacity = monthlyPeriod === "year" ? "0.4" : "1";
-    if (monthlyRange !== "all" && monthlyPeriod !== "year") {
-      const months = Number(monthlyRange);
-      const keep = monthlyPeriod === "quarter" ? Math.ceil(months / 3) : months;
-      sortedKeys = sortedKeys.slice(-keep);
-    }
-    if (sortedKeys.length === 0) return;
-    const labelMap = {};
-    METRIC_ORDER.forEach(key => (perMetric[key] || []).forEach(p => { labelMap[p.key] = p.label; }));
+
     const isYear = monthlyPeriod === "year";
+    const keys = METRIC_ORDER.filter(k => METRICS_DATA[k] && METRICS_DATA[k].series && METRICS_DATA[k].series.length);
     const yearRange = {};
-    if (isYear) {
-      METRIC_ORDER.forEach(key => {
-        const ser = (METRICS_DATA[key] && METRICS_DATA[key].series) || [];
-        ser.forEach(p => {
-          const y = p.date.slice(0, 4);
-          if (!yearRange[y]) yearRange[y] = { start: p.date, end: p.date };
-          if (p.date < yearRange[y].start) yearRange[y].start = p.date;
-          if (p.date > yearRange[y].end) yearRange[y].end = p.date;
-        });
+    const perMetric = {};
+    let allKeys = new Set();
+    keys.forEach(key => {
+      const ser = getMonthlySeries(key);
+      perMetric[key] = aggregateSeries(ser, monthlyPeriod);
+      perMetric[key].forEach(p => allKeys.add(p.key));
+      if (isYear) ser.forEach(p => {
+        const y = p.date.slice(0, 4);
+        if (!yearRange[y]) yearRange[y] = { start: p.date, end: p.date };
+        if (p.date < yearRange[y].start) yearRange[y].start = p.date;
+        if (p.date > yearRange[y].end) yearRange[y].end = p.date;
       });
+    });
+    let sortedKeys = Array.from(allKeys).sort();
+    if (monthlyRange !== "all" && !isYear) {
+      const months = Number(monthlyRange);
+      sortedKeys = sortedKeys.slice(-(monthlyPeriod === "quarter" ? Math.ceil(months / 3) : months));
     }
+    renderMonthlyYearSummary(isYear ? yearRange : null);
+    if (!sortedKeys.length) return;
+
+    const labelMap = {};
+    keys.forEach(key => perMetric[key].forEach(p => { labelMap[p.key] = p.label; }));
     const mdLabel = d => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+    const partialKey = cur && !cur.complete && monthlyIncludeCurrent
+      ? (monthlyPeriod === "month" ? cur.monthKey : monthlyPeriod === "quarter" ? `${cur.monthKey.slice(0, 4)}-Q${getQuarter(cur.lastDate)}` : null)
+      : null;
     const labels = sortedKeys.map(k => isYear && yearRange[k]
       ? [`${k}년`, `(${mdLabel(yearRange[k].start)}~${mdLabel(yearRange[k].end)})`]
-      : (labelMap[k] || k));
-    renderMonthlyYearSummary(isYear ? yearRange : null);
+      : (k === partialKey ? [labelMap[k] || k, "(진행 중)"] : (labelMap[k] || k)));
 
-    const datasets = METRIC_ORDER.filter(k => perMetric[k]).map(key => {
+    keys.forEach(key => {
+      const canvas = document.getElementById(`monthlyTrendChart_${key}`);
+      if (!canvas) return;
       const valueByKey = {};
       perMetric[key].forEach(p => { valueByKey[p.key] = p.value; });
-      const pos = LABEL_POS[key] || { align: "top", anchor: "end" };
-      return {
-        label: METRICS_DATA[key].label,
-        data: sortedKeys.map(k => valueByKey[k] !== undefined ? valueByKey[k] : null),
-        borderColor: COLORS[key],
-        backgroundColor: COLORS[key],
-        tension: 0.3,
-        pointRadius: 4,
-        pointBackgroundColor: COLORS[key],
-        borderWidth: 2,
-        spanGaps: true,
-        borderRadius: isYear ? 6 : 0,
-        maxBarThickness: isYear ? 70 : undefined,
-        datalabels: isYear ? { align: "end", anchor: "end", offset: 2 } : { align: pos.align, anchor: pos.anchor, offset: 5 },
-      };
-    });
-
-    monthlyChartInstance = new Chart(ctx, {
-      type: isYear ? "bar" : "line",
-      data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        plugins: {
-          legend: { display: false },
-          datalabels: {
-            font: { size: 10.5, family: "'IBM Plex Mono', monospace", weight: 600 },
-            color: (c) => c.dataset.borderColor,
-            backgroundColor: "rgba(255,255,255,0.85)",
-            borderRadius: 3,
-            padding: { top: 1, bottom: 1, left: 3, right: 3 },
-            formatter: (v) => v === null ? "" : Math.round(v).toLocaleString("ko-KR"),
+      const data = sortedKeys.map(k => valueByKey[k] !== undefined ? valueByKey[k] : null);
+      const color = COLORS[key];
+      monthlyChartInstances[key] = new Chart(canvas, {
+        type: isYear ? "bar" : "line",
+        data: {
+          labels,
+          datasets: [{
+            label: METRICS_DATA[key].label,
+            data,
+            borderColor: color,
+            backgroundColor: isYear ? color : color + "22",
+            fill: !isYear,
+            tension: 0.3,
+            pointRadius: 3.5,
+            pointBackgroundColor: sortedKeys.map(k => k === partialKey ? "#fff" : color),
+            pointBorderColor: color,
+            borderWidth: 2,
+            spanGaps: true,
+            borderRadius: isYear ? 6 : 0,
+            maxBarThickness: isYear ? 70 : undefined,
+            segment: { borderDash: c => (partialKey && sortedKeys[c.p1DataIndex] === partialKey ? [5, 4] : undefined) },
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              align: isYear ? "end" : "top", anchor: "end", offset: isYear ? 2 : 4,
+              font: { size: 10.5, family: "'IBM Plex Mono', monospace", weight: 600 },
+              color,
+              backgroundColor: "rgba(255,255,255,0.85)",
+              borderRadius: 3,
+              padding: { top: 1, bottom: 1, left: 3, right: 3 },
+              formatter: (v) => v === null ? "" : Math.round(v).toLocaleString("ko-KR"),
+            },
+          },
+          layout: { padding: { top: 18 } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 10.5 }, maxRotation: 0, autoSkip: true } },
+            y: { beginAtZero: isYear, grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 10.5 } } },
           },
         },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
-          y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 11 } } },
-        },
-      },
+      });
     });
   }
 
@@ -3473,11 +3504,7 @@ function extractBrand(name) {
         <div class="section-head">
           <h2>기간별 추이</h2>
           <div style="display:flex; align-items:center; gap:16px;">
-            <div class="legend">
-              ${METRIC_ORDER.filter(k => METRICS_DATA[k]).map(k => `
-                <span class="legend-item"><span class="legend-dot" style="background:${COLORS[k]}"></span>${METRICS_DATA[k].label}</span>
-              `).join("")}
-            </div>
+            <div class="segmented"><button id="monthly-current-toggle" title="아직 끝나지 않은 이번 달 값을 그래프에 포함"></button></div>
             <div class="segmented" id="monthly-range-toggle" title="그래프에 보여줄 기간">
               <button data-range="6">최근 6개월</button>
               <button class="active" data-range="12">최근 1년</button>
@@ -3490,7 +3517,13 @@ function extractBrand(name) {
             </div>
           </div>
         </div>
-        <div class="trend-chart-wrap tall"><canvas id="monthlyTrendChart"></canvas></div>
+        <div class="two-col" id="monthly-trend-charts" style="gap:18px;">
+          ${METRIC_ORDER.filter(k => METRICS_DATA[k]).map(k => `
+            <div>
+              <div style="font-size:13px; font-weight:700; margin-bottom:6px;"><span class="legend-dot" style="background:${COLORS[k]}; display:inline-block; margin-right:6px;"></span>${METRICS_DATA[k].label}</div>
+              <div class="trend-chart-wrap"><canvas id="monthlyTrendChart_${k}"></canvas></div>
+            </div>`).join("")}
+        </div>
         <div id="monthly-year-summary"></div>
       </div>
 
@@ -3551,6 +3584,8 @@ function extractBrand(name) {
         renderMonthlyTrendChart();
       });
     });
+    const curToggle = document.getElementById("monthly-current-toggle");
+    if (curToggle) curToggle.addEventListener("click", () => { monthlyIncludeCurrent = !monthlyIncludeCurrent; renderMonthlyTrendChart(); });
     document.querySelectorAll("#monthly-range-toggle button").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll("#monthly-range-toggle button").forEach(b => b.classList.remove("active"));
