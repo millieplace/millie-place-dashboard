@@ -2626,7 +2626,7 @@
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
-        <div class="kpi-sub" style="margin-top:8px;">연도마다 데이터가 있는 기간이 달라 합계만으로는 비교가 어려워요 · 일평균과 동기간(두 해 모두 데이터가 있는 같은 날짜 구간) 기준으로 비교해보세요</div>
+        <div class="kpi-sub" style="margin-top:8px;">그래프의 흰 점은 일부 기간만 있는 달이에요 (예: 2025년 4월은 4/14부터) · 연도마다 데이터가 있는 기간이 달라, 합계보다는 일평균과 동기간(두 해 모두 데이터가 있는 같은 날짜 구간) 기준으로 비교해보세요</div>
       </div>`;
   }
 
@@ -2698,6 +2698,60 @@
     const labels = sortedKeys.map(k => isYear && yearRange[k]
       ? [`${k}년`, `(${mdLabel(yearRange[k].start)}~${mdLabel(yearRange[k].end)})`]
       : (k === partialKey ? [labelMap[k] || k, "(진행 중)"] : (labelMap[k] || k)));
+
+    if (isYear) {
+      const years = Object.keys(yearRange).sort();
+      const yearColors = (base, idx, total) => idx === total - 1 ? base : ["#cbd5e1", "#94a3b8", "#64748b"][Math.max(0, total - 2 - idx)] || "#cbd5e1";
+      keys.forEach(key => {
+        const canvas = document.getElementById(`monthlyTrendChart_${key}`);
+        if (!canvas) return;
+        const byYM = {};
+        getMonthlySeries(key).forEach(p => { const ym = p.date.slice(0, 7); byYM[ym] = (byYM[ym] || 0) + p.value; });
+        const datasets = years.map((y, idx) => {
+          const color = yearColors(COLORS[key], idx, years.length);
+          const isLatest = idx === years.length - 1;
+          const partial = new Set();
+          if (yearRange[y].start.slice(8) !== "01") partial.add(Number(yearRange[y].start.slice(5, 7)));
+          const endD = yearRange[y].end, [ey, em, ed] = endD.split("-").map(Number);
+          if (ed !== new Date(ey, em, 0).getDate()) partial.add(em);
+          return {
+            label: `${y}년`,
+            data: Array.from({ length: 12 }, (_, m) => { const v = byYM[`${y}-${String(m + 1).padStart(2, "0")}`]; return v === undefined ? null : v; }),
+            borderColor: color, backgroundColor: color, borderWidth: isLatest ? 2.6 : 2,
+            pointRadius: Array.from({ length: 12 }, (_, m) => partial.has(m + 1) ? 4 : 3),
+            pointBackgroundColor: Array.from({ length: 12 }, (_, m) => partial.has(m + 1) ? "#fff" : color),
+            pointBorderColor: color, tension: 0.3, spanGaps: false, fill: false,
+            datalabels: { display: isLatest },
+            _partial: partial,
+          };
+        });
+        monthlyChartInstances[key] = new Chart(canvas, {
+          type: "line",
+          data: { labels: Array.from({ length: 12 }, (_, m) => `${m + 1}월`), datasets },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: { display: true, position: "top", align: "end", labels: { boxWidth: 12, boxHeight: 2, font: { size: 11 } } },
+              tooltip: { callbacks: { label: c => c.parsed.y === null ? "" : `${c.dataset.label}: ${Math.round(c.parsed.y).toLocaleString("ko-KR")}${c.dataset._partial.has(c.dataIndex + 1) ? " (일부 기간)" : ""}` } },
+              datalabels: {
+                align: "top", anchor: "end", offset: 4,
+                font: { size: 10, family: "'IBM Plex Mono', monospace", weight: 600 },
+                color: c => c.dataset.borderColor, backgroundColor: "rgba(255,255,255,0.85)", borderRadius: 3,
+                padding: { top: 1, bottom: 1, left: 3, right: 3 },
+                formatter: v => v === null ? "" : Math.round(v).toLocaleString("ko-KR"),
+              },
+            },
+            layout: { padding: { top: 14 } },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 10.5 } } },
+              y: { grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 10.5 } } },
+            },
+          },
+        });
+      });
+      return;
+    }
 
     keys.forEach(key => {
       const canvas = document.getElementById(`monthlyTrendChart_${key}`);
@@ -3513,7 +3567,7 @@ function extractBrand(name) {
             <div class="segmented" id="monthly-period-toggle">
               <button class="active" data-period="month">월별</button>
               <button data-period="quarter">분기별</button>
-              <button data-period="year">연별</button>
+              <button data-period="year">연도 비교</button>
             </div>
           </div>
         </div>
