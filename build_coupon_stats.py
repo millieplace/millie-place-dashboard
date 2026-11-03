@@ -2,7 +2,7 @@
 구독권 발급 리스트(관리자 엑셀 다운로드, HTML 형식 .xls) → docs/coupon_stats.json (집계만)
 
 보안: 구독권 코드·회원번호 등 원본 행은 저장하지 않고, 날짜별 건수·비율만 내보낸다.
-사용: python3 build_coupon_stats.py <export.xls> [<export2.xls> ...]
+사용: python3 build_coupon_stats.py <export.xls> [<export2.xls> ...] [--as-of "YYYY-MM-DD HH:MM"]
       (같은 구독권이 여러 파일에 있으면 코드 기준으로 중복 제거)
 """
 import json, re, sys, os
@@ -79,7 +79,11 @@ def build(paths, out_path, as_of=None):
 
 
 if __name__ == '__main__':
+    # 관리자 파일명 시각은 12시간제라 오후 다운로드는 직접 지정: --as-of "YYYY-MM-DD HH:MM"
+    args, as_of = sys.argv[1:], None
+    if '--as-of' in args:
+        i = args.index('--as-of'); as_of = args[i + 1]; args = args[:i] + args[i + 2:]
     here = os.path.dirname(os.path.abspath(__file__))
-    o = build(sys.argv[1:], os.path.join(here, 'docs', 'coupon_stats.json'))
+    o = build(args, os.path.join(here, 'docs', 'coupon_stats.json'), as_of=as_of)
     for c in o['coupons']:
         print(c['label'], '| 발급', c['issued'], '등록', c['registered'], '사용', c['used'], '| 회원', c['members'], '(2장+', c['multi_members'], ')')
