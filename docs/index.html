@@ -2943,21 +2943,163 @@
           ? `감소분의 <b>${share.toFixed(0)}%</b>가 ${names} 3곳에 집중돼 있어요 — 전체 감소는 일부 대형 매장의 영향이 커요`
           : `가장 많이 줄어든 곳은 ${names}지만 이 3곳 비중은 감소분의 <b>${share.toFixed(0)}%</b>뿐이에요 — 감소가 특정 매장보다는 여러 매장에 고르게 퍼져 있어요`);
       }
-      if (sa.closedLoss > 0) {
+      if (sa.closedLoss >= 10) {
         reasons.push(`이 중 폐업·해지 매장(${sa.closedNames.join(", ")})에서 빠진 몫이 <span style="color:var(--bad); font-weight:600;">-${fmt(sa.closedLoss)}건</span>이에요`);
       }
-      if (sa.newPartnerNames.length) {
-        reasons.push(`반대로 최근 3개월 내 신규 제휴 매장 <b>${sa.newPartnerNames.length}곳</b>이 전월 대비 <span style="color:var(--good); font-weight:600;">+${fmt(sa.newPartnerGain)}건</span>을 더하며 감소분을 일부 메웠어요`);
+      if (sa.newPartnerNames.length && sa.gainSum > 0) {
+        reasons.push(net >= 0
+          ? `늘어난 몫(+${fmt(sa.gainSum)}건)의 <b>${(sa.newPartnerGain / sa.gainSum * 100).toFixed(0)}%</b>가 최근 3개월 내 신규 제휴 매장에서 나왔어요`
+          : `반대로 최근 3개월 내 신규 제휴 매장 <b>${sa.newPartnerNames.length}곳</b>이 전월 대비 <span style="color:var(--good); font-weight:600;">+${fmt(sa.newPartnerGain)}건</span>을 더하며 감소분을 일부 메웠어요`);
       }
     }
+
+    // ── 확장 분석에 쓸 공통 값 ──
+    const storeM = METRICS_DATA[STORE_KEY] || {};
+    const bmtAll = storeM.benefit_monthly_totals || storeM.monthly_totals || {};
+    const stCur = bmtAll[label] || {}, stPrev = (prevLabel && bmtAll[prevLabel]) || {};
+    const stTotal = Object.values(stCur).reduce((a, v) => a + v, 0);
+    const stPrevTotal = Object.values(stPrev).reduce((a, v) => a + v, 0);
+    const uvDailyStore = (METRICS_DATA.daily_store_uv && METRICS_DATA.daily_store_uv.daily_totals) || {};
+    const clkDailyStore = (METRICS_DATA.daily_store && METRICS_DATA.daily_store.daily_totals) || {};
+    const storeUvMonth = name => Object.keys(uvDailyStore).filter(d => d.startsWith(label)).reduce((a, d) => a + ((uvDailyStore[d] || {})[name] || 0), 0);
+    const monthsBack = (ym, n) => { const [y, m] = ym.split("-").map(Number); const d = new Date(y, m - 1 - n, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+    const newSince = `${monthsBack(label, 2)}-01`; // 최근 3개월(해당 월 포함) 내 노출
+    const exposeOf = name => { const s = PARTNER_STORE_MASTER.find(x => x.name === name); return s ? getEffectiveExposeDate(s) : null; };
+    const isNewStore = name => { const e = exposeOf(name); return !!(e && e >= newSince); };
+    const nameShort = n => { const b = n.split(":")[0].trim(); return b.length > 14 ? b.slice(0, 13) + "…" : b; };
+    const monthKo = ym => `${Number(ym.slice(5, 7))}월`;
+    const hasBatchim = w => { const c = (w || "").trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 ? (c - 0xAC00) % 28 !== 0 : /[0-9LMNRlmnr]$/.test((w || "").trim()); };
+    const ieyo = w => (hasBatchim(w) ? "이에요" : "예요");
+    const convNow = uvCmp && benefitCmp && uvCmp.value > 0 ? benefitCmp.value / uvCmp.value * 100 : null;
+    const convPrev = uvCmp && benefitCmp && uvCmp.prevValue > 0 ? benefitCmp.prevValue / uvCmp.prevValue * 100 : null;
+
+    // 목표 달성률 · 전년 동월
+    const [ly, lm] = label.split("-").map(Number);
+    const yoyLabel = `${ly - 1}-${String(lm).padStart(2, "0")}`;
+    const monthSum = (key, ym) => ((METRICS_DATA[key] && METRICS_DATA[key].series) || []).filter(p => p.date.startsWith(ym)).reduce((a, p) => a + p.value, 0);
+    const hasMonth = (key, ym) => ((METRICS_DATA[key] && METRICS_DATA[key].series) || []).some(p => p.date.startsWith(ym + "-01"));
+    const goalBits = [["UV", "uv", uvCmp], ["혜택받기", "benefit_claims", benefitCmp]].map(([nm, key, cmp]) => {
+      const tgt = cmp && (KPI_TARGETS[key] || {})[label];
+      return tgt ? `${nm} <b>${(cmp.value / tgt * 100).toFixed(0)}%</b>(${fmt(cmp.value)}/${fmt(tgt)})${cmp.value >= tgt ? " 🎯" : ""}` : null;
+    }).filter(Boolean);
+    if (goalBits.length) summary.push(`목표 달성률은 ${goalBits.join(", ")}예요`);
+    if (hasMonth("uv", yoyLabel)) {
+      const yu = monthSum("uv", yoyLabel), yb = monthSum("benefit_claims", yoyLabel);
+      const ub = uvCmp ? uvCmp.value : 0, bb = benefitCmp ? benefitCmp.value : 0;
+      const beat = bb >= yb;
+      summary.push(`전년 동월(${yoyLabel}) 대비 UV ${deltaSpan((ub - yu) / yu * 100)}, 혜택받기 ${deltaSpan((bb - yb) / yb * 100)}${beat && ub < yu ? ` — 방문은 작년보다 적지만 <b>혜택받기는 작년 같은 달을 넘어섰어요</b>` : ""}`);
+    }
+
+    // ── 전환율 분석 ──
+    const convLines = [];
+    let topStore = null;
+    if (convNow !== null) {
+      const allConv = {};
+      ((METRICS_DATA.uv && METRICS_DATA.uv.series) || []).forEach(p => { const m = p.date.slice(0, 7); (allConv[m] = allConv[m] || { u: 0, b: 0 }).u += p.value; });
+      ((METRICS_DATA.benefit_claims && METRICS_DATA.benefit_claims.series) || []).forEach(p => { const m = p.date.slice(0, 7); (allConv[m] = allConv[m] || { u: 0, b: 0 }).b += p.value; });
+      const completed = Object.keys(allConv).filter(m => m <= label && allConv[m].u > 0);
+      const best = completed.every(m => m === label || allConv[m].b / allConv[m].u * 100 <= convNow);
+      convLines.push(`UV 대비 혜택받기 전환율이 <b>${convNow.toFixed(1)}%</b>${convPrev !== null ? `로 전월(${convPrev.toFixed(1)}%) 대비 ${deltaSpan(convNow - convPrev, "%p")}` : ""}${best ? " — <b>서비스 시작 이후 최고치</b>예요" : ""}`);
+      const ranked = Object.entries(stCur).sort((a, b) => b[1] - a[1]);
+      if (ranked.length && stTotal > 0) {
+        const [tn, tv] = ranked[0]; const tuv = storeUvMonth(tn);
+        topStore = { name: tn, value: tv, share: tv / stTotal * 100 };
+        if (topStore.share >= 8) {
+          convLines.push(`가장 큰 기여는 <b>${nameShort(tn)}</b>${ieyo(nameShort(tn))} — 매장 혜택사용의 <b>${topStore.share.toFixed(0)}%</b>(${fmt(tv)}건)를 혼자 만들었고${tuv > 0 ? `, 상세페이지 방문자 중 <b>${(tv / tuv * 100).toFixed(0)}%</b>가 혜택까지 받았어요` : ""}`);
+          if (uvCmp && benefitCmp && tuv > 0) {
+            const exConv = (benefitCmp.value - tv) / (uvCmp.value - tuv) * 100;
+            convLines.push(exConv > (convPrev || 0) + 1
+              ? `이 매장을 빼고 계산해도 전환율이 <b>${exConv.toFixed(1)}%</b>로 전월보다 높아요 — 한 매장 효과만이 아니라 <b>전반적으로 혜택 이용이 늘었어요</b>`
+              : `이 매장을 빼고 계산하면 전환율은 <b>${exConv.toFixed(1)}%</b>로 전월과 비슷해요 — 전환율 상승은 이 매장 영향이 커요`);
+          }
+        }
+      }
+    }
+
+    // 신규 매장 · 집중도 (변화 요인 보강)
+    if (stTotal > 0) {
+      const newNames = Object.keys(stCur).filter(isNewStore);
+      const newSum = newNames.reduce((a, n) => a + stCur[n], 0);
+      if (newNames.length) {
+        reasons.unshift(`매장 혜택사용 합계는 ${fmt(stPrevTotal)}건 → <b>${fmt(stTotal)}건</b>(${deltaSpan(stPrevTotal > 0 ? (stTotal - stPrevTotal) / stPrevTotal * 100 : null)})이고, 이 중 <b>최근 3개월 내 신규 제휴 ${newNames.length}곳</b>이 <b>${(newSum / stTotal * 100).toFixed(0)}%</b>(${fmt(newSum)}건)를 차지해요`);
+        const oldNames = Object.keys(stCur).filter(n => !isNewStore(n) && exposeOf(n));
+        const excl = topStore && isNewStore(topStore.name) && topStore.share >= 8 ? topStore.name : null;
+        const newAvgNames = newNames.filter(n => n !== excl);
+        if (oldNames.length && newAvgNames.length) {
+          const avgNew = newAvgNames.reduce((a, n) => a + stCur[n], 0) / newAvgNames.length;
+          const avgOld = oldNames.reduce((a, n) => a + stCur[n], 0) / oldNames.length;
+          reasons.splice(1, 0, `매장당 평균으로 봐도 신규 매장 <b>${avgNew.toFixed(1)}건</b>${excl ? `(${nameShort(excl)} 제외)` : ""} vs 기존 매장 <b>${avgOld.toFixed(1)}건</b> — ${avgNew > avgOld ? "신규 매장이 기존 매장보다 더 활발하게 이용되고 있어요" : "신규 매장은 아직 기존 매장 수준까지는 올라오지 않았어요"}`);
+        }
+      }
+      const top3 = Object.entries(stCur).sort((a, b) => b[1] - a[1]).slice(0, 3);
+      const top3Share = top3.reduce((a, [, v]) => a + v, 0) / stTotal * 100;
+      reasons.push(`상위 3개 매장(${top3.map(([n]) => nameShort(n)).join(", ")}) 비중은 <b>${top3Share.toFixed(0)}%</b>예요 — ${top3Share >= 40 ? "소수 매장 의존도가 높은 편이라 이 매장들의 변동을 주의해서 봐야 해요" : "특정 매장에 쏠리지 않고 고르게 분산돼 있어요"}`);
+    }
+
+    // ── 지역 · 방문객 ──
+    const audience = [];
+    if (stTotal > 0 && PARTNER_STORE_INFO) {
+      const sidoN = s => ({ "강원도": "강원", "경기도": "경기", "경상남도": "경남", "경상북도": "경북" }[s] || s);
+      const reg = {};
+      Object.entries(stCur).forEach(([n, v]) => { const s = sidoN((PARTNER_STORE_INFO[n] || {}).sido); if (s) (reg[s] = reg[s] || { c: 0, p: 0 }).c += v; });
+      Object.entries(stPrev).forEach(([n, v]) => { const s = sidoN((PARTNER_STORE_INFO[n] || {}).sido); if (s) (reg[s] = reg[s] || { c: 0, p: 0 }).p += v; });
+      const grow = Object.entries(reg).map(([s, r]) => ({ s, ...r, d: r.c - r.p })).sort((a, b) => b.d - a.d);
+      const g = grow.filter(r => r.d > 0).slice(0, 3);
+      if (g.length) audience.push(`지역별로는 ${g.map(r => `<b>${r.s}</b> ${fmt(r.p)}→${fmt(r.c)}건`).join(", ")} 순으로 늘었어요${grow.find(r => r.s !== "서울" && r.p > 0 && r.c / r.p >= 3) ? ` — 특히 <b>${grow.find(r => r.s !== "서울" && r.p > 0 && r.c / r.p >= 3).s}</b>는 신규 매장 합류로 ${(grow.find(r => r.s !== "서울" && r.p > 0 && r.c / r.p >= 3).c / grow.find(r => r.s !== "서울" && r.p > 0 && r.c / r.p >= 3).p).toFixed(0)}배가 됐어요` : ""}`);
+    }
+    const sd = METRICS_DATA.store_demo;
+    if (sd && sd.monthly_rows && sd.monthly_rows[label] && prevLabel && sd.monthly_rows[prevLabel]) {
+      const mk = sd.metric_key || "SUM(회원수(유니크))";
+      const share = rows => { const t = rows.reduce((a, r) => a + (Number(r[mk]) || 0), 0); const f = rows.filter(r => r.sex === "F").reduce((a, r) => a + (Number(r[mk]) || 0), 0); const ages = {}; rows.forEach(r => { ages[r.age_band] = (ages[r.age_band] || 0) + (Number(r[mk]) || 0); }); Object.keys(ages).forEach(a => { ages[a] = ages[a] / t * 100; }); return { t, f: f / t * 100, ages }; };
+      const c = share(sd.monthly_rows[label]), p = share(sd.monthly_rows[prevLabel]);
+      const topAge = Object.entries(c.ages).sort((a, b) => b[1] - a[1])[0];
+      const moved = Object.keys(c.ages).map(a => ({ a, d: c.ages[a] - (p.ages[a] || 0) })).sort((x, y) => Math.abs(y.d) - Math.abs(x.d))[0];
+      audience.push(`혜택을 받은 방문객은 <b>여성 ${c.f.toFixed(0)}%</b>(전월 ${p.f.toFixed(0)}%), 연령은 <b>${demoAgeLabel(topAge[0])}가 ${topAge[1].toFixed(0)}%</b>로 가장 많아요${moved && Math.abs(moved.d) >= 1 ? ` · 전월 대비 ${demoAgeLabel(moved.a)} 비중이 ${deltaSpan(moved.d, "%p")} 변했어요` : ""}`);
+    }
+
+    // ── 날짜 · 구독권 ──
+    const timing = [];
+    const bDaily = ((METRICS_DATA.benefit_claims && METRICS_DATA.benefit_claims.series) || []).filter(p => p.date.startsWith(label));
+    if (bDaily.length) {
+      const avg = bDaily.reduce((a, p) => a + p.value, 0) / bDaily.length;
+      const wd = d => ["일", "월", "화", "수", "목", "금", "토"][new Date(d + "T00:00:00").getDay()];
+      const peaks = bDaily.slice().sort((a, b) => b.value - a.value).slice(0, 3).filter(p => p.value >= avg * 1.4);
+      if (peaks.length) {
+        const desc = peaks.map(p => {
+          const top = Object.entries(clkDailyStore[p.date] || {}).sort((a, b) => b[1] - a[1])[0];
+          const lead = top && top[1] >= p.value * 0.25 ? ` · ${nameShort(top[0])} ${fmt(top[1])}건` : "";
+          return `${Number(p.date.slice(5, 7))}/${Number(p.date.slice(8))}(${wd(p.date)}) ${fmt(p.value)}건${lead}`;
+        }).join(", ");
+        timing.push(`혜택받기가 평소(일평균 ${fmt(avg)}건)보다 크게 몰린 날은 ${desc}이에요 — 이런 날의 노출(푸시·배너·SNS)을 기록해두면 다음 기획에 참고하기 좋아요`);
+      }
+    }
+    if (COUPON_STATS && COUPON_STATS.coupons && COUPON_STATS.coupons.length) {
+      const cp = COUPON_STATS.coupons[0];
+      const sumM = (m, k) => Object.entries(cp.daily || {}).filter(([d]) => d.startsWith(m)).reduce((a, [, v]) => a + (v[k] || 0), 0);
+      const r = sumM(label, "registered"), u = sumM(label, "used"), rp = prevLabel ? sumM(prevLabel, "registered") : 0;
+      if (r + rp > 0) timing.push(`제휴처 증정 구독권은 ${label}에 <b>${fmt(r)}장 등록, ${fmt(u)}장 사용</b>됐어요${rp ? ` (전월 등록 ${fmt(rp)}장 대비 ${deltaSpan((r - rp) / rp * 100)})` : ""} · 누적 등록률은 ${(cp.registered / cp.issued * 100).toFixed(1)}%예요`);
+    }
+
+    // ── 한 줄 요약 ──
+    const headBits = [];
+    if (uvCmp && benefitCmp) headBits.push(`UV ${deltaSpan(uvCmp.delta)}, 혜택받기 ${deltaSpan(benefitCmp.delta)}`);
+    if (convNow !== null && convPrev !== null && convNow - convPrev >= 1) headBits.push(`전환율 ${convNow.toFixed(1)}%${convLines.some(l => l.includes("최고치")) ? "(역대 최고)" : ""}`);
+    const drivers = [];
+    if (stTotal > 0) { const nn = Object.keys(stCur).filter(isNewStore); const ns = nn.reduce((a, n) => a + stCur[n], 0); if (ns / stTotal >= 0.3) drivers.push(`신규 제휴 매장(혜택사용의 ${(ns / stTotal * 100).toFixed(0)}%)`); }
+    if (topStore && topStore.share >= 8) drivers.push(nameShort(topStore.name));
+    const headline = headBits.length ? `<b>${monthKo(label)}</b>은 ${headBits.join(" · ")}${drivers.length && benefitCmp && benefitCmp.delta > 0 ? `<br>성장 동력: <b>${drivers.join("</b>, <b>")}</b>` : ""}` : "";
 
     const sectionTitle = t => `<div style="font-size:12px; font-weight:700; color:var(--ink-faint); margin:14px 0 4px; letter-spacing:0.02em;">${t}</div>`;
     const ul = items => `<ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">${items.map(t => `<li>${t}</li>`).join("")}</ul>`;
 
     let html = `<div class="section-card">
       <div class="section-head"><h2>📌 지난달(${label}) 종합 인사이트</h2></div>
+      ${headline ? `<div style="font-size:14.5px; line-height:1.7; padding:12px 14px; background:#f5f6ff; border-radius:10px; margin:2px 0 6px;">${headline}</div>` : ""}
       ${sectionTitle("전체 실적")}${ul(summary)}
+      ${convLines.length ? sectionTitle("전환율 분석") + ul(convLines) : ""}
       ${reasons.length ? sectionTitle(`혜택받기 변화 요인 <span style="font-weight:500;">(매장별 혜택사용 기준)</span>`) + ul(reasons) : ""}
+      ${audience.length ? sectionTitle("지역 · 방문객") + ul(audience) : ""}
+      ${timing.length ? sectionTitle("날짜 · 구독권") + ul(timing) : ""}
     </div>`;
 
     if (sa) html += renderStoreLevelInsightsCard(sa, label, prevLabel);
@@ -4896,6 +5038,7 @@ function extractBrand(name) {
 
   /* ================= 구독권 Tracking 탭 ================= */
   let COUPON_STATS = null;
+  let PARTNER_STORE_INFO = null;
   let couponCharts = {};
 
   function renderCouponTab() {
@@ -5640,6 +5783,12 @@ function extractBrand(name) {
         }
       }
 
+      try {
+        const [cr, ir] = await Promise.all([fetch("./coupon_stats.json", { cache: "no-store" }), fetch("./partner_store_info.json", { cache: "no-store" })]);
+        if (cr.ok) COUPON_STATS = await cr.json();
+        if (ir.ok) PARTNER_STORE_INFO = await ir.json();
+      } catch (e) { /* 보조 데이터 — 없어도 진행 */ }
+
       setupTabs();
       renderKpiTab();
       renderDailyTab();
@@ -5667,10 +5816,6 @@ function extractBrand(name) {
       }
       // 이벤트 Tracking 탭은 숨김 (코드는 유지, 필요 시 버튼과 아래 호출만 복구)
       // renderEventTab();
-      try {
-        const cr = await fetch("./coupon_stats.json", { cache: "no-store" });
-        if (cr.ok) COUPON_STATS = await cr.json();
-      } catch (e) { COUPON_STATS = null; }
       renderCouponTab();
 
       renderHubTab();
