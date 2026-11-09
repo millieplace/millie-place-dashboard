@@ -2003,7 +2003,7 @@
     { name: "종이의 서재 by grape lab", status: "제휴 중", expose: "2026-09-12", term: null, termReason: null, plannedExpose: null },
     { name: "렉터스라운지 홍대", status: "제휴 중", expose: "2026-09-12", term: null, termReason: null, plannedExpose: null },
     { name: "텅앤빈 청파", status: "제휴 중", expose: "2026-09-11", term: null, termReason: null, plannedExpose: null },
-    { name: "스페인 미술 500년: 빛과 어둠의 연대기", status: "10월 단기", expose: "2026-10-01", term: null, termReason: "10월 단기 제휴 진행", plannedExpose: null },
+    { name: "스페인 미술 500년: 빛과 어둠의 연대기", status: "해지", expose: "2026-10-01", term: "2026-11-01", termReason: "10월 단기 제휴 종료", plannedExpose: null },
     { name: "콜로라도 프로젝트", status: "제휴 중", expose: "2026-09-21", term: null, termReason: null, plannedExpose: null },
     { name: "녹턴", status: "제휴 중", expose: "2026-09-21", term: null, termReason: null, plannedExpose: null },
     { name: "나울", status: "제휴 중", expose: "2026-09-21", term: null, termReason: null, plannedExpose: null },
@@ -5348,6 +5348,7 @@ function extractBrand(name) {
 
   const SPAIN_STORE = "스페인 미술 500년: 빛과 어둠의 연대기";
   const SPAIN_START = "2026-10-01";
+  const SPAIN_END = "2026-10-31"; // 11/1 제휴 종료
   let spainCharts = {};
 
   function renderSpainTab() {
@@ -5357,12 +5358,15 @@ function extractBrand(name) {
     const uvDaily = (uvM && uvM.daily_totals) || {}, qrDaily = (uvM && uvM.qr_daily_totals) || {};
     const clkDaily = (clkM && clkM.daily_totals) || {};
     const allDates = getSortedDates(uvDaily);
-    const end = allDates.length ? allDates[allDates.length - 1] : null;
+    let end = allDates.length ? allDates[allDates.length - 1] : null;
     if (!end || end < SPAIN_START) {
       area.innerHTML = `<div class="placeholder-panel"><div class="icon">🎨</div><h3>데이터 준비 중</h3><p>${SPAIN_START} 이후 데이터가 아직 없어요.</p></div>`;
       return;
     }
+    const endAll = end;
+    end = end > SPAIN_END ? SPAIN_END : end;
     const days = allDates.filter(d => d >= SPAIN_START && d <= end);
+    const afterDays = allDates.filter(d => d > SPAIN_END && d <= endAll);
     const nDays = days.length;
     const val = (src, d, n) => ((src[d] || {})[n]) || 0;
     const sumFor = (src, n) => days.reduce((a, d) => a + val(src, d, n), 0);
@@ -5400,15 +5404,26 @@ function extractBrand(name) {
 
     const insights = [];
     insights.push(`${SPAIN_START} ~ ${end} (${nDays}일) 동안 상세페이지 UV <b>${fmt(uvSum)}명</b>, 혜택클릭 <b>${fmt(clkSum)}건</b>으로 두 지표 모두 전체 ${uvRank.total}개 매장 중 <b>1위</b>예요${second ? ` — 2위 ${second[0]}(${fmt(second[1])}명)의 약 <b>${(uvSum / second[1]).toFixed(1)}배</b>` : ""}`);
-    if (conv !== null && otherConv !== null) insights.push(`UV 대비 혜택클릭 전환율이 <b>${conv.toFixed(0)}%</b>로, 다른 매장 평균(${otherConv.toFixed(0)}%)보다 훨씬 높아요 — 상세페이지에 들어온 사람 대부분이 혜택까지 받아갔어요`);
+    if (conv !== null && otherConv !== null) {
+      const gap = conv - otherConv;
+      insights.push(`UV 대비 혜택클릭 전환율은 <b>${conv.toFixed(0)}%</b>로 다른 매장 평균(${otherConv.toFixed(0)}%)${Math.abs(gap) < 5 ? "과 비슷해요" : gap > 0 ? `보다 <b>${gap.toFixed(0)}%p 높아요</b> — 상세페이지에 들어온 사람 상당수가 혜택까지 받아갔어요` : `보다 ${(-gap).toFixed(0)}%p 낮아요 — 방문은 많았지만 혜택까지 이어진 비율은 평균 이하예요`}`);
+    }
     if (benShare !== null) insights.push(`같은 기간 밀리플레이스 전체 혜택받기(${fmt(benNow)}건)의 <b>${benShare.toFixed(0)}%</b>를 이 한 곳이 만들었어요. 전체 혜택받기는 직전 ${nDays}일(${fmt(benPrev)}건) 대비 ${liftSpan(pctChg(benNow, benPrev))}, UV는 ${liftSpan(pctChg(uvNow, uvPrev))}예요`);
-    if (peakTop2.length === 2 && peakShare >= 50) insights.push(`방문이 <b>${peakTop2.map(r => `${r.d.slice(5)}(${wd(r.d)})`).join(", ")}</b> 이틀에 집중됐어요 (전체 UV의 ${peakShare.toFixed(0)}%) — 나머지 날은 하루 10명 안팎이라, 해당 일자의 푸시·SNS·현장 안내 등 노출 이슈를 확인해보면 좋아요`);
+    if (peakTop2.length === 2 && peakShare >= 50) {
+      const restDays = Math.max(1, nDays - 2);
+      const restAvg = (uvSum - peakTop2.reduce((a, r) => a + r.uv, 0)) / restDays;
+      insights.push(`방문이 <b>${peakTop2.map(r => `${r.d.slice(5)}(${wd(r.d)})`).join(", ")}</b> 이틀에 집중됐어요 (전체 UV의 ${peakShare.toFixed(0)}%) — 나머지 날은 하루 평균 ${fmt(restAvg)}명이라, 해당 일자의 푸시·SNS·현장 안내 등 노출 이슈를 확인해보면 좋아요`);
+    }
+    if (afterDays.length) {
+      const aUv = afterDays.reduce((a, d) => a + val(uvDaily, d, SPAIN_STORE), 0), aClk = afterDays.reduce((a, d) => a + val(clkDaily, d, SPAIN_STORE), 0);
+      insights.push(`11/1 제휴 종료 이후(${afterDays.length}일간)에도 상세페이지 방문 ${fmt(aUv)}명, 혜택클릭 ${fmt(aClk)}건이 남아 있어요${aUv > 0 ? " — 앱에서 매장 노출이 완전히 내려갔는지 확인해보면 좋아요" : ""}`);
+    }
     insights.push(`QR 스캔 유입은 ${qrSum > 0 ? `${fmt(qrSum)}건` : "아직 0건"}이에요${qrSum > 0 ? "" : " — 전시장 현장 QR 안내가 있는지 확인이 필요해요"}${preLaunch > 0 ? ` · 오픈 전(9월)에도 상세페이지 사전 유입이 ${fmt(preLaunch)}명 있었어요` : ""}`);
 
     const top5 = uvRank.sorted.slice(0, 6);
     area.innerHTML = `
       <div class="section-card">
-        <div class="section-head"><h2>🎨 스페인 미술 500년: 빛과 어둠의 연대기 — 10월 단기 제휴</h2></div>
+        <div class="section-head"><h2>🎨 스페인 미술 500년: 빛과 어둠의 연대기 — 10월 단기 제휴 <span style="font-size:12px; font-weight:700; color:var(--bad); border:1px solid var(--bad); border-radius:10px; padding:1px 8px; vertical-align:middle;">11/1 제휴 종료</span></h2></div>
         <div style="font-size:12.5px; color:var(--ink-faint);">분석 기간 ${SPAIN_START} ~ ${end} (${nDays}일) · 매장 상세페이지 UV · 혜택클릭 기준</div>
       </div>
       <div class="section-card">
