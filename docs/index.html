@@ -5301,12 +5301,26 @@ function extractBrand(name) {
 
   let urbanplayTrendChart = null;
   let urbanplayStoreCharts = [];
+  let urbanplayDailyChart = null;
 
   function renderUrbanplayTab() {
     const area = document.getElementById("urbanplay-area");
+    const bat = w => { const c = (w || "").trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 ? (c - 0xAC00) % 28 : (/[0-9]$/.test(w) ? 1 : 0); };
+    const iga = w => w + (bat(w) ? "이" : "가");
+    const eunNeun = w => w + (bat(w) ? "은" : "는");
+    const euro = w => w + (bat(w) && bat(w) !== 8 ? "으로" : "로");
     const storeMetric = METRICS_DATA[STORE_KEY];
     const monthlyTotals = (storeMetric && storeMetric.monthly_totals) || {};
-    const benefitMonthlyTotals = (storeMetric && storeMetric.benefit_monthly_totals) || {};
+    const baseBenefitMonthly = (storeMetric && storeMetric.benefit_monthly_totals) || {};
+    const clickDaily = (METRICS_DATA.daily_store && METRICS_DATA.daily_store.daily_totals) || {};
+    const clickDates = Object.keys(clickDaily).sort();
+    const lastDataDate = clickDates.length ? clickDates[clickDates.length - 1] : null;
+    const curMonthKey = lastDataDate ? lastDataDate.slice(0, 7) : null;
+    const curMonthPartial = !!(curMonthKey && !baseBenefitMonthly[curMonthKey]);
+    const benefitMonthlyTotals = curMonthPartial
+      ? { ...baseBenefitMonthly, [curMonthKey]: aggregateDailyStoreForMonth(clickDaily, curMonthKey) }
+      : baseBenefitMonthly;
+    const curMonthDays = curMonthPartial ? Number(lastDataDate.slice(8)) : 0;
     const uvMetric = METRICS_DATA["daily_store_uv"];
     const uvDaily = (uvMetric && uvMetric.daily_totals) || {};
     const months = Object.keys(monthlyTotals).sort();
@@ -5325,15 +5339,17 @@ function extractBrand(name) {
     function storeBenefitVal(month, name) { return (benefitMonthlyTotals[month] || {})[name] || 0; }
 
     // 매장별 상세 표 전용 (혜택확인 기준)
-    const latestBenefitMonth = benefitMonths[benefitMonths.length - 1];
+    const completeMonths = benefitMonths.filter(m => !(curMonthPartial && m === curMonthKey));
+    const latestBenefitMonth = completeMonths[completeMonths.length - 1];
     const storeBenefitRows = URBANPLAY_STORES.map(name => {
       const cur = storeBenefitVal(latestBenefitMonth, name);
-      const vals25 = benefitMonths.filter(m => m.startsWith("2025")).map(m => storeBenefitVal(m, name));
-      const vals26 = benefitMonths.filter(m => m.startsWith("2026")).map(m => storeBenefitVal(m, name));
+      const vals25 = completeMonths.filter(m => m.startsWith("2025")).map(m => storeBenefitVal(m, name));
+      const vals26 = completeMonths.filter(m => m.startsWith("2026")).map(m => storeBenefitVal(m, name));
       const avg25 = vals25.length ? avgOfArr(vals25) : null;
       const avg26 = vals26.length ? avgOfArr(vals26) : null;
       const avgPct = (avg25 && avg25 > 0) ? ((avg26 - avg25) / avg25) * 100 : null;
-      return { name, cur, avg25, avg26, avgPct };
+      const curPartial = curMonthPartial ? storeBenefitVal(curMonthKey, name) : null;
+      return { name, cur, avg25, avg26, avgPct, curPartial };
     });
 
     // 합계 (5개 매장 통합, 혜택확인 기준)
@@ -5353,15 +5369,31 @@ function extractBrand(name) {
     insights.push(`5개 매장 합산 혜택사용은 2025년 월평균 ${fmt(Math.round(totalBenefitAvg25))}건 → 2026년 월평균 ${fmt(Math.round(totalBenefitAvg26))}건으로 ${liftSpan(totalBenefitAvgPct)} 수준이에요`);
     insights.push(`5개 매장 중 <b>${decliningCount}곳</b>이 작년보다 줄어들었어요`);
     if (worst) {
-      insights.push(`가장 크게 줄어든 곳은 <b>${worst.name}</b>로, 연 평균 기준 ${liftSpan(worst.avgPct)} 감소했어요`);
+      insights.push(`가장 크게 줄어든 곳은 <b>${euro(worst.name)}</b>, 연 평균 기준 ${liftSpan(worst.avgPct)} 감소했어요`);
     }
     if (best && best.avgPct !== null && best.avgPct > 0) {
-      insights.push(`반면 <b>${best.name}</b>는 ${liftSpan(best.avgPct)}로 유일하게(또는 가장 크게) 증가했어요`);
+      insights.push(`반면 <b>${eunNeun(best.name)}</b> ${liftSpan(best.avgPct)}로 ${storeBenefitRows.filter(r => r.avgPct !== null && r.avgPct > 0).length === 1 ? "유일하게" : "가장 크게"} 증가했어요`);
     }
     insights.push(`${latestBenefitMonth} 기준 5개 매장 합산 혜택사용은 ${fmt(totalBenefitCur)}건이에요`);
+    let paceHtml = "";
+    if (curMonthPartial && curMonthDays > 0) {
+      const curSum = storeBenefitRows.reduce((a, r) => a + (r.curPartial || 0), 0);
+      const [py, pm] = latestBenefitMonth.split("-").map(Number);
+      const prevDays = new Date(py, pm, 0).getDate();
+      const curAvg = curSum / curMonthDays, prevAvg = totalBenefitCur / prevDays;
+      const curM = Number(curMonthKey.slice(5)), prevM = pm;
+      const paceRows = storeBenefitRows.map(r => ({ name: r.name, d: (r.curPartial || 0) / curMonthDays - r.cur / prevDays })).sort((a, b) => b.d - a.d);
+      insights.unshift(`<b>${curM}월(1~${curMonthDays}일)</b> 5개 매장 혜택사용은 ${fmt(curSum)}건, 일평균 <b>${curAvg.toFixed(1)}건</b>으로 ${prevM}월 일평균(${prevAvg.toFixed(1)}건) 대비 ${liftSpan(prevAvg > 0 ? (curAvg - prevAvg) / prevAvg * 100 : null)} 수준이에요${paceRows[0].d > 0.2 ? ` — <b>${iga(paceRows[0].name)}</b> 가장 크게 늘었어요` : ""}`);
+      paceHtml = `<div class="kpi-card">
+          <div class="kpi-top"><div class="kpi-label">${curM}월 진행 중 (1~${curMonthDays}일)</div></div>
+          <div class="kpi-value-row"><div class="kpi-value">${fmt(curSum)}<span class="unit">건</span></div></div>
+          <div class="kpi-sub">일평균 ${curAvg.toFixed(1)}건 · ${prevM}월 대비 ${liftSpan(prevAvg > 0 ? (curAvg - prevAvg) / prevAvg * 100 : null)}</div>
+        </div>`;
+    }
 
     // 월별 추이 차트 데이터 (5개 매장 합산, 혜택확인만)
-    const trendLabels = benefitMonths.map(m => m.slice(2));
+    const trendLabels = benefitMonths.map(m => (curMonthPartial && m === curMonthKey) ? [m.slice(2), "(진행 중)"] : m.slice(2));
+    const partialIdx = curMonthPartial ? benefitMonths.indexOf(curMonthKey) : -1;
     const trendData = benefitMonths.map(m => URBANPLAY_STORES.reduce((a, name) => a + storeBenefitVal(m, name), 0));
 
     area.innerHTML = `
@@ -5377,7 +5409,8 @@ function extractBrand(name) {
         </ul>
       </div>
 
-      <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="kpi-grid" style="grid-template-columns: repeat(${paceHtml ? 4 : 3}, 1fr);">
+        ${paceHtml}
         <div class="kpi-card">
           <div class="kpi-top"><div class="kpi-label">${latestBenefitMonth} 혜택사용 합계</div></div>
           <div class="kpi-value-row"><div class="kpi-value">${fmt(totalBenefitCur)}<span class="unit">건</span></div></div>
@@ -5393,6 +5426,12 @@ function extractBrand(name) {
           <div class="kpi-value-row"><div class="kpi-value">${fmt(uvTotalAllTime)}<span class="unit">건</span></div></div>
           <div class="kpi-sub">5개 매장 합산, 데이터 수집 시작 이후 누적</div>
         </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h2>📅 일별 추이 (최근 60일, 혜택확인)</h2></div>
+        <div style="font-size:12px; color:var(--ink-faint); margin-bottom:6px;">매장별 막대를 쌓아서 표시 · 선은 5개 매장 합계의 7일 평균${lastDataDate ? ` · ${lastDataDate}까지` : ""}</div>
+        <div class="trend-chart-wrap tall"><canvas id="urbanplayDailyChart"></canvas></div>
       </div>
 
       <div class="section-card">
@@ -5417,6 +5456,7 @@ function extractBrand(name) {
           <thead>
             <tr>
               <th>매장명</th>
+              ${curMonthPartial ? `<th style="text-align:right">${curMonthKey}<br><span style="font-weight:500; color:var(--ink-faint);">1~${curMonthDays}일</span></th>` : ""}
               <th style="text-align:right">${latestBenefitMonth}</th>
               <th style="text-align:right">25년 월평균</th>
               <th style="text-align:right">26년 월평균</th>
@@ -5427,6 +5467,7 @@ function extractBrand(name) {
             ${storeBenefitRows.map(r => `
               <tr>
                 <td>${r.name}</td>
+                ${curMonthPartial ? `<td class="rank-val" style="color:var(--accent);">${fmt(r.curPartial)}</td>` : ""}
                 <td class="rank-val">${fmt(r.cur)}</td>
                 <td class="rank-val" style="color:var(--ink-faint);">${r.avg25 !== null ? r.avg25.toFixed(1) : "-"}</td>
                 <td class="rank-val">${r.avg26 !== null ? r.avg26.toFixed(1) : "-"}</td>
@@ -5436,7 +5477,7 @@ function extractBrand(name) {
         </table>
       </div>
 
-      <div class="kpi-sub" style="margin:4px 2px 0;">추이 그래프와 매장별 상세 표는 store_breakdown 혜택확인(월별) 기준이에요 · 이 5개 매장이 어반플레이 제휴 매장으로 확인됐어요, 다른 매장이 더 있다면 알려주시면 추가할게요</div>`;
+      <div class="kpi-sub" style="margin:4px 2px 0;">완결된 달은 store_breakdown 혜택확인(월별), 이번 달(진행 중)과 일별 추이는 일별 매장 혜택클릭 데이터 기준이에요 · 연 평균은 완결된 달만으로 계산해요 · 이 5개 매장이 어반플레이 제휴 매장으로 확인됐어요, 다른 매장이 더 있다면 알려주시면 추가할게요</div>`;
 
     if (urbanplayTrendChart) { urbanplayTrendChart.destroy(); urbanplayTrendChart = null; }
     const canvas = document.getElementById("urbanplayTrendChart");
@@ -5451,7 +5492,9 @@ function extractBrand(name) {
           backgroundColor: "#6366f1",
           tension: 0.3,
           pointRadius: 3,
+          pointBackgroundColor: trendData.map((_, k) => k === partialIdx ? "#fff" : "#6366f1"),
           borderWidth: 2,
+          segment: { borderDash: c => (c.p1DataIndex === partialIdx ? [5, 4] : undefined) },
         }],
       },
       options: {
@@ -5472,6 +5515,43 @@ function extractBrand(name) {
       },
     });
 
+    if (urbanplayDailyChart) { urbanplayDailyChart.destroy(); urbanplayDailyChart = null; }
+    const dCanvas = document.getElementById("urbanplayDailyChart");
+    if (dCanvas && clickDates.length) {
+      const days = [];
+      const end = new Date(lastDataDate + "T00:00:00");
+      for (let k = 59; k >= 0; k--) { const x = new Date(end); x.setDate(x.getDate() - k); days.push(toLocalDateStr(x)); }
+      const palette = ["#6366f1", "#06b6d4", "#f59e0b", "#10b981", "#ec4899"];
+      const totals = days.map(d => URBANPLAY_STORES.reduce((a, n) => a + ((clickDaily[d] || {})[n] || 0), 0));
+      const ma7 = totals.map((_, k) => k < 6 ? null : totals.slice(k - 6, k + 1).reduce((a, v) => a + v, 0) / 7);
+      const wd = d => ["일", "월", "화", "수", "목", "금", "토"][new Date(d + "T00:00:00").getDay()];
+      urbanplayDailyChart = new Chart(dCanvas, {
+        data: {
+          labels: days.map(d => `${Number(d.slice(5, 7))}/${Number(d.slice(8))}`),
+          datasets: [
+            ...URBANPLAY_STORES.map((n, k) => ({ type: "bar", label: n, data: days.map(d => (clickDaily[d] || {})[n] || 0), backgroundColor: palette[k % palette.length], stack: "s", borderRadius: 2, maxBarThickness: 14 })),
+            { type: "line", label: "합계 7일 평균", data: ma7, borderColor: "#111827", borderWidth: 2, pointRadius: 0, tension: 0.35, spanGaps: true },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
+            datalabels: { display: false },
+            tooltip: { callbacks: {
+              title: items => { const d = days[items[0].dataIndex]; return `${d} (${wd(d)}) · 합계 ${totals[items[0].dataIndex]}건`; },
+              label: c => c.dataset.type === "line" ? (c.parsed.y === null ? "" : `7일 평균 ${c.parsed.y.toFixed(1)}건`) : (c.parsed.y ? `${c.dataset.label}: ${c.parsed.y}건` : ""),
+            } },
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 10 }, maxTicksLimit: 12, maxRotation: 0 } },
+            y: { stacked: true, beginAtZero: true, grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 10.5 }, precision: 0 } },
+          },
+        },
+      });
+    }
+
     urbanplayStoreCharts.forEach(c => c && c.destroy());
     urbanplayStoreCharts = URBANPLAY_STORES.map((name, i) => {
       const storeTrendData = benefitMonths.map(m => storeBenefitVal(m, name));
@@ -5487,6 +5567,8 @@ function extractBrand(name) {
             backgroundColor: "#06b6d4",
             tension: 0.3,
             pointRadius: 2.5,
+            pointBackgroundColor: storeTrendData.map((_, k) => k === partialIdx ? "#fff" : "#06b6d4"),
+            segment: { borderDash: c => (c.p1DataIndex === partialIdx ? [5, 4] : undefined) },
             borderWidth: 2,
           }],
         },
