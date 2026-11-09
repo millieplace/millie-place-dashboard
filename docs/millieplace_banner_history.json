@@ -319,6 +319,14 @@
         "https://image.millie.co.kr/service/hero_banner/6ae3f6d524be7.jpg",
         "https://image.millie.co.kr/service/hero_banner/6ac928f95a5fd.jpg"
       ]
+    },
+    "2026-11-09": {
+      "images": [
+        "https://image.millie.co.kr/service/hero_banner/6aefd825d7f58.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6aefd944d7d4b.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6ae3f6d524be7.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6ac928f95a5fd.jpg"
+      ]
     }
   },
   "meta": {
@@ -471,6 +479,16 @@
       "title": "가을이 가기 전에 · 읽다 만 책 챙겨서",
       "subtitle": "책 펼치기 좋은 밀리플레이스 4곳",
       "place_seq": "1101"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6aefd825d7f58.jpg": {
+      "title": "동네한바퀴 인터뷰 · 말에도 맛이 있어요",
+      "subtitle": "맛을 말로 옮기는 성북 카페 수록",
+      "place_seq": "1216"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6aefd944d7d4b.jpg": {
+      "title": "동네한바퀴 인터뷰 · 책도 주인을 기다려요",
+      "subtitle": "오래 남을 책, 서촌 북살롱 텍스트북",
+      "place_seq": "1176"
     }
   }
 }
