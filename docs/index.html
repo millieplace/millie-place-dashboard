@@ -401,6 +401,7 @@
       <button data-tab="monthly">월간 데이터</button>
       <button data-tab="newstores">신규 매장 분석</button>
       <button data-tab="partner">제휴처별 데이터</button>
+      <button data-tab="annual">연간 순위</button>
       <button data-tab="coupon">구독권 Tracking</button>
       <button data-tab="hub">밀플 허브 페이지</button>
       <button data-tab="jeju981">제주 981</button>
@@ -426,6 +427,10 @@
 
     <div class="tab-panel" id="tab-partner">
       <div id="partner-area"></div>
+    </div>
+
+    <div class="tab-panel" id="tab-annual">
+      <div id="annual-area"></div>
     </div>
 
     <div class="tab-panel" id="tab-coupon">
@@ -5036,6 +5041,151 @@ function extractBrand(name) {
     return rates.length ? avgOfArr(rates) : null;
   }
 
+  /* ================= 연간 누적 순위 탭 ================= */
+  let annualState = { year: null, activeOnly: false, query: "", showAll: false };
+
+  function buildAnnualRanking(year) {
+    const sm = METRICS_DATA[STORE_KEY] || {};
+    const base = sm.benefit_monthly_totals || sm.monthly_totals || {};
+    const clickDaily = (METRICS_DATA.daily_store && METRICS_DATA.daily_store.daily_totals) || {};
+    const dates = Object.keys(clickDaily).sort();
+    const last = dates.length ? dates[dates.length - 1] : null;
+    const curKey = last ? last.slice(0, 7) : null;
+    const monthly = { ...base };
+    let partial = null;
+    if (curKey && !base[curKey]) { monthly[curKey] = aggregateDailyStoreForMonth(clickDaily, curKey); partial = { key: curKey, day: Number(last.slice(8)) }; }
+    const months = Object.keys(monthly).filter(m => m.startsWith(String(year))).sort();
+    const per = {};
+    months.forEach(m => Object.entries(monthly[m] || {}).forEach(([n, v]) => {
+      if (!n || n === "null" || !v) return;
+      (per[n] = per[n] || { name: n, total: 0, byMonth: {} }).total += v;
+      per[n].byMonth[m] = v;
+    }));
+    const rows = Object.values(per).sort((a, b) => b.total - a.total);
+    const grand = rows.reduce((a, r) => a + r.total, 0);
+    let cum = 0;
+    rows.forEach((r, i) => {
+      r.rank = i + 1; r.share = grand ? r.total / grand * 100 : 0; cum += r.total; r.cumShare = grand ? cum / grand * 100 : 0;
+      const done = months.filter(m => !(partial && m === partial.key));
+      const active = done.filter(m => m >= (Object.keys(r.byMonth).sort()[0] || m));
+      r.activeMonths = active.length; r.monthlyAvg = active.length ? active.reduce((a, m) => a + (r.byMonth[m] || 0), 0) / active.length : 0;
+      r.recent = months.slice(-3).map(m => ({ m, v: r.byMonth[m] || 0 }));
+      const info = PARTNER_STORE_MASTER.find(s => s.name === r.name);
+      r.status = info ? info.status : "기타";
+      r.expose = info ? getEffectiveExposeDate(info) : null;
+      const pi = (PARTNER_STORE_INFO || {})[r.name] || {};
+      r.region = [pi.sido, pi.gugun].filter(Boolean).join(" ");
+    });
+    return { rows, grand, months, partial };
+  }
+
+  function renderAnnualRankTab() {
+    const area = document.getElementById("annual-area");
+    const sm = METRICS_DATA[STORE_KEY] || {};
+    const base = sm.benefit_monthly_totals || sm.monthly_totals || {};
+    const years = Array.from(new Set(Object.keys(base).map(m => m.slice(0, 4)))).sort();
+    if (!years.length) { area.innerHTML = `<div class="placeholder-panel"><div class="icon">🏆</div><h3>데이터 없음</h3></div>`; return; }
+    if (!annualState.year || !years.includes(annualState.year)) annualState.year = years[years.length - 1];
+    const { rows, grand, months, partial } = buildAnnualRanking(annualState.year);
+    const nm = n => n.split(":")[0].trim();
+    const bat = w => { const c = (w || "").trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 ? (c - 0xAC00) % 28 : (/[0-9]$/.test(w) ? 1 : 0); };
+    const euro = w => w + (bat(w) && bat(w) !== 8 ? "으로" : "로");
+    const mk = m => `${Number(m.slice(5))}월`;
+    const periodText = months.length ? `${mk(months[0])}~${mk(months[months.length - 1])}${partial && months.includes(partial.key) ? `(${partial.day}일까지)` : ""}` : "-";
+
+    // 요약 지표
+    const top10 = rows.slice(0, 10).reduce((a, r) => a + r.total, 0);
+    const top20n = Math.max(1, Math.ceil(rows.length * 0.2));
+    const top20 = rows.slice(0, top20n).reduce((a, r) => a + r.total, 0);
+    const halfIdx = rows.findIndex(r => r.cumShare >= 50);
+    const activeRows = rows.filter(r => r.status === "제휴 중" || r.status === "10월 단기" || r.status === "해지 예정");
+    const termRows = rows.filter(r => r.status === "해지");
+    const termSum = termRows.reduce((a, r) => a + r.total, 0);
+    const yStart = `${annualState.year}-01-01`;
+    const newcomers = rows.filter(r => r.expose && r.expose >= yStart && r.rank <= 30);
+
+    const insights = [];
+    if (rows[0]) insights.push(`${annualState.year}년(${periodText}) 누적 1위는 <b>${euro(nm(rows[0].name))}</b> <b>${fmt(rows[0].total)}건</b>, 전체의 <b>${rows[0].share.toFixed(1)}%</b>예요${rows[1] ? ` · 2위 ${nm(rows[1].name)}(${fmt(rows[1].total)}건), 3위 ${rows[2] ? `${nm(rows[2].name)}(${fmt(rows[2].total)}건)` : "-"}` : ""}`);
+    if (halfIdx >= 0) insights.push(`상위 <b>${halfIdx + 1}개 매장</b>이 전체 혜택클릭의 절반을 만들었어요 (전체 ${rows.length}곳 중 ${(((halfIdx + 1) / rows.length) * 100).toFixed(0)}%) — 상위 20% 매장(${top20n}곳)의 비중은 <b>${(top20 / grand * 100).toFixed(0)}%</b>예요`);
+    if (newcomers.length && annualState.year !== years[0]) insights.push(`올해 새로 노출된 매장 중 <b>${newcomers.length}곳</b>이 TOP 30에 들었어요: ${newcomers.slice(0, 5).map(r => `${nm(r.name)}(${r.rank}위)`).join(", ")}${newcomers.length > 5 ? " 등" : ""}`);
+    if (termRows.length) insights.push(`해지된 매장 ${termRows.length}곳에서 나온 혜택클릭은 ${fmt(termSum)}건(${(termSum / grand * 100).toFixed(1)}%)이에요`);
+    const avgActive = activeRows.length ? activeRows.reduce((a, r) => a + r.monthlyAvg, 0) / activeRows.length : 0;
+    if (activeRows.length) insights.push(`제휴 중인 매장의 월평균 혜택클릭은 매장당 <b>${avgActive.toFixed(1)}건</b>이에요 — 순위표의 "월평균"을 이 값과 비교해보면 매장별 활성도를 판단하기 좋아요`);
+
+    // 필터 적용
+    const q = annualState.query.trim().toLowerCase();
+    let shown = rows.filter(r => (!annualState.activeOnly || r.status === "제휴 중" || r.status === "10월 단기" || r.status === "해지 예정") && (!q || r.name.toLowerCase().includes(q) || (r.region || "").toLowerCase().includes(q)));
+    const total = shown.length;
+    if (!annualState.showAll && !q) shown = shown.slice(0, 50);
+    const tag = st => {
+      const map = { "해지": ["해지", "var(--bad)"], "해지 예정": ["해지예정", "#b45309"], "10월 단기": ["단기", "var(--accent)"], "제휴예정": ["예정", "var(--ink-faint)"] };
+      const t = map[st]; return t ? ` <span style="font-size:10.5px; font-weight:700; color:${t[1]}; border:1px solid ${t[1]}; border-radius:10px; padding:0 6px;">${t[0]}</span>` : "";
+    };
+    const spark = rec => {
+      const mx = Math.max(1, ...rec.map(x => x.v));
+      return `<span style="display:inline-flex; align-items:flex-end; gap:2px; height:18px; vertical-align:middle;" title="${rec.map(x => `${mk(x.m)} ${x.v}건`).join(" · ")}">${rec.map((x, i) => `<span style="width:7px; height:${Math.max(2, x.v / mx * 18)}px; background:${i === rec.length - 1 && partial && x.m === partial.key ? "#c7d2fe" : "#818cf8"}; border-radius:1px;"></span>`).join("")}</span> <span style="font-size:11px; color:var(--ink-faint);">${rec.map(x => x.v).join("·")}</span>`;
+    };
+    const maxTotal = rows[0] ? rows[0].total : 1;
+
+    area.innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><h2>🏆 연간 누적 혜택클릭 순위</h2></div>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+          <div class="segmented" id="annual-year-toggle">${years.map(y => `<button data-year="${y}" class="${y === annualState.year ? "active" : ""}">${y}년</button>`).join("")}</div>
+          <span style="font-size:12.5px; color:var(--ink-faint);">집계 기간 ${periodText} · 매장별 월간 혜택사용 합계${partial && months.includes(partial.key) ? " (이번 달은 일별 혜택클릭 합산)" : ""}</span>
+        </div>
+      </div>
+      <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">총 혜택클릭</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(grand)}<span class="unit">건</span></div></div><div class="kpi-sub">${periodText}</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">혜택클릭이 있었던 매장</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(rows.length)}<span class="unit">곳</span></div></div><div class="kpi-sub">제휴 중 ${activeRows.length}곳 · 해지 ${termRows.length}곳</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">상위 10곳 비중</div></div><div class="kpi-value-row"><div class="kpi-value">${grand ? (top10 / grand * 100).toFixed(1) : "-"}<span class="unit">%</span></div></div><div class="kpi-sub">${fmt(top10)}건</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">절반을 만든 매장 수</div></div><div class="kpi-value-row"><div class="kpi-value">${halfIdx >= 0 ? halfIdx + 1 : "-"}<span class="unit">곳</span></div></div><div class="kpi-sub">누적 50% 도달 순위</div></div>
+      </div>
+      <div class="section-card">
+        <div class="section-head"><h2>📌 인사이트</h2></div>
+        <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">${insights.map(t => `<li>${t}</li>`).join("")}</ul>
+      </div>
+      <div class="section-card">
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px;">
+          <input id="annual-search" class="store-search" placeholder="매장명·지역 검색" value="${annualState.query.replace(/"/g, "&quot;")}" style="flex:1; min-width:200px; max-width:320px; padding:9px 14px;">
+          <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="annual-active-only" ${annualState.activeOnly ? "checked" : ""}> 제휴 중만 보기</label>
+          <span style="font-size:12px; color:var(--ink-faint); margin-left:auto;">${fmt(total)}곳${!annualState.showAll && !q && total > 50 ? " 중 상위 50곳 표시" : ""}</span>
+        </div>
+        <div style="overflow-x:auto;">
+        <table class="rank-table">
+          <thead><tr>
+            <th style="width:44px;">순위</th><th>매장명</th><th>지역</th>
+            <th style="text-align:right">누적 혜택클릭</th><th style="text-align:right">전체 대비</th><th style="text-align:right">누적 %</th>
+            <th style="text-align:right">월평균</th><th>최근 3개월<br><span style="font-weight:500; color:var(--ink-faint);">${months.slice(-3).map(m => Number(m.slice(5))).join("·")}월</span></th><th>노출 시작</th>
+          </tr></thead>
+          <tbody>${shown.map(r => `<tr>
+            <td style="font-weight:700; ${r.rank <= 3 ? "color:var(--accent);" : ""}">${r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}</td>
+            <td>${r.name}${tag(r.status)}</td>
+            <td style="font-size:12px; color:var(--ink-soft);">${r.region || "-"}</td>
+            <td class="rank-val"><div style="display:flex; align-items:center; justify-content:flex-end; gap:8px;"><span style="display:inline-block; width:${Math.max(2, r.total / maxTotal * 70)}px; height:6px; background:#c7d2fe; border-radius:3px;"></span><b>${fmt(r.total)}</b></div></td>
+            <td class="rank-val">${r.share.toFixed(1)}%</td>
+            <td class="rank-val" style="color:var(--ink-faint);">${r.cumShare.toFixed(1)}%</td>
+            <td class="rank-val">${r.monthlyAvg.toFixed(1)}</td>
+            <td style="white-space:nowrap;">${spark(r.recent)}</td>
+            <td style="font-size:12px; color:var(--ink-soft);">${r.expose || "-"}</td>
+          </tr>`).join("") || `<tr><td colspan="9" class="empty-note">검색 결과가 없어요</td></tr>`}</tbody>
+        </table>
+        </div>
+        ${!annualState.showAll && !q && total > 50 ? `<div style="text-align:center; margin-top:10px;"><button id="annual-show-all" class="store-select" style="padding:7px 16px; cursor:pointer;">전체 ${fmt(total)}곳 보기</button></div>` : ""}
+        <div class="kpi-sub" style="margin-top:10px;">전체 대비 = 해당 연도 전체 매장 혜택클릭 중 이 매장 비중 · 누적 % = 1위부터 이 매장까지 합친 비중 · 월평균 = 첫 혜택클릭이 있던 달부터 완결된 달 기준으로 계산 · 최근 3개월 막대의 연한 색은 진행 중인 달</div>
+      </div>`;
+
+    area.querySelectorAll("#annual-year-toggle button").forEach(b => b.addEventListener("click", () => { annualState.year = b.dataset.year; annualState.showAll = false; renderAnnualRankTab(); }));
+    const cb = document.getElementById("annual-active-only"); if (cb) cb.addEventListener("change", e => { annualState.activeOnly = e.target.checked; renderAnnualRankTab(); });
+    const sa = document.getElementById("annual-show-all"); if (sa) sa.addEventListener("click", () => { annualState.showAll = true; renderAnnualRankTab(); });
+    const si = document.getElementById("annual-search");
+    if (si) si.addEventListener("input", e => {
+      annualState.query = e.target.value; const pos = e.target.selectionStart;
+      renderAnnualRankTab();
+      const ni = document.getElementById("annual-search"); if (ni) { ni.focus(); ni.setSelectionRange(pos, pos); }
+    });
+  }
+
   /* ================= 구독권 Tracking 탭 ================= */
   let COUPON_STATS = null;
   let PARTNER_STORE_INFO = null;
@@ -5899,6 +6049,7 @@ function extractBrand(name) {
       // 이벤트 Tracking 탭은 숨김 (코드는 유지, 필요 시 버튼과 아래 호출만 복구)
       // renderEventTab();
       renderCouponTab();
+      renderAnnualRankTab();
 
       renderHubTab();
       renderNewStoresTab();
