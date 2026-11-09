@@ -5042,9 +5042,10 @@ function extractBrand(name) {
   }
 
   /* ================= 연간 누적 순위 탭 ================= */
-  let annualState = { year: null, activeOnly: false, query: "", showAll: false };
+  let annualState = { year: null, quarter: "all", activeOnly: false, query: "", showAll: false };
+  const qMonths = q => [1, 2, 3].map(k => String((Number(q) - 1) * 3 + k).padStart(2, "0"));
 
-  function buildAnnualRanking(year) {
+  function buildAnnualRanking(year, quarter) {
     const sm = METRICS_DATA[STORE_KEY] || {};
     const base = sm.benefit_monthly_totals || sm.monthly_totals || {};
     const clickDaily = (METRICS_DATA.daily_store && METRICS_DATA.daily_store.daily_totals) || {};
@@ -5054,7 +5055,7 @@ function extractBrand(name) {
     const monthly = { ...base };
     let partial = null;
     if (curKey && !base[curKey]) { monthly[curKey] = aggregateDailyStoreForMonth(clickDaily, curKey); partial = { key: curKey, day: Number(last.slice(8)) }; }
-    const months = Object.keys(monthly).filter(m => m.startsWith(String(year))).sort();
+    const months = Object.keys(monthly).filter(m => m.startsWith(String(year)) && (!quarter || quarter === "all" || qMonths(quarter).includes(m.slice(5)))).sort();
     const per = {};
     months.forEach(m => Object.entries(monthly[m] || {}).forEach(([n, v]) => {
       if (!n || n === "null" || !v) return;
@@ -5086,7 +5087,19 @@ function extractBrand(name) {
     const years = Array.from(new Set(Object.keys(base).map(m => m.slice(0, 4)))).sort();
     if (!years.length) { area.innerHTML = `<div class="placeholder-panel"><div class="icon">🏆</div><h3>데이터 없음</h3></div>`; return; }
     if (!annualState.year || !years.includes(annualState.year)) annualState.year = years[years.length - 1];
-    const { rows, grand, months, partial } = buildAnnualRanking(annualState.year);
+    const allMonthsOfYear = Object.keys(base).concat(Object.keys((METRICS_DATA.daily_store || {}).daily_totals || {}).map(d => d.slice(0, 7))).filter(m => m.startsWith(annualState.year));
+    const quarters = ["1", "2", "3", "4"].filter(q => allMonthsOfYear.some(m => qMonths(q).includes(m.slice(5))));
+    if (annualState.quarter !== "all" && !quarters.includes(annualState.quarter)) annualState.quarter = "all";
+    const isQ = annualState.quarter !== "all";
+    const { rows, grand, months, partial } = buildAnnualRanking(annualState.year, annualState.quarter);
+    // 직전 기간 (분기: 직전 분기 / 연간: 전년)
+    let prevYear = annualState.year, prevQ = annualState.quarter, prevLabel = "";
+    if (isQ) { prevQ = String(Number(annualState.quarter) - 1); if (prevQ === "0") { prevQ = "4"; prevYear = String(Number(annualState.year) - 1); } prevLabel = `${prevYear === annualState.year ? "" : prevYear + "년 "}${prevQ}분기`; }
+    else { prevYear = String(Number(annualState.year) - 1); prevLabel = `${prevYear}년`; }
+    const prevRank = {};
+    if (years.includes(prevYear)) buildAnnualRanking(prevYear, isQ ? prevQ : "all").rows.forEach(r => { prevRank[r.name] = r.rank; });
+    const hasPrev = Object.keys(prevRank).length > 0;
+    const periodName = isQ ? `${annualState.year}년 ${annualState.quarter}분기` : `${annualState.year}년`;
     const nm = n => n.split(":")[0].trim();
     const bat = w => { const c = (w || "").trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 ? (c - 0xAC00) % 28 : (/[0-9]$/.test(w) ? 1 : 0); };
     const euro = w => w + (bat(w) && bat(w) !== 8 ? "으로" : "로");
@@ -5105,9 +5118,15 @@ function extractBrand(name) {
     const newcomers = rows.filter(r => r.expose && r.expose >= yStart && r.rank <= 30);
 
     const insights = [];
-    if (rows[0]) insights.push(`${annualState.year}년(${periodText}) 누적 1위는 <b>${euro(nm(rows[0].name))}</b> <b>${fmt(rows[0].total)}건</b>, 전체의 <b>${rows[0].share.toFixed(1)}%</b>예요${rows[1] ? ` · 2위 ${nm(rows[1].name)}(${fmt(rows[1].total)}건), 3위 ${rows[2] ? `${nm(rows[2].name)}(${fmt(rows[2].total)}건)` : "-"}` : ""}`);
+    if (rows[0]) insights.push(`${periodName}(${periodText}) 누적 1위는 <b>${euro(nm(rows[0].name))}</b> <b>${fmt(rows[0].total)}건</b>, 전체의 <b>${rows[0].share.toFixed(1)}%</b>예요${rows[1] ? ` · 2위 ${nm(rows[1].name)}(${fmt(rows[1].total)}건), 3위 ${rows[2] ? `${nm(rows[2].name)}(${fmt(rows[2].total)}건)` : "-"}` : ""}`);
     if (halfIdx >= 0) insights.push(`상위 <b>${halfIdx + 1}개 매장</b>이 전체 혜택클릭의 절반을 만들었어요 (전체 ${rows.length}곳 중 ${(((halfIdx + 1) / rows.length) * 100).toFixed(0)}%) — 상위 20% 매장(${top20n}곳)의 비중은 <b>${(top20 / grand * 100).toFixed(0)}%</b>예요`);
-    if (newcomers.length && annualState.year !== years[0]) insights.push(`올해 새로 노출된 매장 중 <b>${newcomers.length}곳</b>이 TOP 30에 들었어요: ${newcomers.slice(0, 5).map(r => `${nm(r.name)}(${r.rank}위)`).join(", ")}${newcomers.length > 5 ? " 등" : ""}`);
+    if (hasPrev) {
+      const climbers = rows.slice(0, 30).filter(r => prevRank[r.name]).map(r => ({ r, d: prevRank[r.name] - r.rank })).filter(x => x.d >= 10).sort((a, b) => b.d - a.d);
+      const fresh = rows.slice(0, 20).filter(r => !prevRank[r.name]);
+      if (climbers.length) insights.push(`${prevLabel} 대비 크게 오른 매장: ${climbers.slice(0, 4).map(x => `<b>${nm(x.r.name)}</b>(${prevRank[x.r.name]}→${x.r.rank}위)`).join(", ")}`);
+      if (fresh.length) insights.push(`${prevLabel}엔 없다가 TOP 20에 새로 들어온 매장: ${fresh.slice(0, 5).map(r => `<b>${nm(r.name)}</b>(${r.rank}위)`).join(", ")}`);
+    }
+    if (newcomers.length && annualState.year !== years[0] && !isQ) insights.push(`올해 새로 노출된 매장 중 <b>${newcomers.length}곳</b>이 TOP 30에 들었어요: ${newcomers.slice(0, 5).map(r => `${nm(r.name)}(${r.rank}위)`).join(", ")}${newcomers.length > 5 ? " 등" : ""}`);
     if (termRows.length) insights.push(`해지된 매장 ${termRows.length}곳에서 나온 혜택클릭은 ${fmt(termSum)}건(${(termSum / grand * 100).toFixed(1)}%)이에요`);
     const avgActive = activeRows.length ? activeRows.reduce((a, r) => a + r.monthlyAvg, 0) / activeRows.length : 0;
     if (activeRows.length) insights.push(`제휴 중인 매장의 월평균 혜택클릭은 매장당 <b>${avgActive.toFixed(1)}건</b>이에요 — 순위표의 "월평균"을 이 값과 비교해보면 매장별 활성도를 판단하기 좋아요`);
@@ -5129,14 +5148,18 @@ function extractBrand(name) {
 
     area.innerHTML = `
       <div class="section-card">
-        <div class="section-head"><h2>🏆 연간 누적 혜택클릭 순위</h2></div>
+        <div class="section-head"><h2>🏆 ${isQ ? "분기" : "연간"} 누적 혜택클릭 순위</h2></div>
         <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
           <div class="segmented" id="annual-year-toggle">${years.map(y => `<button data-year="${y}" class="${y === annualState.year ? "active" : ""}">${y}년</button>`).join("")}</div>
+          <div class="segmented" id="annual-quarter-toggle">
+            <button data-q="all" class="${!isQ ? "active" : ""}">연간</button>
+            ${quarters.map(q => `<button data-q="${q}" class="${annualState.quarter === q ? "active" : ""}">${q}분기</button>`).join("")}
+          </div>
           <span style="font-size:12.5px; color:var(--ink-faint);">집계 기간 ${periodText} · 매장별 월간 혜택사용 합계${partial && months.includes(partial.key) ? " (이번 달은 일별 혜택클릭 합산)" : ""}</span>
         </div>
       </div>
       <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
-        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">총 혜택클릭</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(grand)}<span class="unit">건</span></div></div><div class="kpi-sub">${periodText}</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">${periodName} 총 혜택클릭</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(grand)}<span class="unit">건</span></div></div><div class="kpi-sub">${periodText}</div></div>
         <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">혜택클릭이 있었던 매장</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(rows.length)}<span class="unit">곳</span></div></div><div class="kpi-sub">제휴 중 ${activeRows.length}곳 · 해지 ${termRows.length}곳</div></div>
         <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">상위 10곳 비중</div></div><div class="kpi-value-row"><div class="kpi-value">${grand ? (top10 / grand * 100).toFixed(1) : "-"}<span class="unit">%</span></div></div><div class="kpi-sub">${fmt(top10)}건</div></div>
         <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">절반을 만든 매장 수</div></div><div class="kpi-value-row"><div class="kpi-value">${halfIdx >= 0 ? halfIdx + 1 : "-"}<span class="unit">곳</span></div></div><div class="kpi-sub">누적 50% 도달 순위</div></div>
@@ -5154,12 +5177,13 @@ function extractBrand(name) {
         <div style="overflow-x:auto;">
         <table class="rank-table">
           <thead><tr>
-            <th style="width:44px;">순위</th><th>매장명</th><th>지역</th>
+            <th style="width:44px;">순위</th>${hasPrev ? `<th style="text-align:center; white-space:nowrap;">${isQ ? "전분기" : "전년"} 대비</th>` : ""}<th>매장명</th><th>지역</th>
             <th style="text-align:right">누적 혜택클릭</th><th style="text-align:right">전체 대비</th><th style="text-align:right">누적 %</th>
-            <th style="text-align:right">월평균</th><th>최근 3개월<br><span style="font-weight:500; color:var(--ink-faint);">${months.slice(-3).map(m => Number(m.slice(5))).join("·")}월</span></th><th>노출 시작</th>
+            <th style="text-align:right">월평균</th><th>${isQ ? "월별" : "최근 3개월"}<br><span style="font-weight:500; color:var(--ink-faint);">${months.slice(-3).map(m => Number(m.slice(5))).join("·")}월</span></th><th>노출 시작</th>
           </tr></thead>
           <tbody>${shown.map(r => `<tr>
             <td style="font-weight:700; ${r.rank <= 3 ? "color:var(--accent);" : ""}">${r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}</td>
+            ${hasPrev ? `<td style="text-align:center; font-size:12px; white-space:nowrap;">${(() => { const pr = prevRank[r.name]; if (!pr) return `<span style="color:var(--ink-faint);">NEW</span>`; const d = pr - r.rank; return d > 0 ? `<span style="color:var(--good); font-weight:700;">▲${d}</span>` : d < 0 ? `<span style="color:var(--bad); font-weight:700;">▼${-d}</span>` : `<span style="color:var(--ink-faint);">-</span>`; })()}</td>` : ""}
             <td>${r.name}${tag(r.status)}</td>
             <td style="font-size:12px; color:var(--ink-soft);">${r.region || "-"}</td>
             <td class="rank-val"><div style="display:flex; align-items:center; justify-content:flex-end; gap:8px;"><span style="display:inline-block; width:${Math.max(2, r.total / maxTotal * 70)}px; height:6px; background:#c7d2fe; border-radius:3px;"></span><b>${fmt(r.total)}</b></div></td>
@@ -5168,14 +5192,15 @@ function extractBrand(name) {
             <td class="rank-val">${r.monthlyAvg.toFixed(1)}</td>
             <td style="white-space:nowrap;">${spark(r.recent)}</td>
             <td style="font-size:12px; color:var(--ink-soft);">${r.expose || "-"}</td>
-          </tr>`).join("") || `<tr><td colspan="9" class="empty-note">검색 결과가 없어요</td></tr>`}</tbody>
+          </tr>`).join("") || `<tr><td colspan="${hasPrev ? 10 : 9}" class="empty-note">검색 결과가 없어요</td></tr>`}</tbody>
         </table>
         </div>
         ${!annualState.showAll && !q && total > 50 ? `<div style="text-align:center; margin-top:10px;"><button id="annual-show-all" class="store-select" style="padding:7px 16px; cursor:pointer;">전체 ${fmt(total)}곳 보기</button></div>` : ""}
-        <div class="kpi-sub" style="margin-top:10px;">전체 대비 = 해당 연도 전체 매장 혜택클릭 중 이 매장 비중 · 누적 % = 1위부터 이 매장까지 합친 비중 · 월평균 = 첫 혜택클릭이 있던 달부터 완결된 달 기준으로 계산 · 최근 3개월 막대의 연한 색은 진행 중인 달</div>
+        <div class="kpi-sub" style="margin-top:10px;">전체 대비 = 해당 연도 전체 매장 혜택클릭 중 이 매장 비중 · 누적 % = 1위부터 이 매장까지 합친 비중 · 월평균 = 첫 혜택클릭이 있던 달부터 완결된 달 기준으로 계산 · ${hasPrev ? `순위 변화는 ${prevLabel} 순위와 비교 (NEW = 그 기간엔 혜택클릭 없음)` : ""} · 최근 3개월 막대의 연한 색은 진행 중인 달</div>
       </div>`;
 
     area.querySelectorAll("#annual-year-toggle button").forEach(b => b.addEventListener("click", () => { annualState.year = b.dataset.year; annualState.showAll = false; renderAnnualRankTab(); }));
+    area.querySelectorAll("#annual-quarter-toggle button").forEach(b => b.addEventListener("click", () => { annualState.quarter = b.dataset.q; annualState.showAll = false; renderAnnualRankTab(); }));
     const cb = document.getElementById("annual-active-only"); if (cb) cb.addEventListener("change", e => { annualState.activeOnly = e.target.checked; renderAnnualRankTab(); });
     const sa = document.getElementById("annual-show-all"); if (sa) sa.addEventListener("click", () => { annualState.showAll = true; renderAnnualRankTab(); });
     const si = document.getElementById("annual-search");
