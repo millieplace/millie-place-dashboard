@@ -403,10 +403,8 @@
       <button data-tab="partner">제휴처별 데이터</button>
       <button data-tab="annual">연간 순위</button>
       <button data-tab="coupon">구독권 Tracking</button>
-      <button data-tab="hub">밀플 허브 페이지</button>
       <button data-tab="jeju981">제주 981</button>
       <button data-tab="urbanplay">어반플레이</button>
-      <button data-tab="spain">스페인 미술</button>
     </div>
 
     <div class="tab-panel active" id="tab-kpi">
@@ -6091,11 +6089,11 @@ function extractBrand(name) {
       renderCouponTab();
       renderAnnualRankTab();
 
-      renderHubTab();
+      // renderHubTab();  // 밀플 허브 페이지 탭 숨김 (버튼과 이 줄만 복구하면 다시 사용 가능)
       renderNewStoresTab();
       renderJeju981Tab();
       renderUrbanplayTab();
-      renderSpainTab();
+      // renderSpainTab();  // 스페인 미술 탭 숨김 (11/1 제휴 종료)
 
       document.getElementById("updated-at").textContent = data.updated_at || "-";
     } catch (e) {
