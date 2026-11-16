@@ -5490,6 +5490,9 @@ function extractBrand(name) {
   let urbanplayTrendChart = null;
   let urbanplayStoreCharts = [];
   let urbanplayDailyChart = null;
+  let urbanplayEvtCharts = [];
+  // 어반플레이 이벤트 설정 (다른 달 이벤트면 month만 바꾸면 됨)
+  const URBANPLAY_EVENT = { month: "2026-11", label: "11월 어반플레이 이벤트" };
 
   function renderUrbanplayTab() {
     const area = document.getElementById("urbanplay-area");
@@ -5584,11 +5587,97 @@ function extractBrand(name) {
     const partialIdx = curMonthPartial ? benefitMonths.indexOf(curMonthKey) : -1;
     const trendData = benefitMonths.map(m => URBANPLAY_STORES.reduce((a, name) => a + storeBenefitVal(m, name), 0));
 
+    // ── 11월 이벤트 성과 (일별 데이터 기준, 일평균으로 비교) ──
+    const EVT = URBANPLAY_EVENT;
+    const uvDailyAll = (METRICS_DATA.daily_store_uv && METRICS_DATA.daily_store_uv.daily_totals) || {};
+    const dayKeys = Object.keys(clickDaily).sort();
+    const lastDay = dayKeys.length ? dayKeys[dayKeys.length - 1] : null;
+    const evtStart = `${EVT.month}-01`;
+    const evtOn = !!(lastDay && lastDay >= evtStart);
+    const sumRange = (src, a, b, names) => Object.keys(src).filter(d => d >= a && d <= b).reduce((t, d) => t + names.reduce((x, n) => x + ((src[d] || {})[n] || 0), 0), 0);
+    const daysIn = (a, b) => Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 86400000) + 1;
+    const ymAdd = (ym, k) => { const [y, m] = ym.split("-").map(Number); const d = new Date(y, m - 1 + k, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+    const monthEnd = ym => { const [y, m] = ym.split("-").map(Number); return `${ym}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`; };
+    let evt = null;
+    if (evtOn) {
+      const evtEnd = lastDay < monthEnd(EVT.month) ? lastDay : monthEnd(EVT.month);
+      const evtDays = daysIn(evtStart, evtEnd);
+      const baseMonths = [ymAdd(EVT.month, -3), ymAdd(EVT.month, -2), ymAdd(EVT.month, -1)];
+      const bStart = `${baseMonths[0]}-01`, bEnd = monthEnd(baseMonths[2]);
+      const prevM = baseMonths[2];
+      const prevSameEnd = `${prevM}-${String(Math.min(evtDays, Number(monthEnd(prevM).slice(8)))).padStart(2, "0")}`;
+      const yoyM = ymAdd(EVT.month, -12);
+      const yoyEnd = `${yoyM}-${String(evtDays).padStart(2, "0")}`;
+      const hasYoy = Object.keys(clickDaily).some(d => d.startsWith(yoyM));
+      const calc = (src, names) => {
+        const cur = sumRange(src, evtStart, evtEnd, names) / evtDays;
+        const base = sumRange(src, bStart, bEnd, names) / daysIn(bStart, bEnd);
+        const prevSame = sumRange(src, `${prevM}-01`, prevSameEnd, names) / daysIn(`${prevM}-01`, prevSameEnd);
+        const yoy = hasYoy ? sumRange(src, `${yoyM}-01`, yoyEnd, names) / evtDays : null;
+        const lift = (a, b) => (b > 0 ? (a - b) / b * 100 : null);
+        return { cur, base, prevSame, yoy, liftBase: lift(cur, base), liftPrev: lift(cur, prevSame), liftYoy: yoy !== null ? lift(cur, yoy) : null, total: sumRange(src, evtStart, evtEnd, names) };
+      };
+      const clk = calc(clickDaily, URBANPLAY_STORES), uv = calc(uvDailyAll, URBANPLAY_STORES);
+      const perStore = URBANPLAY_STORES.map(n => ({ name: n, clk: calc(clickDaily, [n]), uv: calc(uvDailyAll, [n]) })).sort((a, b) => (b.clk.cur - b.clk.base) - (a.clk.cur - a.clk.base));
+      // 월별 일평균 (최근 12개월, 이벤트 월 포함)
+      const months = [];
+      for (let k = -11; k <= 0; k++) months.push(ymAdd(EVT.month, k));
+      const monthAvg = (src, ym) => { const a = `${ym}-01`; const b = ym === EVT.month ? evtEnd : monthEnd(ym); if (!Object.keys(src).some(d => d >= a && d <= b)) return null; return sumRange(src, a, b, URBANPLAY_STORES) / daysIn(a, b); };
+      const mClk = months.map(m => monthAvg(clickDaily, m)), mUv = months.map(m => monthAvg(uvDailyAll, m));
+      // 누적 페이스 (이벤트 월 vs 직전 월 vs 기준 3개월 평균)
+      const cumOf = (ym, upto) => { const out = []; let c = 0; for (let d = 1; d <= upto; d++) { const k = `${ym}-${String(d).padStart(2, "0")}`; c += URBANPLAY_STORES.reduce((x, n) => x + ((clickDaily[k] || {})[n] || 0), 0); out.push(c); } return out; };
+      const fullDays = Number(monthEnd(EVT.month).slice(8));
+      const paceCur = cumOf(EVT.month, evtDays);
+      const pacePrev = cumOf(prevM, Math.min(fullDays, Number(monthEnd(prevM).slice(8))));
+      const paceBase = Array.from({ length: fullDays }, (_, i) => clk.base * (i + 1));
+      evt = { evtEnd, evtDays, baseMonths, prevM, yoyM, hasYoy, clk, uv, perStore, months, mClk, mUv, paceCur, pacePrev, paceBase, fullDays, partial: evtEnd < monthEnd(EVT.month) };
+    }
+
     area.innerHTML = `
       <div class="section-card">
         <div class="section-head"><h2>🏙️ 어반플레이 제휴 매장 분석</h2></div>
         <div style="font-size:12.5px; color:var(--ink-faint);">fyi 역삼 · 연남장 · 연남방앗간 DDP점 · 연남방앗간 서울역점 · 캐비넷클럽라운지 역삼점 · 5개 매장 통합 분석 (어반플레이 미팅 참고용)</div>
       </div>
+
+      ${evt ? (() => {
+        const mo = ym => `${Number(ym.slice(5))}월`;
+        const baseLbl = `${mo(evt.baseMonths[0])}~${mo(evt.baseMonths[2])}`;
+        const lspan = v => v === null ? "-" : liftSpan(v);
+        const big = (v) => v === null ? "-" : `<span style="color:${v >= 0 ? "var(--good)" : "var(--bad)"};">${v >= 0 ? "▲" : "▼"}${Math.abs(v).toFixed(0)}%</span>`;
+        const top = evt.perStore[0];
+        const evtIns = [];
+        evtIns.push(`${mo(EVT.month)}(1~${evt.evtDays}일) 5개 매장 혜택클릭은 <b>${fmt(evt.clk.total)}건</b>, 하루 평균 <b>${evt.clk.cur.toFixed(1)}건</b>으로 평소(${baseLbl} 일평균 ${evt.clk.base.toFixed(1)}건) 대비 ${lspan(evt.clk.liftBase)}예요`);
+        evtIns.push(`상세페이지 방문(UV)도 하루 평균 <b>${evt.uv.cur.toFixed(1)}명</b>으로 평소(${evt.uv.base.toFixed(1)}명) 대비 ${lspan(evt.uv.liftBase)} — ${evt.uv.liftBase !== null && evt.clk.liftBase !== null && evt.uv.liftBase > evt.clk.liftBase + 10 ? "방문은 늘었지만 혜택까지 이어지는 비율은 아직 낮아요" : evt.clk.liftBase !== null && evt.uv.liftBase !== null && evt.clk.liftBase > evt.uv.liftBase + 10 ? "방문 대비 혜택 이용이 더 크게 늘어, 방문한 고객의 참여가 좋아요" : "방문과 혜택 이용이 비슷한 폭으로 움직이고 있어요"}`);
+        if (evt.hasYoy && evt.clk.liftYoy !== null) evtIns.push(`작년 같은 기간(${mo(evt.yoyM)} 1~${evt.evtDays}일) 일평균 ${evt.clk.yoy.toFixed(1)}건과 비교하면 ${lspan(evt.clk.liftYoy)}예요`);
+        if (top && top.clk.cur > top.clk.base) evtIns.push(`가장 크게 반응한 곳은 <b>${top.name}</b> — 하루 평균 ${top.clk.base.toFixed(1)}건 → ${top.clk.cur.toFixed(1)}건(${lspan(top.clk.liftBase)})`);
+        const paceNow = evt.paceCur[evt.paceCur.length - 1] || 0, paceBaseNow = evt.paceBase[evt.evtDays - 1] || 0;
+        if (paceBaseNow > 0) evtIns.push(`누적으로 보면 평소 페이스(${fmt(paceBaseNow)}건)보다 <b>${fmt(paceNow - paceBaseNow)}건 ${paceNow >= paceBaseNow ? "앞서" : "뒤처져"}</b> 있어요${evt.partial ? ` · 이 속도면 ${mo(EVT.month)} 한 달 약 <b>${fmt(evt.clk.cur * evt.fullDays)}건</b>이 예상돼요` : ""}`);
+        return `
+      <div class="section-card" style="border:2px solid #c7d2fe;">
+        <div class="section-head"><h2>🎉 ${EVT.label} 성과 <span style="font-size:12px; font-weight:500; color:var(--ink-faint);">${mo(EVT.month)} 1~${evt.evtDays}일${evt.partial ? " · 진행 중" : ""} · 일평균 기준 비교</span></h2></div>
+        <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:12px;">
+          <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">혜택클릭 일평균 · 평소 대비</div></div><div class="kpi-value-row"><div class="kpi-value" style="font-size:30px;">${big(evt.clk.liftBase)}</div></div><div class="kpi-sub">${evt.clk.base.toFixed(1)} → <b>${evt.clk.cur.toFixed(1)}건</b>/일 (${baseLbl} 평균)</div></div>
+          <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">상세페이지 UV 일평균 · 평소 대비</div></div><div class="kpi-value-row"><div class="kpi-value" style="font-size:30px;">${big(evt.uv.liftBase)}</div></div><div class="kpi-sub">${evt.uv.base.toFixed(1)} → <b>${evt.uv.cur.toFixed(1)}명</b>/일</div></div>
+          <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">혜택클릭 · ${mo(evt.prevM)} 같은 기간 대비</div></div><div class="kpi-value-row"><div class="kpi-value">${big(evt.clk.liftPrev)}</div></div><div class="kpi-sub">${mo(evt.prevM)} 1~${evt.evtDays}일 일평균 ${evt.clk.prevSame.toFixed(1)}건</div></div>
+          <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">혜택클릭 · 전년 같은 기간 대비</div></div><div class="kpi-value-row"><div class="kpi-value">${evt.hasYoy ? big(evt.clk.liftYoy) : "-"}</div></div><div class="kpi-sub">${evt.hasYoy ? `${mo(evt.yoyM)} 1~${evt.evtDays}일 일평균 ${evt.clk.yoy.toFixed(1)}건` : "전년 데이터 없음"}</div></div>
+        </div>
+        <ul style="margin:0 0 14px; padding-left:18px; font-size:13.5px; line-height:1.9;">${evtIns.map(t => `<li>${t}</li>`).join("")}</ul>
+        <div class="two-col" style="gap:18px;">
+          <div><div style="font-size:13px; font-weight:700; margin-bottom:6px;">월별 혜택클릭 일평균</div><div class="trend-chart-wrap"><canvas id="urbanplayEvtClk"></canvas></div></div>
+          <div><div style="font-size:13px; font-weight:700; margin-bottom:6px;">월별 상세페이지 UV 일평균</div><div class="trend-chart-wrap"><canvas id="urbanplayEvtUv"></canvas></div></div>
+        </div>
+        <div style="margin-top:16px;"><div style="font-size:13px; font-weight:700; margin-bottom:6px;">누적 페이스 — ${mo(EVT.month)} vs ${mo(evt.prevM)} vs 평소</div><div class="trend-chart-wrap"><canvas id="urbanplayEvtPace"></canvas></div></div>
+        <div style="margin-top:16px; overflow-x:auto;">
+          <table class="rank-table">
+            <thead><tr><th>매장</th><th style="text-align:right">평소 혜택클릭/일<br><span style="font-weight:500; color:var(--ink-faint);">${baseLbl}</span></th><th style="text-align:right">${mo(EVT.month)} 혜택클릭/일</th><th style="text-align:right">상승률</th><th style="text-align:right">평소 UV/일</th><th style="text-align:right">${mo(EVT.month)} UV/일</th><th style="text-align:right">상승률</th></tr></thead>
+            <tbody>${evt.perStore.map(r => `<tr><td>${r.name}</td><td class="rank-val" style="color:var(--ink-faint);">${r.clk.base.toFixed(2)}</td><td class="rank-val"><b>${r.clk.cur.toFixed(2)}</b></td><td class="rank-val">${lspan(r.clk.liftBase)}</td><td class="rank-val" style="color:var(--ink-faint);">${r.uv.base.toFixed(1)}</td><td class="rank-val"><b>${r.uv.cur.toFixed(1)}</b></td><td class="rank-val">${lspan(r.uv.liftBase)}</td></tr>`).join("")}
+              <tr style="font-weight:700; border-top:2px solid var(--border);"><td>5개 매장 합계</td><td class="rank-val">${evt.clk.base.toFixed(2)}</td><td class="rank-val">${evt.clk.cur.toFixed(2)}</td><td class="rank-val">${lspan(evt.clk.liftBase)}</td><td class="rank-val">${evt.uv.base.toFixed(1)}</td><td class="rank-val">${evt.uv.cur.toFixed(1)}</td><td class="rank-val">${lspan(evt.uv.liftBase)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="kpi-sub" style="margin-top:8px;">일별 매장 데이터(혜택클릭·상세페이지 UV) 기준 · 진행 중인 달도 비교할 수 있게 모두 일평균으로 계산 · 평소 = 이벤트 직전 3개월(${baseLbl}) 일평균</div>
+      </div>`;
+      })() : ""}
 
       <div class="section-card">
         <div class="section-head"><h2>📌 종합 인사이트 (혜택사용 기준)</h2></div>
@@ -5702,6 +5791,52 @@ function extractBrand(name) {
         },
       },
     });
+
+    urbanplayEvtCharts.forEach(c => c && c.destroy()); urbanplayEvtCharts = [];
+    if (evt) {
+      const mo = ym => `${Number(ym.slice(5))}월`;
+      const baseLine = v => evt.months.map(() => v);
+      const mk = (id, vals, base, color, unit) => {
+        const el = document.getElementById(id); if (!el) return;
+        urbanplayEvtCharts.push(new Chart(el, {
+          data: {
+            labels: evt.months.map(m => (m === EVT.month ? [mo(m), evt.partial ? "(진행 중)" : "이벤트"] : `${m.slice(2, 4)}.${m.slice(5)}`)),
+            datasets: [
+              { type: "bar", label: "일평균", data: vals, backgroundColor: evt.months.map(m => m === EVT.month ? color : "#d1d5db"), borderRadius: 4, maxBarThickness: 26 },
+              { type: "line", label: "평소(직전 3개월)", data: baseLine(base), borderColor: "#6b7280", borderDash: [5, 4], borderWidth: 1.4, pointRadius: 0 },
+            ],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false },
+              datalabels: { display: c => c.dataset.type === "bar" && c.raw !== null, anchor: "end", align: "top", offset: 1, font: { size: 10, weight: 600 }, color: c => evt.months[c.dataIndex] === EVT.month ? color : "#9ca3af", formatter: v => v === null ? "" : v.toFixed(1) },
+              tooltip: { callbacks: { label: c => c.dataset.type === "line" ? `평소 ${c.parsed.y.toFixed(1)}${unit}/일` : `일평균 ${c.parsed.y === null ? "-" : c.parsed.y.toFixed(1)}${unit}` } } },
+            layout: { padding: { top: 16 } },
+            scales: { x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 10 }, maxRotation: 0 } }, y: { beginAtZero: true, grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 10 } } } },
+          },
+        }));
+      };
+      mk("urbanplayEvtClk", evt.mClk, evt.clk.base, "#6366f1", "건");
+      mk("urbanplayEvtUv", evt.mUv, evt.uv.base, "#06b6d4", "명");
+      const pEl = document.getElementById("urbanplayEvtPace");
+      if (pEl) urbanplayEvtCharts.push(new Chart(pEl, {
+        type: "line",
+        data: {
+          labels: Array.from({ length: evt.fullDays }, (_, i) => `${i + 1}일`),
+          datasets: [
+            { label: `${mo(EVT.month)} 누적`, data: evt.paceCur, borderColor: "#6366f1", backgroundColor: "rgba(99,102,241,0.12)", fill: true, borderWidth: 2.6, pointRadius: 0, tension: 0.25 },
+            { label: `${mo(evt.prevM)} 누적`, data: evt.pacePrev, borderColor: "#9ca3af", borderWidth: 1.6, pointRadius: 0, tension: 0.25 },
+            { label: "평소 페이스", data: evt.paceBase, borderColor: "#6b7280", borderDash: [5, 4], borderWidth: 1.2, pointRadius: 0 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+          plugins: { legend: { position: "top", align: "end", labels: { boxWidth: 12, boxHeight: 2, font: { size: 11 } } }, datalabels: { display: false },
+            tooltip: { callbacks: { label: c => c.parsed.y === null ? "" : `${c.dataset.label}: ${Math.round(c.parsed.y)}건` } } },
+          scales: { x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 10 }, maxTicksLimit: 10, maxRotation: 0 } }, y: { beginAtZero: true, grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 10 }, precision: 0 } } },
+        },
+      }));
+    }
 
     if (urbanplayDailyChart) { urbanplayDailyChart.destroy(); urbanplayDailyChart = null; }
     const dCanvas = document.getElementById("urbanplayDailyChart");
