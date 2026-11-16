@@ -287,14 +287,6 @@
   "size": "중형",
   "address": "서울 서대문구 연희로25길 66 지층"
  },
- "쓰리어클락 김포": {
-  "status": "제휴 중",
-  "expose": "2025-06-16",
-  "sido": "경기",
-  "gugun": "김포시",
-  "size": "소형",
-  "address": "경기 김포시 김포한강1로 247 115호"
- },
  "캣냅": {
   "status": "제휴 중",
   "expose": "2025-06-16",
@@ -1063,14 +1055,6 @@
   "size": null,
   "address": "서울 용산구 청파로45길 14 지하1층"
  },
- "스페인 미술 500년: 빛과 어둠의 연대기": {
-  "status": "해지",
-  "expose": "2026-10-01",
-  "sido": "서울",
-  "gugun": "서초구",
-  "size": null,
-  "address": "서울특별시 서초구 서초동 700번지"
- },
  "콜로라도 프로젝트": {
   "status": "제휴 중",
   "expose": "2026-09-21",
@@ -1102,14 +1086,6 @@
   "gugun": "대덕구",
   "size": null,
   "address": "대전광역시 대덕구 신탄진로 679 2층 (평촌동)"
- },
- "이스트만필름랩": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": "서울",
-  "gugun": "종로구",
-  "size": null,
-  "address": "서울특별시 종로구 종로44길 26 2층"
  },
  "카페 라이츠": {
   "status": "제휴 중",
@@ -1351,22 +1327,6 @@
   "size": null,
   "address": "광주광역시 동구 장동로 23-10 1층"
  },
- "업스탠딩": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
-  "gugun": null,
-  "size": null,
-  "address": null
- },
- "치치하하": {
-  "status": "제휴 중",
-  "expose": "2026-10-26",
-  "sido": "광주",
-  "gugun": "동구",
-  "size": null,
-  "address": "광주광역시 동구 경양로 350 1층"
- },
  "물흐르듯": {
   "status": "제휴 중",
   "expose": "2026-10-21",
@@ -1410,7 +1370,7 @@
  "숨은책방": {
   "status": "제휴 중",
   "expose": "2026-10-23",
-  "sido": "강원",
+  "sido": "강원도",
   "gugun": "속초",
   "size": null,
   "address": "강원도 속초시 바람꽃마을길 160-3 숨은책방"
@@ -1418,30 +1378,150 @@
  "코모레커피": {
   "status": "제휴 중",
   "expose": "2026-10-23",
-  "sido": "경기",
+  "sido": "경기도",
   "gugun": "안양",
   "size": null,
   "address": "경기도 안양시 만안구 안양로 481 1,2층"
  },
+ "치치하하": {
+  "status": "제휴 중",
+  "expose": "2026-10-26",
+  "sido": "광주",
+  "gugun": "동구",
+  "size": null,
+  "address": "광주광역시 동구 경양로 350 1층"
+ },
  "호미카페": {
   "status": "제휴 중",
   "expose": "2026-10-30",
-  "sido": null,
-  "gugun": null,
+  "sido": "경기도",
+  "gugun": "파주",
   "size": null,
-  "address": null
+  "address": "경기도 파주시 운정역길 250 1층"
  },
  "라이키": {
   "status": "제휴 중",
   "expose": "2026-10-30",
+  "sido": "강원",
+  "gugun": "춘천",
+  "size": null,
+  "address": "강원도 춘천시 삭주로 33 1층(라이키)"
+ },
+ "영원": {
+  "status": "제휴 중",
+  "expose": "2026-10-30",
+  "sido": "서울",
+  "gugun": "서대문구",
+  "size": null,
+  "address": "서울특별시 서대문구 성산로 303 2층"
+ },
+ "상상플랫폼": {
+  "status": "11월 단기",
+  "expose": "2026-11-01",
   "sido": null,
   "gugun": null,
   "size": null,
   "address": null
  },
- "영원": {
-  "status": "제휴 중",
-  "expose": "2026-10-30",
+ "업스탠딩": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "여가시간": {
+  "status": "제휴예정",
+  "expose": "2026-11-11",
+  "sido": "서울",
+  "gugun": "광진구",
+  "size": null,
+  "address": "서울 광진구 능동로 162 3층"
+ },
+ "초고록 책방": {
+  "status": "제휴예정",
+  "expose": "2026-11-11",
+  "sido": "서울",
+  "gugun": "중구",
+  "size": null,
+  "address": "대구 중구 공평로8길 32 2층"
+ },
+ "카우치포테이토": {
+  "status": "제휴예정",
+  "expose": "2026-11-11",
+  "sido": "서울",
+  "gugun": "광진구",
+  "size": null,
+  "address": "서울 광진구 능동로13길 70-1 2층"
+ },
+ "플랫": {
+  "status": "제휴예정",
+  "expose": "2026-11-11",
+  "sido": "경기",
+  "gugun": "화성",
+  "size": null,
+  "address": "경기 화성시 동탄구 동탄대로14길 6-34 1층 플랫 동탄점"
+ },
+ "책한모금": {
+  "status": "제휴예정",
+  "expose": "2026-11-12",
+  "sido": "경기",
+  "gugun": "김포",
+  "size": null,
+  "address": "경기 김포시 초당로61번길 20-3 1층"
+ },
+ "환상소설집": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "북카페 파오": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "토오쿠 커피 로스터스": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "웨이스테이션": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "하이타이드커피": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "예민함하우스": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "오감": {
+  "status": "제휴예정",
+  "expose": null,
   "sido": null,
   "gugun": null,
   "size": null,
