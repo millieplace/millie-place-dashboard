@@ -1471,29 +1471,21 @@
   "size": null,
   "address": "경기 김포시 초당로61번길 20-3 1층"
  },
- "환상소설집": {
+ "어거스타": {
   "status": "제휴예정",
-  "expose": null,
-  "sido": null,
-  "gugun": null,
+  "expose": "2026-11-16",
+  "sido": "부산",
+  "gugun": "수영구",
   "size": null,
-  "address": null
+  "address": "부산광역시 수영구 무학로33번길 43 2층"
  },
- "북카페 파오": {
+ "하이타이드커피": {
   "status": "제휴예정",
-  "expose": null,
-  "sido": null,
-  "gugun": null,
+  "expose": "2026-11-16",
+  "sido": "전남",
+  "gugun": "광주",
   "size": null,
-  "address": null
- },
- "토오쿠 커피 로스터스": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
-  "gugun": null,
-  "size": null,
-  "address": null
+  "address": "전남광주 동구 제봉로98번길 5 1층"
  },
  "웨이스테이션": {
   "status": "제휴예정",
@@ -1503,7 +1495,7 @@
   "size": null,
   "address": null
  },
- "하이타이드커피": {
+ "토오쿠 커피 로스터스": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
@@ -1520,6 +1512,22 @@
   "address": null
  },
  "오감": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "북카페 파오": {
+  "status": "제휴예정",
+  "expose": null,
+  "sido": null,
+  "gugun": null,
+  "size": null,
+  "address": null
+ },
+ "헤일로": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
