@@ -1,18 +1,18 @@
 {
-  "captured_at": "2026-11-17 14:12:59 KST",
+  "captured_at": "2026-11-19 10:07:21 KST",
   "source_url": "https://www.millie.co.kr/v4/millieplace",
   "slides": [
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6ae42b3098ce3.jpg",
-      "title": "영감이 필요한 날, · 공명으로 오세요",
-      "subtitle": "밀리플레이스의 새로운 공간을 소개해요",
-      "place_seq": "1231"
-    },
     {
       "image": "https://image.millie.co.kr/service/hero_banner/6af5598117515.jpg",
       "title": "동네한바퀴 인터뷰 · 토끼인지 곰인지",
       "subtitle": "캐릭터 믹스가 사는 용인 리드엑스",
       "place_seq": "1219"
+    },
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6ae42b3098ce3.jpg",
+      "title": "영감이 필요한 날, · 공명으로 오세요",
+      "subtitle": "밀리플레이스의 새로운 공간을 소개해요",
+      "place_seq": "1231"
     },
     {
       "image": "https://image.millie.co.kr/service/hero_banner/6af559c84e5c8.jpg",
