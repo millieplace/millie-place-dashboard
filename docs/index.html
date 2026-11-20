@@ -6012,7 +6012,7 @@ function extractBrand(name) {
           <div class="section-card">
             <div class="section-head"><h2>👥 방문객 인구통계 (${latestMonth}, 두 매장 통합)</h2></div>
             <ul style="margin:0 0 12px; padding-left:18px; font-size:13.5px; line-height:1.9;">
-              <li>가장 큰 그룹은 <b>${demoGroupLabel(sorted[0][0])}</b>로, 전체의 <b>${demoShareOf(groups, total, sorted[0][0]).toFixed(1)}%</b>를 차지해요</li>
+              <li>가장 큰 그룹은 <b>${demoGroupLabel(sorted[0][0])}</b>${(() => { const w = demoGroupLabel(sorted[0][0]); const c = w.slice(-1).charCodeAt(0); const b = c >= 0xAC00 && c <= 0xD7A3 ? (c - 0xAC00) % 28 : 0; return b && b !== 8 ? "으로" : "로"; })()}, 전체의 <b>${demoShareOf(groups, total, sorted[0][0]).toFixed(1)}%</b>를 차지해요</li>
               ${fShare !== null ? `<li>여성 비중은 <b>${fShare.toFixed(1)}%</b>예요</li>` : ""}
             </ul>
             <table class="rank-table">
