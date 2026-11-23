@@ -374,6 +374,15 @@
         "https://image.millie.co.kr/service/hero_banner/6af559c84e5c8.jpg",
         "https://image.millie.co.kr/service/hero_banner/6af5598117515.jpg"
       ]
+    },
+    "2026-11-23": {
+      "images": [
+        "https://image.millie.co.kr/service/hero_banner/6afd689a97164.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6afd68fa8226c.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6ae42b3098ce3.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6ac928f95a5fd.jpg",
+        "https://image.millie.co.kr/service/hero_banner/6afd7028498e2.jpg"
+      ]
     }
   },
   "meta": {
@@ -551,6 +560,21 @@
       "title": "동네한바퀴 인터뷰 · 걸어서 영원속으로",
       "subtitle": "입간판을 찾아오세요, 연희동 영원",
       "place_seq": "1255"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6afd689a97164.jpg": {
+      "title": "동네한바퀴 인터뷰 · 직접 읽고 손으로 쓴",
+      "subtitle": "추천 카드가 있는 서귀포 솜양책방",
+      "place_seq": "1217"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6afd68fa8226c.jpg": {
+      "title": "동네한바퀴 인터뷰 · 하루의 작은 항구",
+      "subtitle": "호주 커피와 한옥 뷰, 대구 하버커피",
+      "place_seq": "1208"
+    },
+    "https://image.millie.co.kr/service/hero_banner/6afd7028498e2.jpg": {
+      "title": "서울에만 100곳, · 오늘은 어디로 갈까요",
+      "subtitle": "11월 소식 모음, 월간 밀리플레이스",
+      "place_seq": "1234"
     }
   }
 }

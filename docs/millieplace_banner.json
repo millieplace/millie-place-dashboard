@@ -1,7 +1,19 @@
 {
-  "captured_at": "2026-11-20 14:02:35 KST",
+  "captured_at": "2026-11-23 09:59:57 KST",
   "source_url": "https://www.millie.co.kr/v4/millieplace",
   "slides": [
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6afd689a97164.jpg",
+      "title": "동네한바퀴 인터뷰 · 직접 읽고 손으로 쓴",
+      "subtitle": "추천 카드가 있는 서귀포 솜양책방",
+      "place_seq": "1217"
+    },
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6afd68fa8226c.jpg",
+      "title": "동네한바퀴 인터뷰 · 하루의 작은 항구",
+      "subtitle": "호주 커피와 한옥 뷰, 대구 하버커피",
+      "place_seq": "1208"
+    },
     {
       "image": "https://image.millie.co.kr/service/hero_banner/6ae42b3098ce3.jpg",
       "title": "영감이 필요한 날, · 공명으로 오세요",
@@ -15,16 +27,10 @@
       "place_seq": "1222"
     },
     {
-      "image": "https://image.millie.co.kr/service/hero_banner/6af559c84e5c8.jpg",
-      "title": "동네한바퀴 인터뷰 · 걸어서 영원속으로",
-      "subtitle": "입간판을 찾아오세요, 연희동 영원",
-      "place_seq": "1255"
-    },
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6af5598117515.jpg",
-      "title": "동네한바퀴 인터뷰 · 토끼인지 곰인지",
-      "subtitle": "캐릭터 믹스가 사는 용인 리드엑스",
-      "place_seq": "1219"
+      "image": "https://image.millie.co.kr/service/hero_banner/6afd7028498e2.jpg",
+      "title": "서울에만 100곳, · 오늘은 어디로 갈까요",
+      "subtitle": "11월 소식 모음, 월간 밀리플레이스",
+      "place_seq": "1234"
     }
   ],
   "error": null
