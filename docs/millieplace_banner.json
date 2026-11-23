@@ -1,7 +1,13 @@
 {
-  "captured_at": "2026-11-23 09:59:57 KST",
+  "captured_at": "2026-11-23 10:01:56 KST",
   "source_url": "https://www.millie.co.kr/v4/millieplace",
   "slides": [
+    {
+      "image": "https://image.millie.co.kr/service/hero_banner/6afd7028498e2.jpg",
+      "title": "서울에만 100곳, · 오늘은 어디로 갈까요",
+      "subtitle": "11월 소식 모음, 월간 밀리플레이스",
+      "place_seq": "1234"
+    },
     {
       "image": "https://image.millie.co.kr/service/hero_banner/6afd689a97164.jpg",
       "title": "동네한바퀴 인터뷰 · 직접 읽고 손으로 쓴",
@@ -25,12 +31,6 @@
       "title": "새로운 밀리플레이스 · 확인하고 선물 받으세요",
       "subtitle": "책 읽기 좋은 카페 가배도 삼행시 이벤트",
       "place_seq": "1222"
-    },
-    {
-      "image": "https://image.millie.co.kr/service/hero_banner/6afd7028498e2.jpg",
-      "title": "서울에만 100곳, · 오늘은 어디로 갈까요",
-      "subtitle": "11월 소식 모음, 월간 밀리플레이스",
-      "place_seq": "1234"
     }
   ],
   "error": null
