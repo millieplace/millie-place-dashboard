@@ -31,6 +31,14 @@
   "size": "대형",
   "address": "경기 남양주시 다산순환로 20 다산 현대프리미어캠퍼스몰 A동 B1F-1F"
  },
+ "인크커피 하남점": {
+  "status": "제휴 중",
+  "expose": "2025-04-15",
+  "sido": "경기",
+  "gugun": "하남시",
+  "size": "대형",
+  "address": "경기 하남시 미사대로 550 C동 1층 42~47호"
+ },
  "마하 한남": {
   "status": "제휴 중",
   "expose": "2025-04-15",
@@ -1423,16 +1431,8 @@
   "size": null,
   "address": null
  },
- "업스탠딩": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
-  "gugun": null,
-  "size": null,
-  "address": null
- },
  "여가시간": {
-  "status": "제휴예정",
+  "status": "계약서 작성 중",
   "expose": "2026-11-11",
   "sido": "서울",
   "gugun": "광진구",
@@ -1440,7 +1440,7 @@
   "address": "서울 광진구 능동로 162 3층"
  },
  "초고록 책방": {
-  "status": "제휴예정",
+  "status": "계약서 작성 중",
   "expose": "2026-11-11",
   "sido": "서울",
   "gugun": "중구",
@@ -1448,7 +1448,7 @@
   "address": "대구 중구 공평로8길 32 2층"
  },
  "카우치포테이토": {
-  "status": "제휴예정",
+  "status": "계약서 작성 중",
   "expose": "2026-11-11",
   "sido": "서울",
   "gugun": "광진구",
@@ -1456,7 +1456,7 @@
   "address": "서울 광진구 능동로13길 70-1 2층"
  },
  "플랫": {
-  "status": "제휴예정",
+  "status": "계약서 작성 중",
   "expose": "2026-11-11",
   "sido": "경기",
   "gugun": "화성",
@@ -1464,7 +1464,7 @@
   "address": "경기 화성시 동탄구 동탄대로14길 6-34 1층 플랫 동탄점"
  },
  "책한모금": {
-  "status": "제휴예정",
+  "status": "계약서 작성 중",
   "expose": "2026-11-12",
   "sido": "경기",
   "gugun": "김포",
@@ -1472,7 +1472,7 @@
   "address": "경기 김포시 초당로61번길 20-3 1층"
  },
  "어거스타": {
-  "status": "제휴예정",
+  "status": "계약서 작성 중",
   "expose": "2026-11-16",
   "sido": "부산",
   "gugun": "수영구",
@@ -1480,20 +1480,84 @@
   "address": "부산광역시 수영구 무학로33번길 43 2층"
  },
  "하이타이드커피": {
-  "status": "제휴예정",
+  "status": "계약서 작성 중",
   "expose": "2026-11-16",
   "sido": "전남",
   "gugun": "광주",
   "size": null,
   "address": "전남광주 동구 제봉로98번길 5 1층"
  },
- "웨이스테이션": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
-  "gugun": null,
+ "북카페파오": {
+  "status": "계약서 작성 중",
+  "expose": "2026-11-20",
+  "sido": "서울",
+  "gugun": "서대문구",
   "size": null,
-  "address": null
+  "address": "서울특별시 서대문구 이화여대길 34 신흥빌딩 3층 파오"
+ },
+ "라누벨": {
+  "status": "계약서 작성 중",
+  "expose": "2026-11-23",
+  "sido": "부산",
+  "gugun": "하남",
+  "size": null,
+  "address": "경기도 하남시 감일백제로 111 1층 109~113호"
+ },
+ "모재": {
+  "status": "계약서 작성 중",
+  "expose": "2026-11-23",
+  "sido": "서울",
+  "gugun": "관악구",
+  "size": null,
+  "address": "서울특별시 관악구 남부순환로 1846-1 B1층"
+ },
+ "하우스 오플비": {
+  "status": "계약서 작성 중",
+  "expose": "2026-11-23",
+  "sido": "서울",
+  "gugun": "강동구",
+  "size": null,
+  "address": "서울특별시 강동구 성내로3길 37 1층 오플비"
+ },
+ "예민함하우스": {
+  "status": "계약서 작성 중",
+  "expose": "2026-11-23",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": null,
+  "address": "서울특별시 마포구 연남로 39 3층"
+ },
+ "무드 여운": {
+  "status": "계약서 작성 중",
+  "expose": "2026-11-23",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": null,
+  "address": "서울특별시 마포구 성미산로 190-13 1층"
+ },
+ "해일로": {
+  "status": "계약서 작성 중",
+  "expose": "2026-11-23",
+  "sido": "서울",
+  "gugun": "종로구",
+  "size": null,
+  "address": "서울특별시 종로구 종로50라길 49 1층"
+ },
+ "오감": {
+  "status": "계약서 작성 중",
+  "expose": "2026-11-23",
+  "sido": "서울",
+  "gugun": "마포구",
+  "size": null,
+  "address": "서울특별시 마포구 양화로 54-1"
+ },
+ "웨이스테이션": {
+  "status": "계약서 작성 중",
+  "expose": "2026-11-23",
+  "sido": "서울",
+  "gugun": "노원구",
+  "size": null,
+  "address": "서울특별시 노원구 화랑로 467 2층"
  },
  "토오쿠 커피 로스터스": {
   "status": "제휴예정",
@@ -1503,7 +1567,7 @@
   "size": null,
   "address": null
  },
- "예민함하우스": {
+ "도심과 약과": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
@@ -1511,23 +1575,7 @@
   "size": null,
   "address": null
  },
- "오감": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
-  "gugun": null,
-  "size": null,
-  "address": null
- },
- "북카페 파오": {
-  "status": "제휴예정",
-  "expose": null,
-  "sido": null,
-  "gugun": null,
-  "size": null,
-  "address": null
- },
- "헤일로": {
+ "업스탠딩": {
   "status": "제휴예정",
   "expose": null,
   "sido": null,
