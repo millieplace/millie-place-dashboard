@@ -1,5 +1,5 @@
 {
- "as_of": "2026-11-10 11:48",
+ "as_of": "2026-11-25 11:04",
  "source_rows": 1650,
  "coupons": [
   {
@@ -10,19 +10,19 @@
    "valid_to": "2027-02-28",
    "issued_at": "2026-08-27",
    "issued": 1650,
-   "registered": 121,
-   "used": 89,
-   "registered_unused": 32,
-   "members": 104,
-   "multi_members": 10,
+   "registered": 145,
+   "used": 110,
+   "registered_unused": 35,
+   "members": 120,
+   "multi_members": 15,
    "max_per_member": 4,
    "first_registered": "2026-09-16",
-   "last_registered": "2026-11-09",
+   "last_registered": "2026-11-25",
    "lag_buckets": {
-    "당일": 79,
-    "1~3일": 6,
+    "당일": 96,
+    "1~3일": 8,
     "4~7일": 0,
-    "8일 이상": 4
+    "8일 이상": 6
    },
    "lag_median_hours": 0.0,
    "daily": {
@@ -221,6 +221,54 @@
     "2026-11-09": {
      "registered": 3,
      "used": 3
+    },
+    "2026-11-10": {
+     "registered": 5,
+     "used": 3
+    },
+    "2026-11-11": {
+     "registered": 4,
+     "used": 4
+    },
+    "2026-11-16": {
+     "registered": 1,
+     "used": 0
+    },
+    "2026-11-17": {
+     "registered": 2,
+     "used": 2
+    },
+    "2026-11-18": {
+     "registered": 1,
+     "used": 1
+    },
+    "2026-11-19": {
+     "registered": 0,
+     "used": 1
+    },
+    "2026-11-20": {
+     "registered": 3,
+     "used": 3
+    },
+    "2026-11-21": {
+     "registered": 1,
+     "used": 1
+    },
+    "2026-11-22": {
+     "registered": 1,
+     "used": 1
+    },
+    "2026-11-23": {
+     "registered": 2,
+     "used": 1
+    },
+    "2026-11-24": {
+     "registered": 3,
+     "used": 3
+    },
+    "2026-11-25": {
+     "registered": 1,
+     "used": 1
     }
    },
    "paid_converted": null
