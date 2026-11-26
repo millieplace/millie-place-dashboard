@@ -402,6 +402,7 @@
       <button data-tab="newstores">신규 매장 분석</button>
       <button data-tab="partner">제휴처별 데이터</button>
       <button data-tab="annual">연간 순위</button>
+      <button data-tab="cumulative">누적 방문</button>
       <button data-tab="coupon">구독권 Tracking</button>
       <button data-tab="jeju981">제주 981</button>
       <button data-tab="urbanplay">어반플레이</button>
@@ -425,6 +426,10 @@
 
     <div class="tab-panel" id="tab-partner">
       <div id="partner-area"></div>
+    </div>
+
+    <div class="tab-panel" id="tab-cumulative">
+      <div id="cumulative-area"></div>
     </div>
 
     <div class="tab-panel" id="tab-annual">
@@ -5064,6 +5069,160 @@ function extractBrand(name) {
     return rates.length ? avgOfArr(rates) : null;
   }
 
+  /* ================= 누적 방문 탭 ================= */
+  let cumCharts = [];
+  let cumState = { query: "", showAll: false, activeOnly: false };
+
+  function renderCumulativeTab() {
+    const area = document.getElementById("cumulative-area");
+    cumCharts.forEach(c => c && c.destroy()); cumCharts = [];
+    const uvS = (METRICS_DATA.uv && METRICS_DATA.uv.series) || [];
+    const bnS = (METRICS_DATA.benefit_claims && METRICS_DATA.benefit_claims.series) || [];
+    if (!uvS.length) { area.innerHTML = `<div class="placeholder-panel"><div class="icon">📈</div><h3>데이터 없음</h3></div>`; return; }
+    const start = uvS[0].date, last = uvS[uvS.length - 1].date;
+    const days = uvS.length;
+    const cumOf = ser => { let c = 0; return ser.map(p => ({ date: p.date, v: (c += p.value) })); };
+    const cu = cumOf(uvS), cb = cumOf(bnS);
+    const totU = cu[cu.length - 1].v, totB = cb.length ? cb[cb.length - 1].v : 0;
+    const avg30 = ser => { const a = ser.slice(-30); return a.reduce((t, p) => t + p.value, 0) / a.length; };
+    const u30 = avg30(uvS), b30 = bnS.length ? avg30(bnS) : 0;
+    const fmtD = d => `${d.slice(2, 4)}.${d.slice(5, 7)}.${d.slice(8)}`;
+    const addDays = (d, n) => { const x = new Date(d + "T00:00:00"); x.setDate(x.getDate() + Math.ceil(n)); return toLocalDateStr(x); };
+    const between = (a, b) => Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 86400000);
+
+    const milestones = (cum, step, rate) => {
+      const out = []; let next = step, prev = start;
+      cum.forEach((p, i) => { while (p.v >= next) { out.push({ m: next, date: p.date, idx: i, fromStart: between(start, p.date) + 1, fromPrev: between(prev, p.date) }); prev = p.date; next += step; } });
+      const cur = cum[cum.length - 1].v;
+      const proj = rate > 0 ? { m: next, date: addDays(last, (next - cur) / rate), left: next - cur, inDays: Math.ceil((next - cur) / rate) } : null;
+      return { list: out, proj };
+    };
+    const mU = milestones(cu, 100000, u30), mB = milestones(cb, 10000, b30);
+    const unitU = v => v >= 10000 ? `${v / 10000}만` : fmt(v);
+
+    // 매장별 누적
+    const uvD = (METRICS_DATA.daily_store_uv && METRICS_DATA.daily_store_uv.daily_totals) || {};
+    const clD = (METRICS_DATA.daily_store && METRICS_DATA.daily_store.daily_totals) || {};
+    const per = {};
+    Object.entries(uvD).forEach(([d, b]) => Object.entries(b).forEach(([n, v]) => { if (!n || n === "null" || !v) return; const r = per[n] = per[n] || { name: n, uv: 0, clk: 0, first: d, last: d }; r.uv += v; if (d < r.first) r.first = d; if (d > r.last) r.last = d; }));
+    Object.entries(clD).forEach(([d, b]) => Object.entries(b).forEach(([n, v]) => { if (!n || n === "null" || !v) return; const r = per[n] = per[n] || { name: n, uv: 0, clk: 0, first: d, last: d }; r.clk += v; if (d < r.first) r.first = d; if (d > r.last) r.last = d; }));
+    const rows = Object.values(per).sort((a, b) => b.uv - a.uv);
+    const storeTotU = rows.reduce((a, r) => a + r.uv, 0);
+    let cs = 0;
+    rows.forEach((r, i) => {
+      r.rank = i + 1; r.share = storeTotU ? r.uv / storeTotU * 100 : 0; cs += r.uv; r.cum = storeTotU ? cs / storeTotU * 100 : 0;
+      r.conv = r.uv ? r.clk / r.uv * 100 : null;
+      const info = PARTNER_STORE_MASTER.find(s => s.name === r.name);
+      r.status = info ? info.status : "기타";
+      const sinceD = info && getEffectiveExposeDate(info) ? getEffectiveExposeDate(info) : r.first;
+      const endD = info && info.term && info.term <= last ? info.term : last;
+      r.activeDays = Math.max(1, between(sinceD, endD) + 1); r.perDay = r.uv / r.activeDays;
+      const pi = (PARTNER_STORE_INFO || {})[r.name] || {}; r.region = [pi.sido, pi.gugun].filter(Boolean).join(" ");
+    });
+    const isActive = st => st === "제휴 중" || st === "해지 예정" || st === "계약서 작성 중" || /단기$/.test(st || "");
+    const top10Share = rows.slice(0, 10).reduce((a, r) => a + r.uv, 0) / (storeTotU || 1) * 100;
+    const bestPerDay = rows.filter(r => isActive(r.status) && r.activeDays >= 30).sort((a, b) => b.perDay - a.perDay)[0];
+
+    const insights = [];
+    insights.push(`서비스 시작(${fmtD(start)}) 이후 <b>${fmt(days)}일</b> 동안 밀리플레이스 UV는 누적 <b>${fmt(totU)}명</b>, 혜택받기는 <b>${fmt(totB)}건</b>이에요 (누적 전환율 ${(totB / totU * 100).toFixed(1)}%)`);
+    if (mU.proj) insights.push(`최근 30일 속도(하루 UV ${fmt(u30)}명)면 <b>누적 UV ${unitU(mU.proj.m)}명</b>까지 ${fmt(mU.proj.left)}명 남았고, 약 <b>${mU.proj.inDays}일 뒤(${fmtD(mU.proj.date)})</b> 돌파가 예상돼요`);
+    if (mB.proj) insights.push(`혜택받기는 하루 ${fmt(b30)}건 속도로 <b>누적 ${unitU(mB.proj.m)}건</b>까지 ${fmt(mB.proj.left)}건, 약 <b>${mB.proj.inDays}일 뒤(${fmtD(mB.proj.date)})</b> 돌파가 예상돼요`);
+    const allAvgU = totU / days;
+    insights.push(`최근 30일 일평균 UV ${fmt(u30)}명은 전체 기간 일평균(${fmt(allAvgU)}명) 대비 ${liftSpan((u30 - allAvgU) / allAvgU * 100)}, 혜택받기 ${fmt(b30)}건은 전체 평균(${fmt(totB / days)}건) 대비 ${liftSpan((b30 - totB / days) / (totB / days) * 100)}예요`);
+    if (rows[0]) insights.push(`매장 상세페이지 누적 방문 1위는 <b>${rows[0].name}</b>(${fmt(rows[0].uv)}명, ${rows[0].share.toFixed(1)}%)이고, 상위 10곳이 전체 상세페이지 방문의 ${top10Share.toFixed(0)}%를 차지해요`);
+    if (bestPerDay) insights.push(`노출 기간을 감안한 하루 평균 방문은 <b>${bestPerDay.name}</b>${(() => { const c = bestPerDay.name.trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? "이" : "가"; })()} ${bestPerDay.perDay.toFixed(1)}명으로 가장 높아요 (제휴 중·노출 30일 이상 매장 기준)`);
+
+    const q = cumState.query.trim().toLowerCase();
+    let shown = rows.filter(r => (!cumState.activeOnly || isActive(r.status)) && (!q || r.name.toLowerCase().includes(q) || (r.region || "").toLowerCase().includes(q)));
+    const total = shown.length;
+    if (!cumState.showAll && !q) shown = shown.slice(0, 30);
+    const tag = st => { const m = { "해지": ["해지", "var(--bad)"], "해지 예정": ["해지예정", "#b45309"], "제휴예정": ["예정", "var(--ink-faint)"], "제휴 취소": ["취소", "var(--ink-faint)"] }; const t = m[st] || (/단기$/.test(st || "") ? ["단기", "var(--accent)"] : null); return t ? ` <span style="font-size:10.5px; font-weight:700; color:${t[1]}; border:1px solid ${t[1]}; border-radius:10px; padding:0 6px;">${t[0]}</span>` : ""; };
+    const mTable = (ms, unit, label) => `
+      <table class="rank-table">
+        <thead><tr><th>${label}</th><th>돌파일</th><th style="text-align:right">시작 후</th><th style="text-align:right">이전 단위부터</th></tr></thead>
+        <tbody>${ms.list.map(x => `<tr><td><b>${unitU(x.m)}${unit}</b></td><td>${fmtD(x.date)}</td><td class="rank-val">${fmt(x.fromStart)}일</td><td class="rank-val" style="color:var(--ink-soft);">${fmt(x.fromPrev)}일</td></tr>`).join("")}
+        ${ms.proj ? `<tr style="color:var(--accent);"><td><b>${unitU(ms.proj.m)}${unit}</b> (예상)</td><td>${fmtD(ms.proj.date)}</td><td class="rank-val">${fmt(between(start, ms.proj.date) + 1)}일</td><td class="rank-val">${ms.list.length ? fmt(between(ms.list[ms.list.length - 1].date, ms.proj.date)) : "-"}일</td></tr>` : ""}</tbody>
+      </table>`;
+
+    area.innerHTML = `
+      <div class="section-card">
+        <div class="section-head"><h2>📈 누적 방문 데이터</h2></div>
+        <div style="font-size:12.5px; color:var(--ink-faint);">서비스 시작 ${start} ~ ${last} (${fmt(days)}일) · 밀리플레이스 전체 UV·혜택받기와 매장 상세페이지 방문 누적</div>
+      </div>
+      <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">누적 UV</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(totU)}<span class="unit">명</span></div></div><div class="kpi-sub">일평균 ${fmt(totU / days)}명</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">누적 혜택받기</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(totB)}<span class="unit">건</span></div></div><div class="kpi-sub">일평균 ${fmt(totB / days)}건</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">누적 전환율</div></div><div class="kpi-value-row"><div class="kpi-value">${(totB / totU * 100).toFixed(1)}<span class="unit">%</span></div></div><div class="kpi-sub">최근 30일 ${(b30 / u30 * 100).toFixed(1)}%</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">상세페이지 누적 방문</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(storeTotU)}<span class="unit">명</span></div></div><div class="kpi-sub">${fmt(rows.length)}개 매장</div></div>
+      </div>
+      <div class="section-card">
+        <div class="section-head"><h2>📌 인사이트</h2></div>
+        <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">${insights.map(t => `<li>${t}</li>`).join("")}</ul>
+      </div>
+      <div class="two-col">
+        <div class="section-card"><div class="section-head"><h2>누적 UV</h2></div><div class="trend-chart-wrap"><canvas id="cumUvChart"></canvas></div></div>
+        <div class="section-card"><div class="section-head"><h2>누적 혜택받기</h2></div><div class="trend-chart-wrap"><canvas id="cumBnChart"></canvas></div></div>
+      </div>
+      <div class="two-col">
+        <div class="section-card"><div class="section-head"><h2>🏁 UV 마일스톤 (10만 단위)</h2></div>${mTable(mU, "명", "누적 UV")}</div>
+        <div class="section-card"><div class="section-head"><h2>🏁 혜택받기 마일스톤 (1만 단위)</h2></div>${mTable(mB, "건", "누적 혜택받기")}</div>
+      </div>
+      <div class="section-card">
+        <div class="section-head"><h2>🏬 매장별 누적 상세페이지 방문</h2></div>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px;">
+          <input id="cum-search" class="store-search" placeholder="매장명·지역 검색" value="${cumState.query.replace(/"/g, "&quot;")}" style="flex:1; min-width:200px; max-width:320px; padding:9px 14px;">
+          <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="cum-active-only" ${cumState.activeOnly ? "checked" : ""}> 제휴 중만 보기</label>
+          <span style="font-size:12px; color:var(--ink-faint); margin-left:auto;">${fmt(total)}곳${!cumState.showAll && !q && total > 30 ? " 중 상위 30곳 표시" : ""}</span>
+        </div>
+        <div style="overflow-x:auto;">
+        <table class="rank-table">
+          <thead><tr><th style="width:44px;">순위</th><th>매장명</th><th>지역</th><th style="text-align:right">누적 방문</th><th style="text-align:right">전체 대비</th><th style="text-align:right">누적 %</th><th style="text-align:right">누적 혜택클릭</th><th style="text-align:right">방문→혜택</th><th style="text-align:right">하루 평균 방문</th><th>첫 방문</th></tr></thead>
+          <tbody>${shown.map(r => `<tr>
+            <td style="font-weight:700;">${r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}</td>
+            <td>${r.name}${tag(r.status)}</td>
+            <td style="font-size:12px; color:var(--ink-soft);">${r.region || "-"}</td>
+            <td class="rank-val"><b>${fmt(r.uv)}</b></td>
+            <td class="rank-val">${r.share.toFixed(1)}%</td>
+            <td class="rank-val" style="color:var(--ink-faint);">${r.cum.toFixed(1)}%</td>
+            <td class="rank-val">${fmt(r.clk)}</td>
+            <td class="rank-val">${r.conv === null ? "-" : r.conv.toFixed(0) + "%"}</td>
+            <td class="rank-val">${r.perDay.toFixed(1)}</td>
+            <td style="font-size:12px; color:var(--ink-soft);">${r.first}</td>
+          </tr>`).join("") || `<tr><td colspan="10" class="empty-note">검색 결과가 없어요</td></tr>`}</tbody>
+        </table>
+        </div>
+        ${!cumState.showAll && !q && total > 30 ? `<div style="text-align:center; margin-top:10px;"><button id="cum-show-all" class="store-select" style="padding:7px 16px; cursor:pointer;">전체 ${fmt(total)}곳 보기</button></div>` : ""}
+        <div class="kpi-sub" style="margin-top:10px;">누적 방문 = 매장 상세페이지 UV 합계 · 방문→혜택 = 누적 혜택클릭 / 누적 방문 · 하루 평균 방문 = 앱 노출일(없으면 첫 방문일)부터 오늘(해지 매장은 해지일)까지 기준</div>
+      </div>`;
+
+    const mkCum = (id, cum, ms, color, unit) => {
+      const el = document.getElementById(id); if (!el) return;
+      const mIdx = new Set(ms.list.map(x => x.idx));
+      cumCharts.push(new Chart(el, {
+        type: "line",
+        data: { labels: cum.map(p => p.date), datasets: [{ data: cum.map(p => p.v), borderColor: color, backgroundColor: color + "1f", fill: true, borderWidth: 2, tension: 0.2,
+          pointRadius: cum.map((_, i) => mIdx.has(i) ? 4 : 0), pointBackgroundColor: "#fff", pointBorderColor: color, pointBorderWidth: 2 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+          plugins: { legend: { display: false },
+            datalabels: { display: c => mIdx.has(c.dataIndex), align: "left", anchor: "center", offset: 6, font: { size: 10, weight: 700 }, color, formatter: v => `${unitU(Math.floor(v / (unit === "명" ? 100000 : 10000)) * (unit === "명" ? 100000 : 10000))}` },
+            tooltip: { callbacks: { title: it => it[0].label, label: c => `누적 ${fmt(c.parsed.y)}${unit}` } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 10 }, maxTicksLimit: 8, maxRotation: 0, callback: function (v) { const l = this.getLabelForValue(v); return l ? `${l.slice(2, 4)}.${l.slice(5, 7)}` : ""; } } },
+            y: { beginAtZero: true, grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 10 }, callback: v => unitU(v) } },
+          },
+        },
+      }));
+    };
+    mkCum("cumUvChart", cu, mU, "#6366f1", "명");
+    mkCum("cumBnChart", cb, mB, "#06b6d4", "건");
+
+    const si = document.getElementById("cum-search");
+    if (si) si.addEventListener("input", e => { cumState.query = e.target.value; const pos = e.target.selectionStart; renderCumulativeTab(); const ni = document.getElementById("cum-search"); if (ni) { ni.focus(); ni.setSelectionRange(pos, pos); } });
+    const ca = document.getElementById("cum-active-only"); if (ca) ca.addEventListener("change", e => { cumState.activeOnly = e.target.checked; renderCumulativeTab(); });
+    const sa = document.getElementById("cum-show-all"); if (sa) sa.addEventListener("click", () => { cumState.showAll = true; renderCumulativeTab(); });
+  }
+
   /* ================= 연간 누적 순위 탭 ================= */
   let annualState = { year: null, quarter: "all", activeOnly: false, query: "", showAll: false };
   const qMonths = q => [1, 2, 3].map(k => String((Number(q) - 1) * 3 + k).padStart(2, "0"));
@@ -6249,6 +6408,7 @@ function extractBrand(name) {
       // renderEventTab();
       renderCouponTab();
       renderAnnualRankTab();
+      renderCumulativeTab();
 
       // renderHubTab();  // 밀플 허브 페이지 탭 숨김 (버튼과 이 줄만 복구하면 다시 사용 가능)
       renderNewStoresTab();
