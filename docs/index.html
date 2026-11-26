@@ -403,6 +403,7 @@
       <button data-tab="partner">제휴처별 데이터</button>
       <button data-tab="annual">연간 순위</button>
       <button data-tab="cumulative">누적 방문</button>
+      <button data-tab="recap">연말 결산</button>
       <button data-tab="coupon">구독권 Tracking</button>
       <button data-tab="jeju981">제주 981</button>
       <button data-tab="urbanplay">어반플레이</button>
@@ -426,6 +427,10 @@
 
     <div class="tab-panel" id="tab-partner">
       <div id="partner-area"></div>
+    </div>
+
+    <div class="tab-panel" id="tab-recap">
+      <div id="recap-area"></div>
     </div>
 
     <div class="tab-panel" id="tab-cumulative">
@@ -5069,6 +5074,225 @@ function extractBrand(name) {
     return rates.length ? avgOfArr(rates) : null;
   }
 
+  /* ================= 연말 결산 탭 ================= */
+  let recapCharts = [];
+  let recapState = { year: null };
+
+  function renderYearRecapTab() {
+    const area = document.getElementById("recap-area");
+    recapCharts.forEach(c => c && c.destroy()); recapCharts = [];
+    const uvS = (METRICS_DATA.uv && METRICS_DATA.uv.series) || [];
+    const bnS = (METRICS_DATA.benefit_claims && METRICS_DATA.benefit_claims.series) || [];
+    if (!uvS.length) { area.innerHTML = `<div class="placeholder-panel"><div class="icon">🎁</div><h3>데이터 없음</h3></div>`; return; }
+    const years = Array.from(new Set(uvS.map(p => p.date.slice(0, 4)))).sort();
+    if (!recapState.year || !years.includes(recapState.year)) recapState.year = years[years.length - 1];
+    const Y = recapState.year;
+    const yU = uvS.filter(p => p.date.startsWith(Y)), yB = bnS.filter(p => p.date.startsWith(Y));
+    const start = yU[0].date, end = yU[yU.length - 1].date, nDays = yU.length;
+    const ongoing = end < `${Y}-12-31`;
+    const firstYear = Y === years[0] && start > `${Y}-01-01`; // 서비스 첫해 (연중 오픈)
+    const sum = a => a.reduce((t, p) => t + p.value, 0);
+    const totU = sum(yU), totB = sum(yB);
+    const md = d => `${Number(d.slice(5, 7))}월 ${Number(d.slice(8))}일`;
+    const addDaysStr = (d, k) => { const x = new Date(d + "T00:00:00"); x.setDate(x.getDate() + k); return toLocalDateStr(x); };
+    const periodLbl = `${Number(start.slice(5, 7))}/${Number(start.slice(8))} ~ ${Number(end.slice(5, 7))}/${Number(end.slice(8))}`;
+    const wdN = ["일", "월", "화", "수", "목", "금", "토"];
+    const jo = (w, a, b) => { const c = (w || "").trim().slice(-1).charCodeAt(0); return w + (c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? a : b); };
+
+    // 매장 집계 (연간 순위 로직 재사용)
+    const rank = buildAnnualRanking(Y, "all");
+    const storeRows = rank.rows;
+    const activeInYear = PARTNER_STORE_MASTER.filter(s => { const e = getEffectiveExposeDate(s); return e && e <= end && !(s.term && s.term < start); });
+    const joined = activeInYear.filter(s => { const e = getEffectiveExposeDate(s); return e && e >= start && e <= end; });
+    const sidoN = s => ({ "강원도": "강원", "경기도": "경기", "경상남도": "경남", "경상북도": "경북" }[s] || s);
+    const sidoOf = n => sidoN(((PARTNER_STORE_INFO || {})[n] || {}).sido);
+    const sidos = new Set(activeInYear.map(s => sidoOf(s.name)).filter(Boolean));
+
+    // 월별
+    const months = Array.from(new Set(yU.map(p => p.date.slice(0, 7)))).sort();
+    const mU = months.map(m => sum(yU.filter(p => p.date.startsWith(m)))), mB = months.map(m => sum(yB.filter(p => p.date.startsWith(m))));
+    const mDays = months.map(m => yU.filter(p => p.date.startsWith(m)).length);
+    const busiest = months.map((m, i) => ({ m, b: mB[i], perDay: mB[i] / mDays[i] })).sort((a, b) => b.perDay - a.perDay)[0];
+    const peakDay = yB.slice().sort((a, b) => b.value - a.value)[0];
+    const peakTop = peakDay ? Object.entries((((METRICS_DATA.daily_store || {}).daily_totals || {})[peakDay.date]) || {}).sort((a, b) => b[1] - a[1])[0] : null;
+    const wd = Array(7).fill(0), wdc = Array(7).fill(0);
+    yB.forEach(p => { const k = new Date(p.date + "T00:00:00").getDay(); wd[k] += p.value; wdc[k] += 1; });
+    const wdAvg = wd.map((v, i) => wdc[i] ? v / wdc[i] : 0);
+    const topWd = wdAvg.indexOf(Math.max(...wdAvg)), lowWd = wdAvg.indexOf(Math.min(...wdAvg.filter(v => v > 0)));
+    const weekendShare = (wd[0] + wd[6]) / (totB || 1) * 100;
+
+    // 누적 마일스톤 (그 해 돌파)
+    let cum = 0; const crossed = [];
+    uvS.forEach(p => { const before = cum; cum += p.value; const step = 100000; if (p.date.startsWith(Y) && Math.floor(cum / step) > Math.floor(before / step)) crossed.push({ v: Math.floor(cum / step) * step, d: p.date }); });
+    let cumB = 0; const crossedB = [];
+    bnS.forEach(p => { const before = cumB; cumB += p.value; const step = 10000; if (p.date.startsWith(Y) && Math.floor(cumB / step) > Math.floor(before / step)) crossedB.push({ v: Math.floor(cumB / step) * step, d: p.date }); });
+
+    // 전년 동기간
+    const prevY = String(Number(Y) - 1);
+    const sameRange = ser => { const a = `${prevY}${start.slice(4)}`, b = `${prevY}${end.slice(4)}`; return ser.filter(p => p.date >= a && p.date <= b); };
+    const pU = sameRange(uvS), pB = sameRange(bnS);
+    const hasPrev = pU.length > 0;
+    const prevRangeLbl = hasPrev ? `${Number(pU[0].date.slice(5, 7))}/${Number(pU[0].date.slice(8))}~${Number(pU[pU.length - 1].date.slice(5, 7))}/${Number(pU[pU.length - 1].date.slice(8))}` : "";
+    const pct = (a, b) => b > 0 ? (a - b) / b * 100 : null;
+
+    // 방문객 프로필 (연간 합산)
+    const sd = METRICS_DATA.store_demo || {}; const mk = sd.metric_key || "SUM(회원수(유니크))";
+    const demoRows = Object.entries(sd.monthly_rows || {}).filter(([m]) => m.startsWith(Y)).flatMap(([, r]) => r);
+    const demoMonths = Object.keys(sd.monthly_rows || {}).filter(m => m.startsWith(Y)).sort();
+    let demo = null;
+    if (demoRows.length) {
+      const t = demoRows.reduce((a, r) => a + (Number(r[mk]) || 0), 0);
+      const f = demoRows.filter(r => r.sex === "F").reduce((a, r) => a + (Number(r[mk]) || 0), 0);
+      const ages = {}; demoRows.forEach(r => { const a = String(r.age_band); ages[a] = (ages[a] || 0) + (Number(r[mk]) || 0); });
+      const ageArr = Object.entries(ages).map(([a, v]) => ({ a, p: v / t * 100 })).filter(x => x.p >= 0.5).sort((x, y) => (x.a === "영유아" ? -1 : Number(x.a)) - (y.a === "영유아" ? -1 : Number(y.a)));
+      const top = ageArr.slice().sort((x, y) => y.p - x.p);
+      demo = { f: f / t * 100, ages: ageArr, top1: top[0], top2: top[1], months: demoMonths };
+    }
+
+    // 지역
+    const reg = {};
+    storeRows.forEach(r => { const s = sidoOf(r.name); if (s) reg[s] = (reg[s] || 0) + r.total; });
+    const regTot = Object.values(reg).reduce((a, v) => a + v, 0);
+    const regRows = Object.entries(reg).sort((a, b) => b[1] - a[1]);
+    const storesBySido = {}; activeInYear.forEach(s => { const k = sidoOf(s.name); if (k) storesBySido[k] = (storesBySido[k] || 0) + 1; });
+
+    // 신규 합류 중 돋보인 매장
+    const joinedNames = new Set(joined.map(s => s.name));
+    const newStars = storeRows.filter(r => joinedNames.has(r.name)).slice(0, 5);
+    const nm = n => n.split(":")[0].trim();
+
+    // 하이라이트
+    const hl = [];
+    if (busiest) hl.push(`가장 바빴던 달은 <b>${Number(busiest.m.slice(5))}월</b> — 하루 평균 혜택받기 ${fmt(busiest.perDay)}건${firstYear && busiest.m === months[0] ? " (서비스 오픈 직후)" : ""}`);
+    if (peakDay) hl.push(`가장 붐빈 날은 <b>${md(peakDay.date)}(${wdN[new Date(peakDay.date + "T00:00:00").getDay()]})</b> — 하루 혜택받기 ${fmt(peakDay.value)}건${firstYear && peakDay.date <= addDaysStr(start, 7) ? " (서비스 오픈 주간)" : ""}${peakTop && peakTop[1] >= peakDay.value * 0.25 ? ` (그날의 주인공: ${nm(peakTop[0])})` : ""}`);
+    hl.push(`가장 많이 찾는 요일은 <b>${wdN[topWd]}요일</b>, 가장 한산한 요일은 ${wdN[lowWd]}요일 · 주말 비중 ${weekendShare.toFixed(0)}%`);
+    if (crossed.length || crossedB.length) hl.push(`올해 넘어선 기록: ${[...crossed.map(x => `누적 방문 <b>${x.v / 10000}만 명</b>(${md(x.d)})`), ...crossedB.slice(-2).map(x => `누적 혜택 <b>${x.v / 10000}만 건</b>(${md(x.d)})`)].join(", ")}`);
+    if (hasPrev) hl.push(`작년 같은 기간(${prevRangeLbl})보다 혜택받기 ${liftSpan(pct(totB, sum(pB)))}, 방문 전환율은 ${(sum(pB) / sum(pU) * 100).toFixed(1)}% → <b>${(totB / totU * 100).toFixed(1)}%</b>`);
+
+    // 복사용 요약
+    const copyLines = [];
+    copyLines.push(`${Y}년 밀리플레이스를 숫자로 돌아보면 (${periodLbl}${ongoing ? " 기준" : ""})`);
+    copyLines.push(`· ${fmt(totU)}명이 밀리플레이스를 방문했고, ${fmt(totB)}번 혜택을 받았어요.`);
+    copyLines.push(firstYear ? `· 밀리플레이스가 처음 문을 연 해, 전국 ${sidos.size}개 지역 ${fmt(activeInYear.length)}곳의 공간이 함께했어요.` : `· 전국 ${sidos.size}개 지역, ${fmt(activeInYear.length)}곳의 공간이 함께했고${joined.length ? `, 그중 ${fmt(joined.length)}곳이 새로 합류했어요` : ""}.`);
+    if (demo && demo.top1) copyLines.push(`· 방문객의 ${demo.f.toFixed(0)}%가 여성이고, ${demoAgeLabel(demo.top1.a)}(${demo.top1.p.toFixed(0)}%)${demo.top2 ? `와 ${demoAgeLabel(demo.top2.a)}(${demo.top2.p.toFixed(0)}%)` : ""}가 가장 많이 찾았어요.`);
+    if (busiest) copyLines.push(`· 가장 바빴던 달은 ${Number(busiest.m.slice(5))}월, 가장 많이 찾는 요일은 ${wdN[topWd]}요일이에요.`);
+    if (hasPrev) { const g = pct(totB, sum(pB)); if (g !== null && g > 0) copyLines.push(`· 작년 같은 기간보다 혜택 이용이 ${g.toFixed(0)}% 늘었어요.`); }
+    copyLines.push(`함께해주신 모든 공간에 감사드려요. 내년에도 더 많은 분들이 책과 공간을 만날 수 있도록 함께할게요.`);
+    const copyText = copyLines.join("\n");
+
+    const card = (label, value, unit, sub) => `<div class="kpi-card"><div class="kpi-top"><div class="kpi-label">${label}</div></div><div class="kpi-value-row"><div class="kpi-value" style="font-size:26px;">${value}<span class="unit">${unit}</span></div></div><div class="kpi-sub">${sub || "&nbsp;"}</div></div>`;
+    const maxReg = regRows.length ? regRows[0][1] : 1;
+
+    area.innerHTML = `
+      <div class="section-card" style="background:linear-gradient(135deg,#eef2ff,#f5f3ff); border:none;">
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+          <h2 style="margin:0; font-size:20px;">🎁 ${Y}년 밀리플레이스 결산</h2>
+          <div class="segmented" id="recap-year-toggle">${years.map(y => `<button data-year="${y}" class="${y === Y ? "active" : ""}">${y}년</button>`).join("")}</div>
+          <span style="font-size:12.5px; color:var(--ink-soft);">${periodLbl} (${fmt(nDays)}일)${ongoing ? " · 진행 중인 해라 이 기간 기준이에요" : ""}</span>
+        </div>
+      </div>
+
+      <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+        ${card("밀리플레이스 방문", fmt(totU), "명", `하루 평균 ${fmt(totU / nDays)}명`)}
+        ${card("혜택받기", fmt(totB), "건", `방문 대비 ${(totB / totU * 100).toFixed(1)}%`)}
+        ${card("함께한 공간", fmt(activeInYear.length), "곳", `전국 ${sidos.size}개 시·도`)}
+        ${firstYear ? card("함께 시작한 공간", fmt(joined.length), "곳", "서비스 첫해") : card("새로 합류한 공간", fmt(joined.length), "곳", joined.length && activeInYear.length ? `함께한 공간의 ${(joined.length / activeInYear.length * 100).toFixed(0)}%` : "")}
+        ${card("매장 상세페이지 방문", fmt(Object.keys((METRICS_DATA.daily_store_uv || {}).daily_totals || {}).filter(d => d.startsWith(Y)).reduce((a, d) => a + Object.values(METRICS_DATA.daily_store_uv.daily_totals[d]).reduce((x, v) => x + v, 0), 0)), "명", "공간 정보를 살펴본 방문")}
+        ${card("매장 혜택클릭", fmt(rank.grand), "건", `${fmt(storeRows.length)}개 공간에서`)}
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h2>✨ 이런 한 해였어요</h2></div>
+        <ul style="margin:0; padding-left:18px; font-size:14px; line-height:2;">${hl.map(t => `<li>${t}</li>`).join("")}</ul>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h2>📅 월별 흐름</h2></div>
+        <div class="trend-chart-wrap"><canvas id="recapMonthlyChart"></canvas></div>
+      </div>
+
+      <div class="two-col">
+        <div class="section-card">
+          <div class="section-head"><h2>👥 방문객 프로필</h2></div>
+          ${demo ? `
+            <div style="font-size:13px; color:var(--ink-soft); margin-bottom:10px;">혜택을 받은 밀리 회원 기준 · ${demoAgeLabel ? `${Number(demo.months[0].slice(5))}~${Number(demo.months[demo.months.length - 1].slice(5))}월 합산` : ""}</div>
+            <div style="display:flex; height:26px; border-radius:6px; overflow:hidden; margin-bottom:6px;">
+              <div style="width:${demo.f}%; background:#ec4899; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; padding-left:8px;">여성 ${demo.f.toFixed(0)}%</div>
+              <div style="flex:1; background:#6366f1; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:flex-end; padding-right:8px;">남성 ${(100 - demo.f).toFixed(0)}%</div>
+            </div>
+            <div style="margin-top:14px;">${demo.ages.map(x => `
+              <div style="display:flex; align-items:center; gap:10px; margin:6px 0; font-size:13px;">
+                <div style="width:52px;">${demoAgeLabel(x.a)}</div>
+                <div style="flex:1; background:#f1f2f5; border-radius:4px; height:14px; overflow:hidden;"><div style="width:${x.p / Math.max(...demo.ages.map(y => y.p)) * 100}%; height:100%; background:${x === demo.top1 ? "#6366f1" : "#c7d2fe"};"></div></div>
+                <div style="width:44px; text-align:right;">${x.p.toFixed(0)}%</div>
+              </div>`).join("")}</div>` : `<div class="kpi-sub">이 해의 방문객 정보가 아직 없어요</div>`}
+        </div>
+        <div class="section-card">
+          <div class="section-head"><h2>🗺 지역별 혜택 이용</h2></div>
+          ${regRows.length ? regRows.slice(0, 8).map(([s, v]) => `
+            <div style="display:flex; align-items:center; gap:10px; margin:7px 0; font-size:13px;">
+              <div style="width:40px; font-weight:600;">${s}</div>
+              <div style="flex:1; background:#f1f2f5; border-radius:4px; height:14px; overflow:hidden;"><div style="width:${v / maxReg * 100}%; height:100%; background:#06b6d4;"></div></div>
+              <div style="width:120px; text-align:right;">${(v / regTot * 100).toFixed(0)}% <span style="color:var(--ink-faint); font-size:11.5px;">· ${storesBySido[s] || 0}곳</span></div>
+            </div>`).join("") : `<div class="kpi-sub">지역 정보가 있는 매장 데이터가 부족해요</div>`}
+          <div class="kpi-sub" style="margin-top:8px;">현재 제휴 중인 매장의 지역 정보 기준 (해지 매장은 지역 미상이라 제외)</div>
+        </div>
+      </div>
+
+      <div class="${firstYear ? "" : "two-col"}">
+        <div class="section-card">
+          <div class="section-head"><h2>🏆 ${firstYear ? "가장 많이 찾은" : "올해 가장 많이 찾은"} 공간 TOP 10</h2></div>
+          <table class="rank-table"><thead><tr><th style="width:40px;">순위</th><th>공간</th><th style="text-align:right">혜택클릭</th><th style="text-align:right">비중</th></tr></thead>
+          <tbody>${storeRows.slice(0, 10).map(r => `<tr><td style="font-weight:700;">${r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}</td><td>${nm(r.name)}${r.status === "해지" ? ' <span style="font-size:10.5px; color:var(--bad);">(해지)</span>' : ""}</td><td class="rank-val">${fmt(r.total)}</td><td class="rank-val">${r.share.toFixed(1)}%</td></tr>`).join("")}</tbody></table>
+          <div class="kpi-sub" style="margin-top:6px;">제휴처 공유용으로 쓰실 땐 해지 매장은 빼고 쓰시는 걸 권해요</div>
+        </div>
+        ${firstYear ? "" : `<div class="section-card">
+          <div class="section-head"><h2>🌱 새로 합류해 돋보인 공간</h2></div>
+          ${newStars.length ? `<table class="rank-table"><thead><tr><th>공간</th><th>합류</th><th style="text-align:right">혜택클릭</th><th style="text-align:right">연간 순위</th></tr></thead>
+          <tbody>${newStars.map(r => `<tr><td>${nm(r.name)}${r.status === "해지" ? ' <span style="font-size:10.5px; color:var(--bad);">(종료)</span>' : ""}</td><td style="font-size:12px; color:var(--ink-soft);">${r.expose || "-"}</td><td class="rank-val">${fmt(r.total)}</td><td class="rank-val">${r.rank}위</td></tr>`).join("")}</tbody></table>` : `<div class="kpi-sub">${Y}년에 새로 합류한 공간 데이터가 없어요</div>`}
+        </div>`}
+      </div>
+
+      <div class="section-card">
+        <div class="section-head"><h2>📋 복사해서 쓰는 요약</h2></div>
+        <textarea id="recap-copy" readonly style="width:100%; min-height:190px; font-size:13.5px; line-height:1.8; padding:12px 14px; border:1px solid var(--border); border-radius:8px; resize:vertical; font-family:inherit;">${copyText}</textarea>
+        <div style="display:flex; gap:10px; align-items:center; margin-top:8px;">
+          <button id="recap-copy-btn" class="store-select" style="padding:7px 16px; cursor:pointer;">📋 복사하기</button>
+          <span id="recap-copy-msg" style="font-size:12px; color:var(--good);"></span>
+        </div>
+      </div>`;
+
+    const el = document.getElementById("recapMonthlyChart");
+    if (el) recapCharts.push(new Chart(el, {
+      data: {
+        labels: months.map(m => `${Number(m.slice(5))}월`),
+        datasets: [
+          { type: "bar", label: "혜택받기", data: mB, backgroundColor: months.map(m => busiest && m === busiest.m ? "#4338ca" : "#a5b4fc"), borderRadius: 5, maxBarThickness: 34, yAxisID: "y" },
+          { type: "line", label: "방문(UV)", data: mU, borderColor: "#06b6d4", backgroundColor: "#06b6d4", tension: 0.3, pointRadius: 3, borderWidth: 2, yAxisID: "y2" },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: "top", align: "end", labels: { boxWidth: 10, font: { size: 11 } } },
+          datalabels: { display: c => c.dataset.type === "bar", anchor: "end", align: "top", offset: 1, font: { size: 10, weight: 600 }, color: "#4338ca", formatter: v => fmt(v) } },
+        layout: { padding: { top: 14 } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 11 } } },
+          y: { beginAtZero: true, grid: { color: "#f0f1f3" }, ticks: { color: "#9ca3af", font: { size: 10 } }, title: { display: true, text: "혜택받기", color: "#9ca3af", font: { size: 10 } } },
+          y2: { beginAtZero: true, position: "right", grid: { display: false }, ticks: { color: "#06b6d4", font: { size: 10 } }, title: { display: true, text: "방문", color: "#06b6d4", font: { size: 10 } } },
+        },
+      },
+    }));
+
+    area.querySelectorAll("#recap-year-toggle button").forEach(b => b.addEventListener("click", () => { recapState.year = b.dataset.year; renderYearRecapTab(); }));
+    const cbtn = document.getElementById("recap-copy-btn");
+    if (cbtn) cbtn.addEventListener("click", async () => {
+      const ta = document.getElementById("recap-copy"); const msg = document.getElementById("recap-copy-msg");
+      try { await navigator.clipboard.writeText(ta.value); } catch (e) { ta.select(); document.execCommand && document.execCommand("copy"); }
+      if (msg) { msg.textContent = "복사했어요"; setTimeout(() => { msg.textContent = ""; }, 2000); }
+    });
+  }
+
   /* ================= 누적 방문 탭 ================= */
   let cumCharts = [];
   let cumState = { query: "", showAll: false, activeOnly: false };
@@ -6409,6 +6633,7 @@ function extractBrand(name) {
       renderCouponTab();
       renderAnnualRankTab();
       renderCumulativeTab();
+      renderYearRecapTab();
 
       // renderHubTab();  // 밀플 허브 페이지 탭 숨김 (버튼과 이 줄만 복구하면 다시 사용 가능)
       renderNewStoresTab();
