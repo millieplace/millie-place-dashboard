@@ -5295,66 +5295,113 @@ function extractBrand(name) {
 
   /* ================= 누적 방문 탭 ================= */
   let cumCharts = [];
-  let cumState = { query: "", showAll: false, activeOnly: false };
+  let cumState = { query: "", showAll: false, activeOnly: false, year: "all" };
 
   function renderCumulativeTab() {
     const area = document.getElementById("cumulative-area");
     cumCharts.forEach(c => c && c.destroy()); cumCharts = [];
-    const uvS = (METRICS_DATA.uv && METRICS_DATA.uv.series) || [];
-    const bnS = (METRICS_DATA.benefit_claims && METRICS_DATA.benefit_claims.series) || [];
-    if (!uvS.length) { area.innerHTML = `<div class="placeholder-panel"><div class="icon">📈</div><h3>데이터 없음</h3></div>`; return; }
-    const start = uvS[0].date, last = uvS[uvS.length - 1].date;
-    const days = uvS.length;
+    const uvAll = (METRICS_DATA.uv && METRICS_DATA.uv.series) || [];
+    const bnAll = (METRICS_DATA.benefit_claims && METRICS_DATA.benefit_claims.series) || [];
+    if (!uvAll.length) { area.innerHTML = `<div class="placeholder-panel"><div class="icon">📈</div><h3>데이터 없음</h3></div>`; return; }
+    const years = Array.from(new Set(uvAll.map(p => p.date.slice(0, 4)))).sort();
+    if (cumState.year !== "all" && !years.includes(cumState.year)) cumState.year = "all";
+    const Y = cumState.year, isAll = Y === "all";
+    const inP = d => isAll || d.startsWith(Y);
+    const uvS = uvAll.filter(p => inP(p.date)), bnS = bnAll.filter(p => inP(p.date));
+    const start = uvS[0].date, last = uvS[uvS.length - 1].date, days = uvS.length;
+    const dataLast = uvAll[uvAll.length - 1].date;
+    const ongoing = last === dataLast;
     const cumOf = ser => { let c = 0; return ser.map(p => ({ date: p.date, v: (c += p.value) })); };
     const cu = cumOf(uvS), cb = cumOf(bnS);
     const totU = cu[cu.length - 1].v, totB = cb.length ? cb[cb.length - 1].v : 0;
-    const avg30 = ser => { const a = ser.slice(-30); return a.reduce((t, p) => t + p.value, 0) / a.length; };
-    const u30 = avg30(uvS), b30 = bnS.length ? avg30(bnS) : 0;
+    const avg30 = ser => { const a = ser.slice(-30); return a.length ? a.reduce((t, p) => t + p.value, 0) / a.length : 0; };
+    const u30 = avg30(uvS), b30 = avg30(bnS);
     const fmtD = d => `${d.slice(2, 4)}.${d.slice(5, 7)}.${d.slice(8)}`;
+    const mdK = d => `${Number(d.slice(5, 7))}월 ${Number(d.slice(8))}일`;
     const addDays = (d, n) => { const x = new Date(d + "T00:00:00"); x.setDate(x.getDate() + Math.ceil(n)); return toLocalDateStr(x); };
     const between = (a, b) => Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 86400000);
+    const wdN = ["일", "월", "화", "수", "목", "금", "토"];
+    const wdOf = d => new Date(d + "T00:00:00").getDay();
+    const jo = (w, a, b) => { const c = (w || "").trim().slice(-1).charCodeAt(0); return w + (c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? a : b); };
+    const nm = n => n.split(":")[0].trim();
+    const periodLbl = isAll ? "서비스 시작 이후" : `${Y}년`;
 
     const milestones = (cum, step, rate) => {
       const out = []; let next = step, prev = start;
       cum.forEach((p, i) => { while (p.v >= next) { out.push({ m: next, date: p.date, idx: i, fromStart: between(start, p.date) + 1, fromPrev: between(prev, p.date) }); prev = p.date; next += step; } });
       const cur = cum[cum.length - 1].v;
-      const proj = rate > 0 ? { m: next, date: addDays(last, (next - cur) / rate), left: next - cur, inDays: Math.ceil((next - cur) / rate) } : null;
+      const projDate = rate > 0 ? addDays(last, (next - cur) / rate) : null;
+      const proj = ongoing && projDate && (isAll || projDate <= `${Y}-12-31`) ? { m: next, date: projDate, left: next - cur, inDays: Math.ceil((next - cur) / rate) } : null;
       return { list: out, proj };
     };
-    const mU = milestones(cu, 100000, u30), mB = milestones(cb, 10000, b30);
+    const stepU = isAll ? 100000 : 50000, stepB = isAll ? 10000 : 5000;
+    const mU = milestones(cu, stepU, u30), mB = milestones(cb, stepB, b30);
     const unitU = v => v >= 10000 ? `${v / 10000}만` : fmt(v);
 
-    // 매장별 누적
+    // 매장별 (기간 내)
     const uvD = (METRICS_DATA.daily_store_uv && METRICS_DATA.daily_store_uv.daily_totals) || {};
     const clD = (METRICS_DATA.daily_store && METRICS_DATA.daily_store.daily_totals) || {};
+    const pDays = Object.keys(uvD).filter(inP).sort();
     const per = {};
-    Object.entries(uvD).forEach(([d, b]) => Object.entries(b).forEach(([n, v]) => { if (!n || n === "null" || !v) return; const r = per[n] = per[n] || { name: n, uv: 0, clk: 0, first: d, last: d }; r.uv += v; if (d < r.first) r.first = d; if (d > r.last) r.last = d; }));
-    Object.entries(clD).forEach(([d, b]) => Object.entries(b).forEach(([n, v]) => { if (!n || n === "null" || !v) return; const r = per[n] = per[n] || { name: n, uv: 0, clk: 0, first: d, last: d }; r.clk += v; if (d < r.first) r.first = d; if (d > r.last) r.last = d; }));
+    const touch = (n, d) => (per[n] = per[n] || { name: n, uv: 0, clk: 0, first: d, last: d, wkend: 0, byDay: {}, byMonth: {} });
+    pDays.forEach(d => Object.entries(uvD[d] || {}).forEach(([n, v]) => { if (!n || n === "null" || !v) return; const r = touch(n, d); r.uv += v; r.byDay[d] = v; r.byMonth[d.slice(0, 7)] = (r.byMonth[d.slice(0, 7)] || 0) + v; if (d < r.first) r.first = d; if (d > r.last) r.last = d; const w = wdOf(d); if (w === 0 || w === 6) r.wkend += v; }));
+    Object.keys(clD).filter(inP).forEach(d => Object.entries(clD[d] || {}).forEach(([n, v]) => { if (!n || n === "null" || !v) return; touch(n, d).clk += v; }));
     const rows = Object.values(per).sort((a, b) => b.uv - a.uv);
     const storeTotU = rows.reduce((a, r) => a + r.uv, 0);
+    const isActive = st => st === "제휴 중" || st === "해지 예정" || st === "계약서 작성 중" || /단기$/.test(st || "");
     let cs = 0;
     rows.forEach((r, i) => {
       r.rank = i + 1; r.share = storeTotU ? r.uv / storeTotU * 100 : 0; cs += r.uv; r.cum = storeTotU ? cs / storeTotU * 100 : 0;
       r.conv = r.uv ? r.clk / r.uv * 100 : null;
       const info = PARTNER_STORE_MASTER.find(s => s.name === r.name);
       r.status = info ? info.status : "기타";
-      const sinceD = info && getEffectiveExposeDate(info) ? getEffectiveExposeDate(info) : r.first;
+      r.expose = info ? getEffectiveExposeDate(info) : null;
+      const sinceD = [r.expose || r.first, start].sort().slice(-1)[0];
       const endD = info && info.term && info.term <= last ? info.term : last;
       r.activeDays = Math.max(1, between(sinceD, endD) + 1); r.perDay = r.uv / r.activeDays;
-      const pi = (PARTNER_STORE_INFO || {})[r.name] || {}; r.region = [pi.sido, pi.gugun].filter(Boolean).join(" ");
+      r.visitDays = Object.keys(r.byDay).filter(d => d >= sinceD && d <= endD).length; r.consistency = r.visitDays / r.activeDays * 100;
+      let best = 0, cur = 0, prevD = null, bestEnd = null;
+      Object.keys(r.byDay).sort().forEach(d => { cur = prevD && between(prevD, d) === 1 ? cur + 1 : 1; if (cur > best) { best = cur; bestEnd = d; } prevD = d; });
+      r.streak = best; r.streakEnd = bestEnd;
+      r.wkShare = r.uv ? r.wkend / r.uv * 100 : 0;
+      const pi = (PARTNER_STORE_INFO || {})[r.name] || {}; r.region = [pi.sido, pi.gugun].filter(Boolean).join(" "); r.sido = pi.sido;
     });
-    const isActive = st => st === "제휴 중" || st === "해지 예정" || st === "계약서 작성 중" || /단기$/.test(st || "");
-    const top10Share = rows.slice(0, 10).reduce((a, r) => a + r.uv, 0) / (storeTotU || 1) * 100;
-    const bestPerDay = rows.filter(r => isActive(r.status) && r.activeDays >= 30).sort((a, b) => b.perDay - a.perDay)[0];
+    const act = rows.filter(r => isActive(r.status));
+
+    // ── 재미로 보는 방문 데이터 ──
+    const months = Array.from(new Set(pDays.map(d => d.slice(0, 7)))).sort();
+    const monthKing = months.map(m => { const t = act.map(r => ({ r, v: r.byMonth[m] || 0 })).sort((a, b) => b.v - a.v)[0]; return t && t.v ? { m, name: t.r.name, v: t.v } : null; }).filter(Boolean);
+    const kingCount = {}; monthKing.forEach(k => { kingCount[k.name] = (kingCount[k.name] || 0) + 1; });
+    const topKing = Object.entries(kingCount).sort((a, b) => b[1] - a[1])[0];
+    const steady = act.filter(r => r.activeDays >= 60).sort((a, b) => b.consistency - a.consistency || b.uv - a.uv).slice(0, 5);
+    const streaks = act.slice().sort((a, b) => b.streak - a.streak).slice(0, 5);
+    const debut = act.filter(r => r.expose && r.expose >= start && r.expose <= last && between(r.expose, last) >= 29).map(r => { const e30 = addDays(r.expose, 29); const v = Object.entries(r.byDay).filter(([d]) => d >= addDays(r.expose, -3) && d <= e30).reduce((a, [, x]) => a + x, 0); return { r, v }; }).sort((a, b) => b.v - a.v).slice(0, 5);
+    const wkPool = act.filter(r => r.uv >= 100);
+    const weekendType = wkPool.slice().sort((a, b) => b.wkShare - a.wkShare).slice(0, 3);
+    const weekdayType = wkPool.slice().sort((a, b) => a.wkShare - b.wkShare).slice(0, 3);
+    const wkAvg = wkPool.length ? wkPool.reduce((a, r) => a + r.wkend, 0) / wkPool.reduce((a, r) => a + r.uv, 0) * 100 : 0;
+    const convTop = act.filter(r => r.uv >= 100).sort((a, b) => b.conv - a.conv).slice(0, 5);
+    const wdSum = Array(7).fill(0), wdCnt = Array(7).fill(0);
+    uvS.forEach(p => { const w = wdOf(p.date); wdSum[w] += p.value; wdCnt[w] += 1; });
+    const wdAvg = wdSum.map((v, i) => wdCnt[i] ? v / wdCnt[i] : 0);
+    const wdMax = Math.max(...wdAvg);
+    const peakU = uvS.slice().sort((a, b) => b.value - a.value)[0], lowU = uvS.slice().sort((a, b) => a.value - b.value)[0];
+    const peakB = bnS.slice().sort((a, b) => b.value - a.value)[0];
+    const sidoVis = {}; act.forEach(r => { if (r.sido) sidoVis[r.sido] = (sidoVis[r.sido] || 0) + r.uv; });
+    const sidoTop = Object.entries(sidoVis).sort((a, b) => b[1] - a[1]);
+    const perHour = totU / days / 24;
 
     const insights = [];
-    insights.push(`서비스 시작(${fmtD(start)}) 이후 <b>${fmt(days)}일</b> 동안 밀리플레이스 UV는 누적 <b>${fmt(totU)}명</b>, 혜택받기는 <b>${fmt(totB)}건</b>이에요 (누적 전환율 ${(totB / totU * 100).toFixed(1)}%)`);
-    if (mU.proj) insights.push(`최근 30일 속도(하루 UV ${fmt(u30)}명)면 <b>누적 UV ${unitU(mU.proj.m)}명</b>까지 ${fmt(mU.proj.left)}명 남았고, 약 <b>${mU.proj.inDays}일 뒤(${fmtD(mU.proj.date)})</b> 돌파가 예상돼요`);
-    if (mB.proj) insights.push(`혜택받기는 하루 ${fmt(b30)}건 속도로 <b>누적 ${unitU(mB.proj.m)}건</b>까지 ${fmt(mB.proj.left)}건, 약 <b>${mB.proj.inDays}일 뒤(${fmtD(mB.proj.date)})</b> 돌파가 예상돼요`);
-    const allAvgU = totU / days;
-    insights.push(`최근 30일 일평균 UV ${fmt(u30)}명은 전체 기간 일평균(${fmt(allAvgU)}명) 대비 ${liftSpan((u30 - allAvgU) / allAvgU * 100)}, 혜택받기 ${fmt(b30)}건은 전체 평균(${fmt(totB / days)}건) 대비 ${liftSpan((b30 - totB / days) / (totB / days) * 100)}예요`);
-    if (rows[0]) insights.push(`매장 상세페이지 누적 방문 1위는 <b>${rows[0].name}</b>(${fmt(rows[0].uv)}명, ${rows[0].share.toFixed(1)}%)이고, 상위 10곳이 전체 상세페이지 방문의 ${top10Share.toFixed(0)}%를 차지해요`);
-    if (bestPerDay) insights.push(`노출 기간을 감안한 하루 평균 방문은 <b>${bestPerDay.name}</b>${(() => { const c = bestPerDay.name.trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? "이" : "가"; })()} ${bestPerDay.perDay.toFixed(1)}명으로 가장 높아요 (제휴 중·노출 30일 이상 매장 기준)`);
+    insights.push(`${periodLbl}${isAll ? `(${fmtD(start)})` : ` (${fmtD(start)}~${fmtD(last)})`} <b>${fmt(days)}일</b> 동안 밀리플레이스 UV는 <b>${fmt(totU)}명</b>, 혜택받기는 <b>${fmt(totB)}건</b>이에요 (전환율 ${(totB / totU * 100).toFixed(1)}%)`);
+    if (mU.proj) insights.push(`최근 30일 속도(하루 UV ${fmt(u30)}명)면 <b>${isAll ? "누적" : `${Y}년`} UV ${unitU(mU.proj.m)}명</b>까지 ${fmt(mU.proj.left)}명 남았고, 약 <b>${mU.proj.inDays}일 뒤(${fmtD(mU.proj.date)})</b> 돌파가 예상돼요`);
+    if (mB.proj) insights.push(`혜택받기는 <b>${isAll ? "누적" : `${Y}년`} ${unitU(mB.proj.m)}건</b>까지 ${fmt(mB.proj.left)}건, 약 <b>${mB.proj.inDays}일 뒤(${fmtD(mB.proj.date)})</b> 돌파가 예상돼요`);
+    if (!isAll) {
+      const prevY = String(Number(Y) - 1);
+      const a = `${prevY}${start.slice(4)}`, b = `${prevY}${last.slice(4)}`;
+      const pu = uvAll.filter(p => p.date >= a && p.date <= b), pb = bnAll.filter(p => p.date >= a && p.date <= b);
+      if (pu.length) { const su = pu.reduce((t, p) => t + p.value, 0), sb = pb.reduce((t, p) => t + p.value, 0); insights.push(`작년 같은 기간보다 UV ${liftSpan((totU - su) / su * 100)}, 혜택받기 ${liftSpan((totB - sb) / sb * 100)} · 전환율 ${(sb / su * 100).toFixed(1)}% → <b>${(totB / totU * 100).toFixed(1)}%</b>`); }
+    }
+    if (rows[0]) insights.push(`매장 상세페이지 방문 1위는 <b>${nm(rows[0].name)}</b>(${fmt(rows[0].uv)}명, ${rows[0].share.toFixed(1)}%)이고, 상위 10곳이 전체 상세페이지 방문의 ${(rows.slice(0, 10).reduce((a, r) => a + r.uv, 0) / (storeTotU || 1) * 100).toFixed(0)}%를 차지해요`);
 
     const q = cumState.query.trim().toLowerCase();
     let shown = rows.filter(r => (!cumState.activeOnly || isActive(r.status)) && (!q || r.name.toLowerCase().includes(q) || (r.region || "").toLowerCase().includes(q)));
@@ -5364,35 +5411,64 @@ function extractBrand(name) {
     const mTable = (ms, unit, label) => `
       <table class="rank-table">
         <thead><tr><th>${label}</th><th>돌파일</th><th style="text-align:right">시작 후</th><th style="text-align:right">이전 단위부터</th></tr></thead>
-        <tbody>${ms.list.map(x => `<tr><td><b>${unitU(x.m)}${unit}</b></td><td>${fmtD(x.date)}</td><td class="rank-val">${fmt(x.fromStart)}일</td><td class="rank-val" style="color:var(--ink-soft);">${fmt(x.fromPrev)}일</td></tr>`).join("")}
+        <tbody>${ms.list.map(x => `<tr><td><b>${unitU(x.m)}${unit}</b></td><td>${fmtD(x.date)}</td><td class="rank-val">${fmt(x.fromStart)}일</td><td class="rank-val" style="color:var(--ink-soft);">${fmt(x.fromPrev)}일</td></tr>`).join("") || `<tr><td colspan="4" class="empty-note">아직 돌파한 단위가 없어요</td></tr>`}
         ${ms.proj ? `<tr style="color:var(--accent);"><td><b>${unitU(ms.proj.m)}${unit}</b> (예상)</td><td>${fmtD(ms.proj.date)}</td><td class="rank-val">${fmt(between(start, ms.proj.date) + 1)}일</td><td class="rank-val">${ms.list.length ? fmt(between(ms.list[ms.list.length - 1].date, ms.proj.date)) : "-"}일</td></tr>` : ""}</tbody>
       </table>`;
+    const funCard = (title, sub, body) => `<div class="section-card" style="margin:0;"><div style="font-size:14px; font-weight:700; margin-bottom:2px;">${title}</div><div style="font-size:11.5px; color:var(--ink-faint); margin-bottom:8px;">${sub}</div>${body}</div>`;
+    const miniList = (items, val) => `<ol style="margin:0; padding-left:20px; font-size:13px; line-height:1.85;">${items.map(x => `<li>${val(x)}</li>`).join("") || "<li style='list-style:none; color:var(--ink-faint);'>해당 데이터가 없어요</li>"}</ol>`;
 
     area.innerHTML = `
       <div class="section-card">
-        <div class="section-head"><h2>📈 누적 방문 데이터</h2></div>
-        <div style="font-size:12.5px; color:var(--ink-faint);">서비스 시작 ${start} ~ ${last} (${fmt(days)}일) · 밀리플레이스 전체 UV·혜택받기와 매장 상세페이지 방문 누적</div>
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+          <h2 style="margin:0;">📈 누적 방문 데이터</h2>
+          <div class="segmented" id="cum-year-toggle">
+            <button data-year="all" class="${isAll ? "active" : ""}">전체</button>
+            ${years.map(y => `<button data-year="${y}" class="${Y === y ? "active" : ""}">${y}년</button>`).join("")}
+          </div>
+          <span style="font-size:12.5px; color:var(--ink-faint);">${start} ~ ${last} (${fmt(days)}일)${!isAll && ongoing ? " · 진행 중" : ""}</span>
+        </div>
       </div>
       <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
-        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">누적 UV</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(totU)}<span class="unit">명</span></div></div><div class="kpi-sub">일평균 ${fmt(totU / days)}명</div></div>
-        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">누적 혜택받기</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(totB)}<span class="unit">건</span></div></div><div class="kpi-sub">일평균 ${fmt(totB / days)}건</div></div>
-        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">누적 전환율</div></div><div class="kpi-value-row"><div class="kpi-value">${(totB / totU * 100).toFixed(1)}<span class="unit">%</span></div></div><div class="kpi-sub">최근 30일 ${(b30 / u30 * 100).toFixed(1)}%</div></div>
-        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">상세페이지 누적 방문</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(storeTotU)}<span class="unit">명</span></div></div><div class="kpi-sub">${fmt(rows.length)}개 매장</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">${isAll ? "누적" : `${Y}년`} UV</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(totU)}<span class="unit">명</span></div></div><div class="kpi-sub">일평균 ${fmt(totU / days)}명 · 1시간에 약 ${perHour.toFixed(0)}명</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">${isAll ? "누적" : `${Y}년`} 혜택받기</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(totB)}<span class="unit">건</span></div></div><div class="kpi-sub">일평균 ${fmt(totB / days)}건</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">전환율</div></div><div class="kpi-value-row"><div class="kpi-value">${(totB / totU * 100).toFixed(1)}<span class="unit">%</span></div></div><div class="kpi-sub">${ongoing ? "최근" : "마지막"} 30일 ${u30 ? (b30 / u30 * 100).toFixed(1) : "-"}%</div></div>
+        <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">상세페이지 방문</div></div><div class="kpi-value-row"><div class="kpi-value">${fmt(storeTotU)}<span class="unit">명</span></div></div><div class="kpi-sub">${fmt(rows.length)}개 공간</div></div>
       </div>
       <div class="section-card">
         <div class="section-head"><h2>📌 인사이트</h2></div>
         <ul style="margin:0; padding-left:18px; font-size:13.5px; line-height:1.9;">${insights.map(t => `<li>${t}</li>`).join("")}</ul>
       </div>
       <div class="two-col">
-        <div class="section-card"><div class="section-head"><h2>누적 UV</h2></div><div class="trend-chart-wrap"><canvas id="cumUvChart"></canvas></div></div>
-        <div class="section-card"><div class="section-head"><h2>누적 혜택받기</h2></div><div class="trend-chart-wrap"><canvas id="cumBnChart"></canvas></div></div>
+        <div class="section-card"><div class="section-head"><h2>${isAll ? "누적" : `${Y}년 누적`} UV</h2></div><div class="trend-chart-wrap"><canvas id="cumUvChart"></canvas></div></div>
+        <div class="section-card"><div class="section-head"><h2>${isAll ? "누적" : `${Y}년 누적`} 혜택받기</h2></div><div class="trend-chart-wrap"><canvas id="cumBnChart"></canvas></div></div>
       </div>
       <div class="two-col">
-        <div class="section-card"><div class="section-head"><h2>🏁 UV 마일스톤 (10만 단위)</h2></div>${mTable(mU, "명", "누적 UV")}</div>
-        <div class="section-card"><div class="section-head"><h2>🏁 혜택받기 마일스톤 (1만 단위)</h2></div>${mTable(mB, "건", "누적 혜택받기")}</div>
+        <div class="section-card"><div class="section-head"><h2>🏁 UV 마일스톤 (${unitU(stepU)} 단위)</h2></div>${mTable(mU, "명", isAll ? "누적 UV" : `${Y}년 UV`)}</div>
+        <div class="section-card"><div class="section-head"><h2>🏁 혜택받기 마일스톤 (${unitU(stepB)} 단위)</h2></div>${mTable(mB, "건", isAll ? "누적 혜택받기" : `${Y}년 혜택받기`)}</div>
       </div>
+
+      <div class="section-card" style="background:linear-gradient(135deg,#fff7ed,#fdf2f8); border:none;">
+        <div class="section-head"><h2>🎉 재미로 보는 방문 데이터 <span style="font-size:12px; font-weight:500; color:var(--ink-faint);">${periodLbl} · 현재 제휴 중인 공간 기준 · 매장 상세페이지 방문</span></h2></div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:14px;">
+          ${funCard("📆 요일별 방문", `하루 평균 UV · 가장 붐빈 날 ${mdK(peakU.date)}(${fmt(peakU.value)}명) · 가장 조용한 날 ${mdK(lowU.date)}(${fmt(lowU.value)}명)`,
+            [1, 2, 3, 4, 5, 6, 0].map(i => `<div style="display:flex; align-items:center; gap:8px; margin:4px 0; font-size:12.5px;"><div style="width:16px; font-weight:${wdAvg[i] === wdMax ? 700 : 500};">${wdN[i]}</div><div style="flex:1; background:#fff; border-radius:4px; height:12px; overflow:hidden;"><div style="width:${wdMax ? wdAvg[i] / wdMax * 100 : 0}%; height:100%; background:${wdAvg[i] === wdMax ? "#f97316" : "#fdba74"};"></div></div><div style="width:52px; text-align:right;">${fmt(wdAvg[i])}명</div></div>`).join(""))}
+          ${funCard("👑 이달의 공간", topKing && topKing[1] >= 2 ? `${jo(nm(topKing[0]), "이", "가")} ${topKing[1]}번 1위` : "월별 상세페이지 방문 1위",
+            `<div style="max-height:220px; overflow:auto;">${monthKing.map(k => `<div style="display:flex; justify-content:space-between; font-size:12.5px; padding:3px 0; border-bottom:1px dashed #fde2c8;"><span style="color:var(--ink-faint); width:52px;">${k.m.slice(2, 4)}.${k.m.slice(5)}</span><span style="flex:1;">${nm(k.name)}</span><b>${fmt(k.v)}</b></div>`).join("")}</div>`)}
+          ${funCard("🔥 최장 연속 방문 기록", "하루도 빠짐없이 상세페이지 방문이 이어진 최장 일수", miniList(streaks, r => `${nm(r.name)} <b>${fmt(r.streak)}일</b> <span style="color:var(--ink-faint); font-size:11.5px;">~${fmtD(r.streakEnd)}</span>`))}
+          ${funCard("🌱 가장 꾸준한 공간", "노출 기간 중 방문이 있었던 날의 비율 (노출 60일 이상)", miniList(steady, r => `${nm(r.name)} <b>${r.consistency.toFixed(0)}%</b> <span style="color:var(--ink-faint); font-size:11.5px;">${fmt(r.visitDays)}/${fmt(r.activeDays)}일</span>`))}
+          ${funCard("🎬 데뷔 성적", `${periodLbl} 새로 합류한 공간의 첫 30일 방문`, miniList(debut, x => `${nm(x.r.name)} <b>${fmt(x.v)}명</b> <span style="color:var(--ink-faint); font-size:11.5px;">${fmtD(x.r.expose)} 합류</span>`))}
+          ${funCard("🎯 방문하면 혜택까지", "상세페이지 방문 대비 혜택클릭 (방문 100명 이상)", miniList(convTop, r => `${nm(r.name)} <b>${r.conv.toFixed(0)}%</b> <span style="color:var(--ink-faint); font-size:11.5px;">${fmt(r.uv)}명 방문</span>`))}
+          ${funCard("🏖 주말형 vs 💼 평일형", `주말(토·일) 방문 비중 (방문 100명 이상) · 평균 ${wkAvg.toFixed(0)}%`,
+            `<div style="font-size:12.5px; line-height:1.85;"><div style="font-weight:700; color:#f97316;">주말형</div>${weekendType.map(r => `<div>${nm(r.name)} <b>${r.wkShare.toFixed(0)}%</b></div>`).join("")}<div style="font-weight:700; color:#6366f1; margin-top:6px;">평일형</div>${weekdayType.map(r => `<div>${nm(r.name)} <b>${r.wkShare.toFixed(0)}%</b></div>`).join("")}</div>`)}
+          ${funCard("🗺 지역별 방문", "제휴 중인 공간의 상세페이지 방문 비중",
+            sidoTop.slice(0, 6).map(([s, v]) => `<div style="display:flex; align-items:center; gap:8px; margin:4px 0; font-size:12.5px;"><div style="width:30px; font-weight:600;">${s}</div><div style="flex:1; background:#fff; border-radius:4px; height:12px; overflow:hidden;"><div style="width:${v / sidoTop[0][1] * 100}%; height:100%; background:#ec4899;"></div></div><div style="width:44px; text-align:right;">${(v / sidoTop.reduce((a, x) => a + x[1], 0) * 100).toFixed(0)}%</div></div>`).join(""))}
+          ${funCard("🔢 숫자로 보면", periodLbl,
+            `<div style="font-size:13px; line-height:1.9;">· 1시간에 약 <b>${perHour.toFixed(0)}명</b>이 밀리플레이스를 찾았어요<br>· 하루 평균 <b>${fmt(totB / days)}번</b> 혜택이 사용됐어요<br>${peakB ? `· 혜택이 가장 많았던 날은 <b>${mdK(peakB.date)}</b>(${fmt(peakB.value)}건)<br>` : ""}· 방문객 <b>${(100 / (totB / totU * 100)).toFixed(0)}명</b> 중 1명이 혜택을 받았어요</div>`)}
+        </div>
+      </div>
+
       <div class="section-card">
-        <div class="section-head"><h2>🏬 매장별 누적 상세페이지 방문</h2></div>
+        <div class="section-head"><h2>🏬 매장별 상세페이지 방문 (${periodLbl})</h2></div>
         <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px;">
           <input id="cum-search" class="store-search" placeholder="매장명·지역 검색" value="${cumState.query.replace(/"/g, "&quot;")}" style="flex:1; min-width:200px; max-width:320px; padding:9px 14px;">
           <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="cum-active-only" ${cumState.activeOnly ? "checked" : ""}> 제휴 중만 보기</label>
@@ -5400,7 +5476,7 @@ function extractBrand(name) {
         </div>
         <div style="overflow-x:auto;">
         <table class="rank-table">
-          <thead><tr><th style="width:44px;">순위</th><th>매장명</th><th>지역</th><th style="text-align:right">누적 방문</th><th style="text-align:right">전체 대비</th><th style="text-align:right">누적 %</th><th style="text-align:right">누적 혜택클릭</th><th style="text-align:right">방문→혜택</th><th style="text-align:right">하루 평균 방문</th><th>첫 방문</th></tr></thead>
+          <thead><tr><th style="width:44px;">순위</th><th>매장명</th><th>지역</th><th style="text-align:right">방문</th><th style="text-align:right">전체 대비</th><th style="text-align:right">누적 %</th><th style="text-align:right">혜택클릭</th><th style="text-align:right">방문→혜택</th><th style="text-align:right">하루 평균</th><th style="text-align:right">주말 비중</th><th style="text-align:right">최장 연속</th></tr></thead>
           <tbody>${shown.map(r => `<tr>
             <td style="font-weight:700;">${r.rank <= 3 ? ["🥇", "🥈", "🥉"][r.rank - 1] : r.rank}</td>
             <td>${r.name}${tag(r.status)}</td>
@@ -5411,15 +5487,16 @@ function extractBrand(name) {
             <td class="rank-val">${fmt(r.clk)}</td>
             <td class="rank-val">${r.conv === null ? "-" : r.conv.toFixed(0) + "%"}</td>
             <td class="rank-val">${r.perDay.toFixed(1)}</td>
-            <td style="font-size:12px; color:var(--ink-soft);">${r.first}</td>
-          </tr>`).join("") || `<tr><td colspan="10" class="empty-note">검색 결과가 없어요</td></tr>`}</tbody>
+            <td class="rank-val">${r.wkShare.toFixed(0)}%</td>
+            <td class="rank-val">${fmt(r.streak)}일</td>
+          </tr>`).join("") || `<tr><td colspan="11" class="empty-note">검색 결과가 없어요</td></tr>`}</tbody>
         </table>
         </div>
         ${!cumState.showAll && !q && total > 30 ? `<div style="text-align:center; margin-top:10px;"><button id="cum-show-all" class="store-select" style="padding:7px 16px; cursor:pointer;">전체 ${fmt(total)}곳 보기</button></div>` : ""}
-        <div class="kpi-sub" style="margin-top:10px;">누적 방문 = 매장 상세페이지 UV 합계 · 방문→혜택 = 누적 혜택클릭 / 누적 방문 · 하루 평균 방문 = 앱 노출일(없으면 첫 방문일)부터 오늘(해지 매장은 해지일)까지 기준</div>
+        <div class="kpi-sub" style="margin-top:10px;">방문 = 매장 상세페이지 UV · 하루 평균 = 기간 내 노출 시작일부터(해지 매장은 해지일까지) · 최장 연속 = 방문이 하루도 끊기지 않은 최장 일수</div>
       </div>`;
 
-    const mkCum = (id, cum, ms, color, unit) => {
+    const mkCum = (id, cum, ms, color, unit, step) => {
       const el = document.getElementById(id); if (!el) return;
       const mIdx = new Set(ms.list.map(x => x.idx));
       cumCharts.push(new Chart(el, {
@@ -5429,7 +5506,7 @@ function extractBrand(name) {
         options: {
           responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
           plugins: { legend: { display: false },
-            datalabels: { display: c => mIdx.has(c.dataIndex), align: "left", anchor: "center", offset: 6, font: { size: 10, weight: 700 }, color, formatter: v => `${unitU(Math.floor(v / (unit === "명" ? 100000 : 10000)) * (unit === "명" ? 100000 : 10000))}` },
+            datalabels: { display: c => mIdx.has(c.dataIndex), align: "left", anchor: "center", offset: 6, font: { size: 10, weight: 700 }, color, formatter: v => unitU(Math.floor(v / step) * step) },
             tooltip: { callbacks: { title: it => it[0].label, label: c => `누적 ${fmt(c.parsed.y)}${unit}` } } },
           scales: {
             x: { grid: { display: false }, ticks: { color: "#9ca3af", font: { size: 10 }, maxTicksLimit: 8, maxRotation: 0, callback: function (v) { const l = this.getLabelForValue(v); return l ? `${l.slice(2, 4)}.${l.slice(5, 7)}` : ""; } } },
@@ -5438,9 +5515,10 @@ function extractBrand(name) {
         },
       }));
     };
-    mkCum("cumUvChart", cu, mU, "#6366f1", "명");
-    mkCum("cumBnChart", cb, mB, "#06b6d4", "건");
+    mkCum("cumUvChart", cu, mU, "#6366f1", "명", stepU);
+    mkCum("cumBnChart", cb, mB, "#06b6d4", "건", stepB);
 
+    area.querySelectorAll("#cum-year-toggle button").forEach(b => b.addEventListener("click", () => { cumState.year = b.dataset.year; cumState.showAll = false; renderCumulativeTab(); }));
     const si = document.getElementById("cum-search");
     if (si) si.addEventListener("input", e => { cumState.query = e.target.value; const pos = e.target.selectionStart; renderCumulativeTab(); const ni = document.getElementById("cum-search"); if (ni) { ni.focus(); ni.setSelectionRange(pos, pos); } });
     const ca = document.getElementById("cum-active-only"); if (ca) ca.addEventListener("change", e => { cumState.activeOnly = e.target.checked; renderCumulativeTab(); });
